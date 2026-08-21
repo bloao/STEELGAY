@@ -1,0 +1,14 @@
+.DS_Store
+.idea/
+node_modules/
+
+# Raw API/debug downloads
+chapter-*.json
+heading-*.json
+commodity-*.json
+uk-*.csv
+
+# Local logs and env files
+*.log
+.env
+.env.*
