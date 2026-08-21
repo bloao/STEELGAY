@@ -79,6 +79,42 @@
             <input id="order-date" name="order-date" type="date" required>
           </div>
 
+          <div class="field-group">
+            <label for="emissions-intensity">Emissions intensity</label>
+            <input
+              id="emissions-intensity"
+              name="emissions-intensity"
+              type="number"
+              min="0"
+              step="0.001"
+              placeholder="tCO2e per tonne, e.g. 2.1"
+            >
+          </div>
+
+          <div class="field-group">
+            <label for="carbon-price">Carbon price</label>
+            <input
+              id="carbon-price"
+              name="carbon-price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="GBP per tCO2e, e.g. 75"
+            >
+          </div>
+
+          <div class="field-group">
+            <label for="overseas-carbon-price">Overseas carbon price paid</label>
+            <input
+              id="overseas-carbon-price"
+              name="overseas-carbon-price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="GBP per tCO2e, e.g. 0"
+            >
+          </div>
+
           <button class="primary-action" type="submit">Assess order</button>
         </form>
       </section>
@@ -133,6 +169,18 @@
           <div>
             <dt>50% exposure</dt>
             <dd id="summary-exposure">Not selected</dd>
+          </div>
+          <div>
+            <dt>CBAM status</dt>
+            <dd id="summary-cbam-status">Not selected</dd>
+          </div>
+          <div>
+            <dt>CBAM emissions</dt>
+            <dd id="summary-cbam-emissions">Not selected</dd>
+          </div>
+          <div>
+            <dt>CBAM estimate</dt>
+            <dd id="summary-cbam-cost">Not selected</dd>
           </div>
         </dl>
 

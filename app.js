@@ -4,6 +4,9 @@ const originInput = document.getElementById("origin");
 const tonnageInput = document.getElementById("tonnage");
 const basePriceInput = document.getElementById("base-price");
 const orderDateInput = document.getElementById("order-date");
+const emissionsIntensityInput = document.getElementById("emissions-intensity");
+const carbonPriceInput = document.getElementById("carbon-price");
+const overseasCarbonPriceInput = document.getElementById("overseas-carbon-price");
 const commodityOptions = document.getElementById("commodity-options");
 const commoditySource = document.getElementById("commodity-source");
 const summaryCommodity = document.getElementById("summary-commodity");
@@ -17,6 +20,9 @@ const summaryOrderNumber = document.getElementById("summary-order-number");
 const summaryBalance = document.getElementById("summary-balance");
 const summaryDuty = document.getElementById("summary-duty");
 const summaryExposure = document.getElementById("summary-exposure");
+const summaryCbamStatus = document.getElementById("summary-cbam-status");
+const summaryCbamEmissions = document.getElementById("summary-cbam-emissions");
+const summaryCbamCost = document.getElementById("summary-cbam-cost");
 const riskList = document.getElementById("risk-list");
 
 let steelData = window.STEEL_COMMODITIES || { commodities: [], count: 0 };
@@ -31,6 +37,9 @@ const apiBase =
 
 const today = new Date();
 orderDateInput.value = today.toISOString().slice(0, 10);
+emissionsIntensityInput.value = "2.1";
+carbonPriceInput.value = "75";
+overseasCarbonPriceInput.value = "0";
 
 function optionLabel(commodity) {
   return `${commodity.code} - ${commodity.description}`;
@@ -97,6 +106,16 @@ function formatCurrency(value) {
     currency: "GBP",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatEmissions(value) {
+  if (!Number.isFinite(value)) {
+    return "Not available";
+  }
+
+  return `${value.toLocaleString("en-GB", {
+    maximumFractionDigits: 3,
+  })} tCO2e`;
 }
 
 function findSelectedCommodity() {
@@ -286,6 +305,51 @@ function calculateExposure(tonnage, basePrice, category, origin, balanceTonnes) 
   };
 }
 
+function isCbamLikelyInScope(commodity) {
+  return Boolean(commodity && (commodity.code.startsWith("72") || commodity.code.startsWith("73")));
+}
+
+function calculateCbam(commodity, origin, orderDate, tonnage, emissionsIntensity, carbonPrice, overseasCarbonPrice) {
+  const cbamStartDate = "2027-01-01";
+  const isImported = origin && origin !== "United Kingdom";
+  const inScope = isCbamLikelyInScope(commodity);
+  const active = Boolean(isImported && orderDate >= cbamStartDate && inScope);
+  const hasInputs =
+    Number.isFinite(tonnage) &&
+    Number.isFinite(emissionsIntensity) &&
+    Number.isFinite(carbonPrice) &&
+    Number.isFinite(overseasCarbonPrice);
+  const netCarbonPrice = hasInputs ? Math.max(carbonPrice - overseasCarbonPrice, 0) : null;
+  const totalEmissions = hasInputs ? tonnage * emissionsIntensity : null;
+  const estimatedCost = active && hasInputs ? totalEmissions * netCarbonPrice : 0;
+
+  let status = "Not applicable";
+
+  if (!commodity) {
+    status = "Select a commodity";
+  } else if (!isImported) {
+    status = "Not applicable for UK-origin goods";
+  } else if (!inScope) {
+    status = "Not in likely Chapter 72/73 steel scope";
+  } else if (orderDate < cbamStartDate) {
+    status = "Not active before 1 Jan 2027";
+  } else if (!hasInputs) {
+    status = "Applies - emissions inputs needed";
+  } else {
+    status = "Applies - estimate based on manual inputs";
+  }
+
+  return {
+    active,
+    inScope,
+    hasInputs,
+    status,
+    netCarbonPrice,
+    totalEmissions,
+    estimatedCost,
+  };
+}
+
 async function loadLiveCommodities() {
   try {
     const response = await fetch(`${apiBase}/api/steel-commodities`);
@@ -319,7 +383,7 @@ async function fetchLiveQuotaCheck(commodity, origin, orderDate, tonnage, basePr
   return response.json();
 }
 
-function getRiskNotes(commodity, origin, orderDate, liveCheck) {
+function getRiskNotes(commodity, origin, orderDate, liveCheck, cbam) {
   const notes = [];
   const date = new Date(`${orderDate}T00:00:00`);
   const cbamStart = new Date("2027-01-01T00:00:00");
@@ -356,12 +420,28 @@ function getRiskNotes(commodity, origin, orderDate, liveCheck) {
     notes.push("Order date is on or after 1 Jan 2027, so CBAM data capture should be part of the order workflow.");
   }
 
+  if (cbam?.active) {
+    notes.push(`CBAM estimate: ${formatCurrency(cbam.estimatedCost)} based on ${formatEmissions(cbam.totalEmissions)} and net carbon price ${formatCurrency(cbam.netCarbonPrice)} per tCO2e.`);
+  } else if (cbam && isImported && cbam.inScope) {
+    notes.push(`CBAM status: ${cbam.status}.`);
+  }
+
   if (isCoil) {
     notes.push("Coil orders should also capture width, thickness, coating, yield loss, and processing capacity.");
   }
 
   notes.push("Next model fields: tonnage, supplier, payment terms, freight, commodity code, emissions data, and target customer margin.");
   return notes;
+}
+
+function renderCbam(cbam) {
+  summaryCbamStatus.textContent = cbam.status;
+  summaryCbamEmissions.textContent = Number.isFinite(cbam.totalEmissions)
+    ? formatEmissions(cbam.totalEmissions)
+    : "Enter tonnage and emissions intensity";
+  summaryCbamCost.textContent = cbam.active && cbam.hasInputs
+    ? formatCurrency(cbam.estimatedCost)
+    : "Not applicable";
 }
 
 function renderLiveResult(liveCheck) {
@@ -401,11 +481,23 @@ async function renderScenario() {
   const orderDate = orderDateInput.value;
   const tonnage = parseNumber(tonnageInput.value);
   const basePrice = parseNumber(basePriceInput.value);
+  const emissionsIntensity = parseNumber(emissionsIntensityInput.value);
+  const carbonPrice = parseNumber(carbonPriceInput.value);
+  const overseasCarbonPrice = parseNumber(overseasCarbonPriceInput.value);
   const quotaPeriod = getQuotaPeriod(orderDate);
   const quotaRow = findQuotaRow(commodity, category, origin, orderDate);
   const balanceTonnes = getQuotaBalanceTonnes(quotaRow);
   const initialTonnes = getInitialVolumeTonnes(quotaRow);
   const exposure = calculateExposure(tonnage, basePrice, category, origin, balanceTonnes);
+  const cbam = calculateCbam(
+    commodity,
+    origin,
+    orderDate,
+    tonnage,
+    emissionsIntensity,
+    carbonPrice,
+    overseasCarbonPrice
+  );
 
   summaryCommodity.textContent = commodity
     ? `${commodity.code} - ${commodity.description}`
@@ -436,6 +528,7 @@ async function renderScenario() {
       ? `${formatCurrency(exposure.tariffCost)} on ${formatTonnes(exposure.excessTonnes)} potentially outside quota`
       : "Not applicable"
     : "Enter tonnage and base price";
+  renderCbam(cbam);
 
   if (!commodity || !origin || !orderDate || tonnage === null || basePrice === null) {
     riskList.innerHTML = "<li>Complete all fields to see the first set of checks.</li>";
@@ -457,7 +550,7 @@ async function renderScenario() {
 
     renderLiveResult(liveCheck);
     riskList.replaceChildren(
-      ...getRiskNotes(commodity, origin, orderDate, liveCheck).map((note) => {
+      ...getRiskNotes(commodity, origin, orderDate, liveCheck, cbam).map((note) => {
         const item = document.createElement("li");
         item.textContent = note;
         return item;
@@ -477,7 +570,7 @@ async function renderScenario() {
       category,
       quota: quotaRow,
       exposure,
-    }).map((note) => {
+    }, cbam).map((note) => {
       const item = document.createElement("li");
       item.textContent = note;
       return item;
@@ -490,7 +583,7 @@ form.addEventListener("submit", (event) => {
   renderScenario();
 });
 
-[commodityInput, originInput, tonnageInput, basePriceInput, orderDateInput].forEach((input) => {
+[commodityInput, originInput, tonnageInput, basePriceInput, orderDateInput, emissionsIntensityInput, carbonPriceInput, overseasCarbonPriceInput].forEach((input) => {
   input.addEventListener("input", renderScenario);
   input.addEventListener("change", renderScenario);
 });
