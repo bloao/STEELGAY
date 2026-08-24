@@ -1,100 +1,100 @@
 {
-  "generatedAt": "2026-08-24T15:03:44.890661+00:00",
+  "generatedAt": "2026-08-24T15:12:50.535973+00:00",
   "coverage": {
     "firstPeriod": "202401",
     "lastPeriod": "202605",
     "monthsCovered": 29
   },
   "kpis": {
-    "totalTonnes": 16590476.33,
-    "totalValueGbp": 13029229377.0,
-    "originCountries": 121,
+    "totalTonnes": 16547208.44,
+    "totalValueGbp": 12993569245.0,
+    "originCountries": 120,
     "activeImporters": 7330,
-    "reliableTransportShare": 0.95
+    "reliableTransportShare": 0.952
   },
   "topCountries": [
     {
       "origin_country": "India",
       "total_tonnes": 2282259.36,
       "total_value": 1111253310,
-      "share_of_uk_steel_import_tonnes": 0.1375644264390944,
+      "share_of_uk_steel_import_tonnes": 0.13792413197459064,
       "main_product_group": "Alloy steel ingots and semi-finished"
     },
     {
       "origin_country": "Netherlands",
       "total_tonnes": 1535246.5899999999,
       "total_value": 979436222,
-      "share_of_uk_steel_import_tonnes": 0.09253782470889964,
+      "share_of_uk_steel_import_tonnes": 0.09277979400759266,
       "main_product_group": "Hot-rolled flat products"
     },
     {
       "origin_country": "Germany",
       "total_tonnes": 1321429.216,
       "total_value": 1208400899,
-      "share_of_uk_steel_import_tonnes": 0.07964986599020989,
+      "share_of_uk_steel_import_tonnes": 0.07985813566020991,
       "main_product_group": "Semi-finished steel"
     },
     {
       "origin_country": "France",
       "total_tonnes": 1269853.662,
       "total_value": 1094653350,
-      "share_of_uk_steel_import_tonnes": 0.07654112137132987,
+      "share_of_uk_steel_import_tonnes": 0.07674126224904834,
       "main_product_group": "Other alloy flat products"
     },
     {
       "origin_country": "South Korea",
       "total_tonnes": 1224110.054,
       "total_value": 783682886,
-      "share_of_uk_steel_import_tonnes": 0.07378390047520228,
+      "share_of_uk_steel_import_tonnes": 0.0739768317301673,
       "main_product_group": "Coated or plated flat products"
     },
     {
       "origin_country": "Spain",
       "total_tonnes": 1132709.014,
       "total_value": 951242549,
-      "share_of_uk_steel_import_tonnes": 0.06827465298830108,
+      "share_of_uk_steel_import_tonnes": 0.06845317857990708,
       "main_product_group": "Angles shapes and sections"
     },
     {
       "origin_country": "Turkey",
       "total_tonnes": 1085766.365,
       "total_value": 646413327,
-      "share_of_uk_steel_import_tonnes": 0.06544515924258731,
+      "share_of_uk_steel_import_tonnes": 0.06561628623130351,
       "main_product_group": "Other bars and rods"
     },
     {
       "origin_country": "Belgium",
       "total_tonnes": 900646.6610000001,
       "total_value": 862084773,
-      "share_of_uk_steel_import_tonnes": 0.054286968219401016,
+      "share_of_uk_steel_import_tonnes": 0.054428918602063885,
       "main_product_group": "Coated or plated flat products"
     },
     {
       "origin_country": "Unknown / not supplied",
-      "total_tonnes": 786886.49,
-      "total_value": 407465910,
-      "share_of_uk_steel_import_tonnes": 0.047430011928846764,
+      "total_tonnes": 743618.6,
+      "total_value": 376201752,
+      "share_of_uk_steel_import_tonnes": 0.04493921756778788,
       "main_product_group": "Ferrous waste and scrap"
     },
     {
       "origin_country": "Vietnam",
       "total_tonnes": 481909.53599999996,
       "total_value": 292301203,
-      "share_of_uk_steel_import_tonnes": 0.029047359856318043,
+      "share_of_uk_steel_import_tonnes": 0.029123313330645183,
       "main_product_group": "Coated or plated flat products"
     },
     {
       "origin_country": "China",
       "total_tonnes": 458692.60399999993,
       "total_value": 527139125,
-      "share_of_uk_steel_import_tonnes": 0.027647946630007313,
+      "share_of_uk_steel_import_tonnes": 0.027720240897539637,
       "main_product_group": "Semi-finished steel"
     },
     {
       "origin_country": "Brazil",
       "total_tonnes": 425943.872,
       "total_value": 279125027,
-      "share_of_uk_steel_import_tonnes": 0.025673998965186427,
+      "share_of_uk_steel_import_tonnes": 0.02574113172461527,
       "main_product_group": "Semi-finished steel"
     }
   ],
@@ -143,7 +143,7 @@
     },
     {
       "estimated_transport_mode": "Unknown",
-      "tonnes": 395805.277
+      "tonnes": 352537.387
     },
     {
       "estimated_transport_mode": "Air",

@@ -318,54 +318,76 @@ def build_company_market_context(
     flows: pd.DataFrame,
     company_summary: pd.DataFrame,
 ) -> pd.DataFrame:
-    market_context_rows = []
-    grouped = flows.groupby("commodity_code", dropna=False)
-    company_status = company_summary.set_index("company_id")
-    for row in company_commodity.itertuples(index=False):
-        if row.commodity_code not in grouped.groups:
-            continue
-        frame = grouped.get_group(row.commodity_code)
-        origin_mix = (
-            frame.groupby("origin_country_name")["tonnes"]
-            .sum()
-            .sort_values(ascending=False)
+    if company_commodity.empty or flows.empty:
+        return pd.DataFrame()
+
+    origin_rank = (
+        flows.groupby(["commodity_code", "origin_country_name"], dropna=False)["tonnes"]
+        .sum()
+        .reset_index()
+        .sort_values(["commodity_code", "tonnes"], ascending=[True, False])
+    )
+    origin_lists = (
+        origin_rank.groupby("commodity_code")["origin_country_name"]
+        .agg(
+            uk_origin_countries_for_this_commodity=lambda s: " | ".join(s.tolist()),
+            top_uk_origin_country=lambda s: s.iloc[0] if len(s) else "",
+            top_5_origin_countries=lambda s: " | ".join(s.head(5).tolist()),
         )
-        market_context_rows.append(
-            {
-                "company_id": row.company_id,
-                "company_name": row.company_name_raw,
-                "postcode": row.postcode,
-                "commodity_code": row.commodity_code,
-                "commodity_description": row.commodity_description,
-                "steel_product_group": row.steel_product_group,
-                "uk_origin_countries_for_this_commodity": " | ".join(origin_mix.index.tolist()),
-                "top_uk_origin_country": origin_mix.index[0] if not origin_mix.empty else "",
-                "top_5_origin_countries": " | ".join(origin_mix.head(5).index.tolist()),
-                "uk_tonnes_for_commodity": frame["tonnes"].sum(),
-                "uk_market_value_for_commodity": frame["statistical_value_gbp"].sum(),
-                "dominant_reported_transport_mode": dominant_value(frame, "estimated_transport_mode", "tonnes"),
-                "company_active_months": int(
-                    company_commodity.loc[
-                        (company_commodity["company_id"] == row.company_id)
-                        & (company_commodity["commodity_code"] == row.commodity_code),
-                        "active_months",
-                    ].iloc[0]
-                ),
-                "company_first_seen": company_commodity.loc[
-                    (company_commodity["company_id"] == row.company_id)
-                    & (company_commodity["commodity_code"] == row.commodity_code),
-                    "first_seen",
-                ].iloc[0],
-                "company_last_seen": company_commodity.loc[
-                    (company_commodity["company_id"] == row.company_id)
-                    & (company_commodity["commodity_code"] == row.commodity_code),
-                    "last_seen",
-                ].iloc[0],
-                "company_status": company_status.loc[row.company_id, "company_status"],
-                "market_probability_note": "Market probability / context only - NOT confirmed company origin",
+        .reset_index()
+    )
+    commodity_market = (
+        flows.groupby("commodity_code", dropna=False)
+        .agg(
+            uk_tonnes_for_commodity=("tonnes", "sum"),
+            uk_market_value_for_commodity=("statistical_value_gbp", "sum"),
+        )
+        .reset_index()
+    )
+    dominant_transport = (
+        flows.groupby(["commodity_code", "estimated_transport_mode"], dropna=False)["tonnes"]
+        .sum()
+        .reset_index()
+        .sort_values(["commodity_code", "tonnes"], ascending=[True, False])
+        .drop_duplicates(subset=["commodity_code"])
+        .rename(columns={"estimated_transport_mode": "dominant_reported_transport_mode"})
+        [["commodity_code", "dominant_reported_transport_mode"]]
+    )
+    market_context = (
+        company_commodity.merge(origin_lists, how="left", on="commodity_code")
+        .merge(commodity_market, how="left", on="commodity_code")
+        .merge(dominant_transport, how="left", on="commodity_code")
+        .rename(
+            columns={
+                "company_name_raw": "company_name",
+                "first_seen": "company_first_seen",
+                "last_seen": "company_last_seen",
+                "active_months": "company_active_months",
             }
         )
-    return pd.DataFrame(market_context_rows)
+    )
+    market_context["market_probability_note"] = "Market probability / context only - NOT confirmed company origin"
+    return market_context[
+        [
+            "company_id",
+            "company_name",
+            "postcode",
+            "commodity_code",
+            "commodity_description",
+            "steel_product_group",
+            "uk_origin_countries_for_this_commodity",
+            "top_uk_origin_country",
+            "top_5_origin_countries",
+            "uk_tonnes_for_commodity",
+            "uk_market_value_for_commodity",
+            "dominant_reported_transport_mode",
+            "company_active_months",
+            "company_first_seen",
+            "company_last_seen",
+            "company_status",
+            "market_probability_note",
+        ]
+    ]
 
 
 def dominant_value(frame: pd.DataFrame, dimension: str, measure: str) -> str:
