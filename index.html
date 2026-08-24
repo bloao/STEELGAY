@@ -7,7 +7,26 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <main class="app-shell">
+    <nav class="tab-nav" role="tablist" aria-label="Sections">
+      <button
+        type="button"
+        role="tab"
+        id="tab-intake"
+        class="tab-nav__button is-active"
+        aria-controls="page-intake"
+        aria-selected="true"
+      >Order intake</button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-mapping"
+        class="tab-nav__button"
+        aria-controls="page-mapping"
+        aria-selected="false"
+      >Mapping out</button>
+    </nav>
+
+    <main id="page-intake" class="app-shell" role="tabpanel" aria-labelledby="tab-intake">
       <section class="entry-panel" aria-labelledby="page-title">
         <div class="masthead">
           <p class="eyebrow">Steel procurement model</p>
@@ -193,9 +212,83 @@
       </section>
     </main>
 
+    <main id="page-mapping" class="mapping-shell" role="tabpanel" aria-labelledby="tab-mapping" hidden>
+      <section class="mapping-panel">
+        <div class="masthead">
+          <p class="eyebrow">Project mapping</p>
+          <h1>Mapping out</h1>
+          <p class="intro">
+            Working space for the team to map what we have today and where each
+            piece is heading. Add scope, data sources, flows, and open questions
+            here as the shape of the project firms up.
+          </p>
+        </div>
+
+        <div class="mapping-grid">
+          <article class="mapping-card">
+            <h2>What we have</h2>
+            <p class="mapping-card__hint">Existing components, datasets, and reference material already in the repo.</p>
+            <ul>
+              <li>Order intake form and initial scenario readout.</li>
+              <li>UK steel commodity code list (<code>steel-commodities.js</code>).</li>
+              <li>Trade remedy / safeguard measure lookup (<code>steel-trade-measure.js</code>).</li>
+              <li>Quota balance data (<code>steel-quotas.js</code>).</li>
+            </ul>
+          </article>
+
+          <article class="mapping-card">
+            <h2>What we need to figure out</h2>
+            <p class="mapping-card__hint">Open questions and unknowns the team is still resolving.</p>
+            <ul>
+              <li>How CBAM inputs are sourced and validated.</li>
+              <li>Where working-capital and supplier exposure data comes from.</li>
+              <li>Which scenarios need to be persisted vs. one-off.</li>
+            </ul>
+          </article>
+
+          <article class="mapping-card">
+            <h2>Approaches on the table</h2>
+            <p class="mapping-card__hint">Candidate solutions to weigh up as a group.</p>
+            <ul>
+              <li>Static reference data bundled with the app (current path).</li>
+              <li>Server-backed lookups via <code>server.mjs</code> for live tariff / quota data.</li>
+              <li>Hybrid: cached snapshots refreshed on a schedule.</li>
+            </ul>
+          </article>
+
+          <article class="mapping-card">
+            <h2>Next steps</h2>
+            <p class="mapping-card__hint">Concrete moves for the coming iteration.</p>
+            <ul>
+              <li>Agree the data model for a saved scenario.</li>
+              <li>Decide which sections of this page become interactive.</li>
+              <li>Pick an owner per card above.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </main>
+
     <script src="steel-commodities.js"></script>
     <script src="steel-trade-measure.js"></script>
     <script src="steel-quotas.js"></script>
     <script src="app.js"></script>
+    <script>
+      (function () {
+        var tabs = document.querySelectorAll('.tab-nav__button');
+        tabs.forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            tabs.forEach(function (other) {
+              var panelId = other.getAttribute('aria-controls');
+              var panel = document.getElementById(panelId);
+              var active = other === tab;
+              other.classList.toggle('is-active', active);
+              other.setAttribute('aria-selected', active ? 'true' : 'false');
+              if (panel) panel.hidden = !active;
+            });
+          });
+        });
+      })();
+    </script>
   </body>
 </html>
