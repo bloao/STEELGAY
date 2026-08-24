@@ -1,201 +1,162 @@
- <!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Steel Order Scenario Intake</title>
+    <title>UK Steel Import Market Analysis</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <main class="app-shell">
-      <section class="entry-panel" aria-labelledby="page-title">
-        <div class="masthead">
-          <p class="eyebrow">Steel procurement model</p>
-          <h1 id="page-title">Order scenario intake</h1>
-          <p class="intro">
-            Capture the basic variables needed to start assessing tariff, CBAM,
-            supplier, and working-capital exposure.
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">HMRC trade intelligence</p>
+          <h1>UK steel imports, made boardroom-ready.</h1>
+          <p class="hero-text">
+            A polished 2024 to 2026 year-to-date analysis layer for Chapter 72 imports,
+            built from HMRC bulk files and packaged for direct use on the website, in Excel,
+            and in downstream commercial reviews.
           </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="output/UK_Steel_Import_Analysis.xlsx">Download workbook</a>
+            <a class="button button-secondary" href="order-tool.html">Open order scenario tool</a>
+          </div>
         </div>
 
-        <form id="order-form" class="order-form">
-          <div class="field-group">
-            <label for="commodity">Commodity</label>
-            <input
-              id="commodity"
-              name="commodity"
-              type="text"
-              list="commodity-options"
-              placeholder="Start typing a code or steel product"
-              autocomplete="off"
-              required
-            >
-            <datalist id="commodity-options"></datalist>
-            <p class="field-note" id="commodity-source">Loading official steel commodity codes...</p>
-          </div>
+        <aside class="hero-panel">
+          <p class="panel-label">Coverage</p>
+          <div class="coverage-row"><span>First month</span><strong id="coverage-first">Loading</strong></div>
+          <div class="coverage-row"><span>Latest month</span><strong id="coverage-last">Loading</strong></div>
+          <div class="coverage-row"><span>Months covered</span><strong id="coverage-months">Loading</strong></div>
+          <p class="panel-note">
+            2026 is treated as year-to-date, with comparisons intended against equivalent 2025 months.
+          </p>
+        </aside>
+      </header>
 
-          <div class="field-group">
-            <label for="origin">Where from</label>
-            <select id="origin" name="origin" required>
-              <option value="">Select origin</option>
-              <option value="United Kingdom">United Kingdom</option>
-              <option value="European Union">European Union</option>
-              <option value="Turkey">Turkey</option>
-              <option value="India">India</option>
-              <option value="China">China</option>
-              <option value="South Korea">South Korea</option>
-              <option value="Other non-UK">Other non-UK</option>
-            </select>
-          </div>
-
-          <div class="field-group">
-            <label for="tonnage">Tonnage</label>
-            <input
-              id="tonnage"
-              name="tonnage"
-              type="number"
-              min="0"
-              step="0.001"
-              placeholder="e.g. 2"
-              required
-            >
-          </div>
-
-          <div class="field-group">
-            <label for="base-price">Base price per tonne</label>
-            <input
-              id="base-price"
-              name="base-price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="e.g. 700"
-              required
-            >
-          </div>
-
-          <div class="field-group">
-            <label for="order-date">Expected import date</label>
-            <input id="order-date" name="order-date" type="date" required>
-          </div>
-
-          <div class="field-group">
-            <label for="emissions-intensity">Emissions intensity</label>
-            <input
-              id="emissions-intensity"
-              name="emissions-intensity"
-              type="number"
-              min="0"
-              step="0.001"
-              placeholder="tCO2e per tonne, e.g. 2.1"
-            >
-          </div>
-
-          <div class="field-group">
-            <label for="carbon-price">Carbon price</label>
-            <input
-              id="carbon-price"
-              name="carbon-price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="GBP per tCO2e, e.g. 75"
-            >
-          </div>
-
-          <div class="field-group">
-            <label for="overseas-carbon-price">Overseas carbon price paid</label>
-            <input
-              id="overseas-carbon-price"
-              name="overseas-carbon-price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="GBP per tCO2e, e.g. 0"
-            >
-          </div>
-
-          <button class="primary-action" type="submit">Assess order</button>
-        </form>
+      <section class="kpi-grid" aria-label="Key performance indicators">
+        <article class="kpi-card"><span>Total tonnes</span><strong id="kpi-tonnes">-</strong></article>
+        <article class="kpi-card"><span>Total import value</span><strong id="kpi-value">-</strong></article>
+        <article class="kpi-card"><span>Origin countries</span><strong id="kpi-countries">-</strong></article>
+        <article class="kpi-card"><span>Active steel importers</span><strong id="kpi-importers">-</strong></article>
+        <article class="kpi-card"><span>Reliable HMRC transport share</span><strong id="kpi-transport">-</strong></article>
       </section>
 
-      <section class="result-panel" aria-labelledby="result-title">
-        <div>
-          <p class="eyebrow">Initial readout</p>
-          <h2 id="result-title">Scenario summary</h2>
+      <section class="story-grid">
+        <article class="story-card">
+          <p class="eyebrow">Country picture</p>
+          <h2>Who is supplying the UK steel market?</h2>
+          <p>
+            The country view keeps origin and dispatch separate so we can see where steel is made
+            versus where it is commercially shipped from. That avoids the usual shortcut of treating
+            dispatch hubs as manufacturing origin.
+          </p>
+        </article>
+        <article class="story-card">
+          <p class="eyebrow">Company picture</p>
+          <h2>Which importers stayed active?</h2>
+          <p>
+            Company continuity is tracked by normalized company identity and monthly commodity activity,
+            while deliberately avoiding any false company-to-country or company-to-shipment inference.
+          </p>
+        </article>
+        <article class="story-card">
+          <p class="eyebrow">Transport picture</p>
+          <h2>How does steel move into the UK?</h2>
+          <p>
+            Reported HMRC transport modes are preserved as fact. Where mode is missing or unreliable,
+            a separate inference layer estimates the most likely mode with a confidence score.
+          </p>
+        </article>
+      </section>
+
+      <section class="chart-grid">
+        <figure class="chart-card chart-card-large">
+          <img src="output/charts/top_countries_tonnes.png" alt="Top 20 countries by steel import tonnes">
+          <figcaption>Top origin countries by tonnage</figcaption>
+        </figure>
+        <figure class="chart-card">
+          <img src="output/charts/top_product_groups.png" alt="Top steel product groups by tonnes">
+          <figcaption>Top steel product groups</figcaption>
+        </figure>
+        <figure class="chart-card">
+          <img src="output/charts/transport_modes.png" alt="Transport modes for steel imports">
+          <figcaption>Transport mode mix</figcaption>
+        </figure>
+        <figure class="chart-card chart-card-wide">
+          <img src="output/charts/top_routes.png" alt="Top origin to dispatch routes">
+          <figcaption>Top origin to dispatch routes</figcaption>
+        </figure>
+      </section>
+
+      <section class="data-grid">
+        <article class="table-card">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Top suppliers</p>
+              <h2>Largest origin countries</h2>
+            </div>
+            <a href="output/country_summary.csv">CSV</a>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Country</th>
+                  <th>Tonnes</th>
+                  <th>Value</th>
+                  <th>Share</th>
+                  <th>Main product group</th>
+                </tr>
+              </thead>
+              <tbody id="top-countries-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="table-card">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Importer continuity</p>
+              <h2>Company status mix</h2>
+            </div>
+            <a href="output/company_activity.csv">CSV</a>
+          </div>
+          <div class="status-list" id="company-status-list"></div>
+        </article>
+      </section>
+
+      <section class="route-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Route detail</p>
+            <h2>Most material origin to dispatch flows</h2>
+          </div>
+          <a href="output/origin_dispatch_routes.csv">CSV</a>
         </div>
+        <div class="route-list" id="route-list"></div>
+      </section>
 
-        <dl class="summary-list" id="summary-list">
+      <section class="downloads">
+        <div class="section-head">
           <div>
-            <dt>Commodity</dt>
-            <dd id="summary-commodity">Not selected</dd>
+            <p class="eyebrow">Downloads</p>
+            <h2>Everything needed for analysis or publishing</h2>
           </div>
-          <div>
-            <dt>Heading</dt>
-            <dd id="summary-heading">Not selected</dd>
-          </div>
-          <div>
-            <dt>Steel measure</dt>
-            <dd id="summary-category">Not selected</dd>
-          </div>
-          <div>
-            <dt>Origin</dt>
-            <dd id="summary-origin">Not selected</dd>
-          </div>
-          <div>
-            <dt>Import date</dt>
-            <dd id="summary-date">Not selected</dd>
-          </div>
-          <div>
-            <dt>Quota period</dt>
-            <dd id="summary-quarter">Not selected</dd>
-          </div>
-          <div>
-            <dt>Quota line</dt>
-            <dd id="summary-quota-line">Not selected</dd>
-          </div>
-          <div>
-            <dt>Order number</dt>
-            <dd id="summary-order-number">Not selected</dd>
-          </div>
-          <div>
-            <dt>Quota balance</dt>
-            <dd id="summary-balance">Not selected</dd>
-          </div>
-          <div>
-            <dt>Import duty</dt>
-            <dd id="summary-duty">Not selected</dd>
-          </div>
-          <div>
-            <dt>50% exposure</dt>
-            <dd id="summary-exposure">Not selected</dd>
-          </div>
-          <div>
-            <dt>CBAM status</dt>
-            <dd id="summary-cbam-status">Not selected</dd>
-          </div>
-          <div>
-            <dt>CBAM emissions</dt>
-            <dd id="summary-cbam-emissions">Not selected</dd>
-          </div>
-          <div>
-            <dt>CBAM estimate</dt>
-            <dd id="summary-cbam-cost">Not selected</dd>
-          </div>
-        </dl>
-
-        <div class="risk-box" id="risk-box" aria-live="polite">
-          <h3>Exposure notes</h3>
-          <ul id="risk-list">
-            <li>Enter an order scenario to see the first set of checks.</li>
-          </ul>
+        </div>
+        <div class="download-grid">
+          <a href="output/UK_Steel_Import_Analysis.xlsx">Excel workbook</a>
+          <a href="output/steel_import_flows.csv">Steel import flows</a>
+          <a href="output/country_summary.csv">Country summary</a>
+          <a href="output/transport_summary.csv">Transport summary</a>
+          <a href="output/company_activity.csv">Company activity</a>
+          <a href="output/company_market_context.csv">Company market context</a>
+          <a href="output/data_quality_report.txt">Data quality report</a>
+          <a href="output/data_limitations.md">Data limitations</a>
         </div>
       </section>
-    </main>
+    </div>
 
-    <script src="steel-commodities.js"></script>
-    <script src="steel-trade-measure.js"></script>
-    <script src="steel-quotas.js"></script>
-    <script src="app.js"></script>
+    <script src="dashboard.js"></script>
   </body>
 </html>

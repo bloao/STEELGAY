@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Steel Order Scenario Tool</title>
+    <link rel="stylesheet" href="order-tool.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="entry-panel" aria-labelledby="page-title">
+        <div class="masthead">
+          <p class="eyebrow">Steel procurement model</p>
+          <h1 id="page-title">Order scenario intake</h1>
+          <p class="intro">
+            Capture the basic variables needed to start assessing tariff, CBAM,
+            supplier, and working-capital exposure.
+          </p>
+        </div>
+
+        <form id="order-form" class="order-form">
+          <div class="field-group">
+            <label for="commodity">Commodity</label>
+            <input id="commodity" name="commodity" type="text" list="commodity-options" placeholder="Start typing a code or steel product" autocomplete="off" required>
+            <datalist id="commodity-options"></datalist>
+            <p class="field-note" id="commodity-source">Loading official steel commodity codes...</p>
+          </div>
+
+          <div class="field-group">
+            <label for="origin">Where from</label>
+            <select id="origin" name="origin" required>
+              <option value="">Select origin</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="European Union">European Union</option>
+              <option value="Turkey">Turkey</option>
+              <option value="India">India</option>
+              <option value="China">China</option>
+              <option value="South Korea">South Korea</option>
+              <option value="Other non-UK">Other non-UK</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="tonnage">Tonnage</label>
+            <input id="tonnage" name="tonnage" type="number" min="0" step="0.001" placeholder="e.g. 2" required>
+          </div>
+
+          <div class="field-group">
+            <label for="base-price">Base price per tonne</label>
+            <input id="base-price" name="base-price" type="number" min="0" step="0.01" placeholder="e.g. 700" required>
+          </div>
+
+          <div class="field-group">
+            <label for="order-date">Expected import date</label>
+            <input id="order-date" name="order-date" type="date" required>
+          </div>
+
+          <div class="field-group">
+            <label for="emissions-intensity">Emissions intensity</label>
+            <input id="emissions-intensity" name="emissions-intensity" type="number" min="0" step="0.001" placeholder="tCO2e per tonne, e.g. 2.1">
+          </div>
+
+          <div class="field-group">
+            <label for="carbon-price">Carbon price</label>
+            <input id="carbon-price" name="carbon-price" type="number" min="0" step="0.01" placeholder="GBP per tCO2e, e.g. 75">
+          </div>
+
+          <div class="field-group">
+            <label for="overseas-carbon-price">Overseas carbon price paid</label>
+            <input id="overseas-carbon-price" name="overseas-carbon-price" type="number" min="0" step="0.01" placeholder="GBP per tCO2e, e.g. 0">
+          </div>
+
+          <button class="primary-action" type="submit">Assess order</button>
+        </form>
+      </section>
+
+      <section class="result-panel" aria-labelledby="result-title">
+        <div>
+          <p class="eyebrow">Initial readout</p>
+          <h2 id="result-title">Scenario summary</h2>
+        </div>
+
+        <dl class="summary-list" id="summary-list">
+          <div><dt>Commodity</dt><dd id="summary-commodity">Not selected</dd></div>
+          <div><dt>Heading</dt><dd id="summary-heading">Not selected</dd></div>
+          <div><dt>Steel measure</dt><dd id="summary-category">Not selected</dd></div>
+          <div><dt>Origin</dt><dd id="summary-origin">Not selected</dd></div>
+          <div><dt>Import date</dt><dd id="summary-date">Not selected</dd></div>
+          <div><dt>Quota period</dt><dd id="summary-quarter">Not selected</dd></div>
+          <div><dt>Quota line</dt><dd id="summary-quota-line">Not selected</dd></div>
+          <div><dt>Order number</dt><dd id="summary-order-number">Not selected</dd></div>
+          <div><dt>Quota balance</dt><dd id="summary-balance">Not selected</dd></div>
+          <div><dt>Import duty</dt><dd id="summary-duty">Not selected</dd></div>
+          <div><dt>50% exposure</dt><dd id="summary-exposure">Not selected</dd></div>
+          <div><dt>CBAM status</dt><dd id="summary-cbam-status">Not selected</dd></div>
+          <div><dt>CBAM emissions</dt><dd id="summary-cbam-emissions">Not selected</dd></div>
+          <div><dt>CBAM estimate</dt><dd id="summary-cbam-cost">Not selected</dd></div>
+        </dl>
+
+        <div class="risk-box" id="risk-box" aria-live="polite">
+          <h3>Exposure notes</h3>
+          <ul id="risk-list">
+            <li>Enter an order scenario to see the first set of checks.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <script src="steel-commodities.js"></script>
+    <script src="steel-trade-measure.js"></script>
+    <script src="steel-quotas.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
