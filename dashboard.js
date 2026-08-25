@@ -8,6 +8,16 @@ const percentFormat = new Intl.NumberFormat("en-GB", {
   style: "percent",
   maximumFractionDigits: 1,
 });
+const compactNumberFormat = new Intl.NumberFormat("en-GB", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+const compactMoneyFormat = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
 
 function setText(id, value) {
   const node = document.getElementById(id);
@@ -86,11 +96,14 @@ async function loadSummary() {
     setText("coverage-last", formatPeriod(summary.coverage.lastPeriod));
     setText("coverage-months", `${summary.coverage.monthsCovered} months`);
 
-    setText("kpi-tonnes", numberFormat.format(summary.kpis.totalTonnes));
-    setText("kpi-value", moneyFormat.format(summary.kpis.totalValueGbp));
+    setText("kpi-tonnes", compactNumberFormat.format(summary.kpis.totalTonnes));
+    setText("kpi-value", compactMoneyFormat.format(summary.kpis.totalValueGbp));
     setText("kpi-countries", numberFormat.format(summary.kpis.originCountries));
     setText("kpi-importers", numberFormat.format(summary.kpis.activeImporters));
     setText("kpi-transport", percentFormat.format(summary.kpis.reliableTransportShare));
+
+    setText("kpi-tonnes-full", `${numberFormat.format(summary.kpis.totalTonnes)} tonnes`);
+    setText("kpi-value-full", moneyFormat.format(summary.kpis.totalValueGbp));
 
     renderCountries(summary.topCountries || []);
     renderStatus(summary.companyStatusMix || []);
