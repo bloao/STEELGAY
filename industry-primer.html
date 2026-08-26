@@ -56,26 +56,260 @@
         font-weight: 600;
       }
 
-      .primer-viewer {
+      .primer-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .primer-toc {
+        position: sticky;
+        top: 24px;
         background: #ffffff;
         border: 1px solid #e3e6ea;
         border-radius: 10px;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
-        overflow: hidden;
+        padding: 20px 20px 18px;
       }
 
-      .primer-viewer__frame {
-        width: 100%;
-        height: min(85vh, 1000px);
-        border: 0;
+      .primer-toc__label {
+        color: #6b7a84;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+
+      .primer-toc ol {
+        list-style: none;
+        counter-reset: toc;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 4px;
+      }
+
+      .primer-toc li {
+        counter-increment: toc;
+      }
+
+      .primer-toc a {
         display: block;
-        background: #f4f5f7;
+        padding: 6px 10px 6px 34px;
+        border-radius: 6px;
+        color: #33434f;
+        font-size: 0.88rem;
+        line-height: 1.35;
+        text-decoration: none;
+        position: relative;
       }
 
-      .primer-fallback {
-        padding: 24px;
-        color: #33434f;
-        font-size: 0.95rem;
+      .primer-toc a::before {
+        content: counter(toc, decimal-leading-zero);
+        position: absolute;
+        left: 10px;
+        top: 6px;
+        color: #6b7a84;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+      }
+
+      .primer-toc a:hover {
+        background: #f4f5f7;
+        color: #0b1f2a;
+      }
+
+      .primer-article {
+        background: #ffffff;
+        border: 1px solid #e3e6ea;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+        padding: clamp(28px, 4vw, 56px);
+        color: #1e2a34;
+        line-height: 1.7;
+        font-size: 1rem;
+      }
+
+      .primer-article section + section {
+        margin-top: 48px;
+      }
+
+      .primer-article h2 {
+        margin-bottom: 18px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e3e6ea;
+      }
+
+      .primer-article h3 {
+        margin-top: 32px;
+        margin-bottom: 10px;
+        font-family: var(--font-serif, "Iowan Old Style", Georgia, serif);
+        font-weight: 600;
+        font-size: 1.12rem;
+        color: #0b1f2a;
+      }
+
+      .primer-article p {
+        margin: 0 0 16px;
+        max-width: 74ch;
+      }
+
+      .primer-article p.lede {
+        font-size: 1.08rem;
+        color: #0b1f2a;
+      }
+
+      .primer-article ul,
+      .primer-article ol {
+        margin: 0 0 20px;
+        padding-left: 22px;
+        max-width: 74ch;
+      }
+
+      .primer-article li {
+        margin-bottom: 8px;
+      }
+
+      .primer-article li::marker {
+        color: #6b7a84;
+      }
+
+      .primer-article strong {
+        color: #0b1f2a;
+      }
+
+      .primer-callout {
+        margin: 24px 0;
+        padding: 18px 22px;
+        background: #e5eef1;
+        border-left: 4px solid #0f4c5c;
+        border-radius: 6px;
+        color: #0b1f2a;
+        font-size: 0.98rem;
+        line-height: 1.6;
+        max-width: 78ch;
+      }
+
+      .primer-callout__label {
+        display: block;
+        color: #0f4c5c;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+
+      .primer-callout p {
+        margin: 0;
+        max-width: none;
+      }
+
+      .primer-table-wrap {
+        overflow-x: auto;
+        margin: 8px 0 24px;
+        border: 1px solid #e3e6ea;
+        border-radius: 8px;
+      }
+
+      .primer-article table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 0.9rem;
+      }
+
+      .primer-article td,
+      .primer-article th {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: normal;
+      }
+
+      .primer-article th,
+      .primer-article td {
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid #e3e6ea;
+        line-height: 1.45;
+      }
+
+      .primer-article thead th {
+        background: #f8f9fb;
+        color: #6b7a84;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid #cfd4da;
+      }
+
+      .primer-article tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .primer-article td.num,
+      .primer-article th.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .primer-timeline {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin: 8px 0 28px;
+      }
+
+      .primer-timeline div {
+        background: #f8f9fb;
+        border: 1px solid #e3e6ea;
+        border-radius: 8px;
+        padding: 14px 16px;
+      }
+
+      .primer-timeline dt {
+        color: #0f4c5c;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+
+      .primer-timeline dd {
+        margin: 0;
+        color: #0b1f2a;
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .primer-equation {
+        margin: 12px 0 24px;
+        padding: 20px 24px;
+        background: #f8f9fb;
+        border: 1px solid #e3e6ea;
+        border-radius: 8px;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.92rem;
+        line-height: 1.7;
+        color: #0b1f2a;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 900px) {
+        .primer-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .primer-toc {
+          position: static;
+        }
       }
     </style>
   </head>
@@ -98,15 +332,7 @@
           post-safeguard import process, compiled as a reference for
           commercial and procurement reviews.
         </p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="docs/uk-steel-industry-primer.pdf" download>Download PDF</a>
-          <a class="button button-secondary" href="docs/uk-steel-industry-primer.pdf" target="_blank" rel="noopener">Open in new tab</a>
-        </div>
         <dl class="primer-meta">
-          <div>
-            <dt>Format</dt>
-            <dd>PDF, 27 pages</dd>
-          </div>
           <div>
             <dt>Scope</dt>
             <dd>UK production, imports, tariffs, quotas, CDS process</dd>
@@ -115,21 +341,1164 @@
             <dt>Regime</dt>
             <dd>Post 1 July 2026 UK steel measure</dd>
           </div>
+          <div>
+            <dt>Reading time</dt>
+            <dd>~25 minutes</dd>
+          </div>
         </dl>
       </header>
 
-      <section class="primer-viewer" aria-label="Industry primer PDF">
-        <object
-          class="primer-viewer__frame"
-          data="docs/uk-steel-industry-primer.pdf#view=FitH"
-          type="application/pdf"
-        >
-          <div class="primer-fallback">
-            <p>The inline PDF viewer is not available in this browser.</p>
-            <p><a href="docs/uk-steel-industry-primer.pdf">Download the primer</a> instead.</p>
-          </div>
-        </object>
-      </section>
+      <div class="primer-layout">
+        <aside class="primer-toc" aria-label="On this page">
+          <p class="primer-toc__label">On this page</p>
+          <ol>
+            <li><a href="#summary">Executive summary</a></li>
+            <li><a href="#production">Domestic production &amp; geography</a></li>
+            <li><a href="#trade-flows">Supply chains &amp; five-year trade flows</a></li>
+            <li><a href="#regime">Post-July 2026 tariff regime</a></li>
+            <li><a href="#quotas">How steel quotas work</a></li>
+            <li><a href="#routes">Import routes &amp; procurement channels</a></li>
+            <li><a href="#process">End-to-end import process</a></li>
+            <li><a href="#implications">Analytical implications</a></li>
+            <li><a href="#methodology">Data methodology &amp; sources</a></li>
+          </ol>
+        </aside>
+
+        <article class="primer-article">
+          <section id="summary">
+            <h2>Executive summary</h2>
+            <p class="lede">
+              The UK steel market is now structurally import-dependent. UK Steel reports that the country
+              produced about 2.6 million tonnes of crude steel in 2025 and that domestic producers
+              supplied roughly 30% of UK steel demand, following the closure of primary steelmaking at
+              Tata Steel&rsquo;s Port Talbot works while its electric-arc-furnace replacement is built.
+              British Steel&rsquo;s Scunthorpe works therefore remains strategically important as the
+              UK&rsquo;s principal operating blast-furnace site; British Steel was transferred into public
+              ownership in July 2026 following government intervention that began in April 2025.
+            </p>
+            <p>
+              The industry is geographically concentrated around South Wales, South Yorkshire,
+              Scunthorpe/Lincolnshire, the North East and parts of the Midlands. The government&rsquo;s
+              2026 Steel Strategy identifies six principal steelmakers: Tata Steel UK, British Steel,
+              7 Steel, Speciality Steel UK, Marcegaglia and Sheffield Forgemasters. Their operations range
+              from mass-market flat and long products to stainless and highly specialised defence/nuclear
+              grades. The sector is simultaneously moving away from blast-furnace/basic-oxygen-furnace
+              production toward scrap-based electric-arc furnaces. In 2024, before the full impact of Port
+              Talbot&rsquo;s shutdown, the UK produced about 4.0&nbsp;Mt of crude steel: 2.9&nbsp;Mt by
+              basic-oxygen-furnace routes and 1.1&nbsp;Mt by electric arc furnaces.
+            </p>
+            <p>
+              Imports fill the large gap between UK production capability and UK consumption. In the
+              comparable UK Steel finished-steel series, imports were roughly 4.5&nbsp;Mt in 2020&ndash;21,
+              5.3&nbsp;Mt in 2022, just over 5&nbsp;Mt in 2023 and about 5.7&nbsp;Mt in 2024. In 2024,
+              roughly 64% of finished steel imports came from the EU, with the Netherlands, Spain, Germany,
+              Belgium and France among the largest European origins; Turkey, India, South Korea and Vietnam
+              were also major suppliers. Broader customs-based definitions put total UK steel imports
+              significantly higher: 2025 estimates are around 7.15&ndash;7.4&nbsp;Mt, illustrating why
+              steel statistics must always be compared on the same product definition.
+            </p>
+            <p>
+              The most important change for an importer is that the old UK steel safeguard ended on
+              <strong>30&nbsp;June&nbsp;2026</strong>. That safeguard used tariff-rate quotas and imposed
+              an additional 25% safeguard duty when quotas were exceeded. WTO safeguard rules did not
+              allow the UK simply to keep extending that temporary measure indefinitely.
+            </p>
+            <p>
+              From <strong>1&nbsp;July&nbsp;2026</strong>, it was replaced by a fundamentally different UK
+              steel trade measure. The current regime covers 20 categories of steel that the government
+              considers capable of being made in the UK. Imports can enter within specified tariff-free
+              quota volumes; once the relevant quota is exhausted, covered imports face a
+              <strong>50% tariff</strong>. The final measure reduced overall quota volume by 51% relative
+              to the former safeguard. The earlier March 2026 announcement referred to a 60% reduction
+              against the then-current arrangements, which explains why both percentages appear in
+              contemporary reporting; the July implementation document&rsquo;s 51% figure is the relevant
+              finalised comparison.
+            </p>
+            <p>
+              This is an important legal distinction: the new arrangement is not simply the old WTO
+              safeguard with a higher rate. It was implemented through the UK&rsquo;s customs-tariff
+              powers under the Taxation (Cross-border Trade) Act 2018, as amended, including the Customs
+              (Tariff and Miscellaneous Amendments) (No.&nbsp;4) Regulations 2026 and associated quota
+              regulations. The former trade-remedy safeguard ceased to exist on 30&nbsp;June.
+            </p>
+            <p>
+              The quota mechanism is mostly first-come, first-served, administered by HMRC through the
+              Customs Declaration Service. Quotas are either country-specific or residual quotas for other
+              origins. An importer must identify the correct commodity code and quota order number and
+              enter the order number in CDS Data Element 8/1 when claiming the quota. The relevant date is
+              effectively when an acceptable declaration/request is received by Customs. If quota remains,
+              the shipment can receive the in-quota treatment; if the quota is exhausted, the 50% rate
+              applies.
+            </p>
+            <p>
+              There is therefore a major commercial difference between buying steel and successfully
+              securing tariff-free quota. Signing a supply contract, loading a ship or even having goods
+              arrive in Britain does not itself reserve quota. For FCFS quotas, the customs claim is
+              critical. Importers with long ocean lead times can consequently be exposed to material
+              tariff risk between ordering and customs clearance.
+            </p>
+            <p>
+              For perspective, if a covered shipment has a customs value of &pound;800 per tonne,
+              exhaustion of the relevant quota makes the steel measure equivalent to approximately
+              <strong>&pound;400 per tonne</strong> of tariff, before taking account of import VAT and any
+              applicable anti-dumping, countervailing, sanctions or other measures. This is why quota
+              availability can have a greater financial effect than the freight rate itself.
+            </p>
+            <p>
+              The import process is broadly the same regardless of transport: establish the importer and
+              EORI; classify the product; establish true origin; check sanctions, anti-dumping and the
+              2026 steel measure; select and contract with the supplier; agree the Incoterm; arrange
+              freight; obtain invoice, transport and origin documents; pre-lodge the CDS declaration; make
+              the quota claim where relevant; satisfy safety/security and port requirements; pay or
+              account for duty and VAT; and obtain customs release. CHIEF is no longer the operational
+              import-declaration system; imports are made through CDS. A &ldquo;C88&rdquo; may still be
+              encountered commercially as shorthand for the customs-entry/SAD-style record, but an
+              importer should build its process around CDS data elements rather than the old CHIEF
+              workflow.
+            </p>
+          </section>
+
+          <section id="production">
+            <h2>Domestic steel production and industrial geography</h2>
+            <p>The UK industry combines two fundamentally different manufacturing routes.</p>
+            <p>
+              The traditional <strong>integrated blast furnace / basic oxygen furnace</strong> route
+              starts with iron ore, coke/coking coal and fluxes. Iron is produced in the blast furnace and
+              converted into steel in a basic oxygen furnace before continuous casting into slabs, blooms
+              or billets and subsequent rolling. British Steel&rsquo;s Scunthorpe operation is now
+              particularly strategically significant because Port Talbot ceased its former blast-furnace
+              production.
+            </p>
+            <p>
+              The alternative <strong>electric arc furnace</strong> route melts recycled steel scrap,
+              sometimes supplemented by higher-purity metallic inputs such as pig iron or direct-reduced
+              iron where chemistry demands it. UK Steel notes that EAF technology is capable of producing
+              a wide range of products and grades when the metallic input mix is properly managed. The
+              UK&rsquo;s policy direction is strongly toward EAF production because it can use the
+              UK&rsquo;s large scrap resource and can have substantially lower emissions when powered by
+              low-carbon electricity.
+            </p>
+            <p>
+              The government&rsquo;s 2026 Steel Strategy gives the following picture of the principal
+              steelmaking base. Capacity figures should be understood as named/announced melt capacity
+              rather than guaranteed current annual output; Tata&rsquo;s 3.2&nbsp;Mt figure, in
+              particular, is its future EAF configuration rather than currently operating liquid-steel
+              capacity.
+            </p>
+
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Producer</th>
+                    <th>Principal location</th>
+                    <th>Route / capacity</th>
+                    <th>Downstream footprint</th>
+                    <th>Strategic role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Tata Steel UK</td>
+                    <td>Port Talbot, South Wales</td>
+                    <td>Future 3.2&nbsp;Mt EAF</td>
+                    <td>Port Talbot, Llanwern, Trostre, Shotton, Hartlepool, Corby; hot-rolled coil, coated/galvanised products and tubes</td>
+                    <td>Britain&rsquo;s principal flat-steel producer; currently transitioning from integrated production to EAF</td>
+                  </tr>
+                  <tr>
+                    <td>British Steel</td>
+                    <td>Scunthorpe</td>
+                    <td>Approx. 2.5&nbsp;Mt BF/BOF</td>
+                    <td>Scunthorpe, Teesside and Skinningrove; rail, structural sections and other long products</td>
+                    <td>Critical primary steelmaking capability; in public ownership since July 2026</td>
+                  </tr>
+                  <tr>
+                    <td>7 Steel</td>
+                    <td>Cardiff / Tremorfa</td>
+                    <td>Approx. 1.2&nbsp;Mt EAF</td>
+                    <td>Rebar and long products</td>
+                    <td>Major supplier into construction</td>
+                  </tr>
+                  <tr>
+                    <td>Speciality Steel UK</td>
+                    <td>Rotherham</td>
+                    <td>Approx. 1.2&nbsp;Mt EAF</td>
+                    <td>Rotherham, Stocksbridge, Brinsworth and other sites; bars, strip, coil and specialty steels</td>
+                    <td>Higher-value engineering, energy and specialist markets</td>
+                  </tr>
+                  <tr>
+                    <td>Marcegaglia</td>
+                    <td>Sheffield</td>
+                    <td>Approx. 0.1&nbsp;Mt EAF</td>
+                    <td>Sheffield plus Midlands processing; stainless/semi-finished and bar products</td>
+                    <td>Stainless and specialist production</td>
+                  </tr>
+                  <tr>
+                    <td>Sheffield Forgemasters</td>
+                    <td>Sheffield</td>
+                    <td>Approx. 0.2&nbsp;Mt EAF</td>
+                    <td>Very large specialist forgings and castings</td>
+                    <td>Nuclear, defence and strategic engineering</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p>
+              This geography gives the UK several distinct industrial clusters. South Wales combines
+              Tata&rsquo;s flat-steel chain with 7&nbsp;Steel&rsquo;s Cardiff EAF. South
+              Yorkshire/Sheffield/Rotherham is centred on specialty EAF metallurgy, forgings and
+              engineering steels. Scunthorpe remains the major primary long-products hub, connected to
+              downstream operations in the North East. Teesside, Skinningrove and Hartlepool retain
+              important rolling and tube operations, while the Midlands and North Wales contain
+              downstream finishing and processing plants.
+            </p>
+            <p>
+              The Port Talbot transition is one reason imports currently play a particularly important
+              role. Tata shut its former ironmaking operation in 2024 while constructing its replacement
+              EAF, meaning semi-finished material and coil have had to be sourced externally to maintain
+              parts of the company&rsquo;s UK downstream processing network during the transition.
+            </p>
+            <p>
+              The industry&rsquo;s production decline is stark. UK crude output was about 5.6&nbsp;Mt in
+              2023, approximately 4.0&nbsp;Mt in 2024 and about 2.6&nbsp;Mt in 2025. The 2024 process
+              split was approximately 2.9&nbsp;Mt BF/BOF and 1.1&nbsp;Mt EAF.
+            </p>
+            <p>
+              The demand side explains why the industry cannot be understood merely by looking at
+              domestic mills. In 2024, UK Steel estimated steel demand was concentrated approximately 53%
+              in construction, 17% in mechanical engineering, 14% in automotive, 2% in oil and gas and
+              14% in other manufacturing. Moreover, only about 39% of UK mills&rsquo; home deliveries
+              went directly to consumers in 2024; around 61% went through stockholders, demonstrating the
+              importance of steel service centres, distributors and stockists.
+            </p>
+            <p>
+              Britain imports finished steel, semi-finished slab/billet, specialist grades and upstream
+              raw materials, while UK mills export significant volumes of finished products &mdash;
+              particularly to continental Europe.
+            </p>
+          </section>
+
+          <section id="trade-flows">
+            <h2>Supply chains, distribution and five-year trade flows</h2>
+            <p>
+              A central feature of UK steel is that domestic production, imports and distribution are
+              intertwined rather than separate markets. A UK mill may import slab, roll or coat it
+              domestically and sell the finished coil through a service centre; a trader may import
+              finished rebar from Turkey and sell it directly to a fabricator; a stockholder may
+              simultaneously carry British, EU and Asian steel. Statistics consequently change depending
+              on whether one measures crude steel, semi-finished steel, finished steel, all steel mill
+              products, HS Chapter 72, or fabricated articles under Chapter 73. HMRC&rsquo;s Overseas
+              Trade Statistics/API provide the most detailed customs-level source, while UK Steel&rsquo;s
+              series provide an industry-consistent view of finished steel.
+            </p>
+
+            <h3>Five-year comparable finished-steel picture</h3>
+            <p>
+              UK Steel&rsquo;s published chart provides a clean comparable series through 2024. The values
+              below are rounded from its charts; volume is finished steel, whereas the &pound; value chart
+              covers steel mill products, so the two series should not be divided to derive implied
+              prices.
+            </p>
+
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th class="num">Finished imports (Mt)</th>
+                    <th class="num">Finished exports (Mt)</th>
+                    <th class="num">EU share of imports</th>
+                    <th class="num">EU share of exports</th>
+                    <th class="num">Mill-product import value</th>
+                    <th class="num">Export value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>2020</td><td class="num">4.5</td><td class="num">3.6</td><td class="num">69%</td><td class="num">75%</td><td class="num">&pound;3.5&thinsp;bn</td><td class="num">&pound;2.9&thinsp;bn</td></tr>
+                  <tr><td>2021</td><td class="num">4.5</td><td class="num">3.0</td><td class="num">58%</td><td class="num">75%</td><td class="num">&pound;5.3&thinsp;bn</td><td class="num">&pound;3.3&thinsp;bn</td></tr>
+                  <tr><td>2022</td><td class="num">5.3</td><td class="num">2.9</td><td class="num">62%</td><td class="num">73%</td><td class="num">&pound;6.4&thinsp;bn</td><td class="num">&pound;4.3&thinsp;bn</td></tr>
+                  <tr><td>2023</td><td class="num">~5.1&ndash;5.2</td><td class="num">2.6</td><td class="num">67%</td><td class="num">77%</td><td class="num">&pound;5.7&thinsp;bn</td><td class="num">&pound;3.8&thinsp;bn</td></tr>
+                  <tr><td>2024</td><td class="num">~5.7</td><td class="num">~2.4</td><td class="num">64%</td><td class="num">78%</td><td class="num">&pound;5.8&thinsp;bn</td><td class="num">&pound;3.3&thinsp;bn</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Source: UK Steel Key Statistics 2025 charts; figures are chart-rounded rather than
+              customs-line precision.
+            </p>
+            <p>
+              The direction is clear: import dependence increased as domestic steel availability
+              contracted. UK Steel separately estimates that the import share of the UK market rose from
+              roughly 55% in 2022 to 60% in 2023 and around 70% in 2024 under its market-share
+              methodology. Differences from the table above arise because &ldquo;import share of
+              demand&rdquo; is not the same calculation as EU versus rest-of-world share of total imports.
+            </p>
+            <p>
+              For 2025, newer sources use a broader definition than UK Steel&rsquo;s older finished-steel
+              chart. U.S. International Trade Administration data put UK steel imports at approximately
+              7.4&nbsp;Mt, up 12% from 6.6&nbsp;Mt in 2024, while an industry analysis citing UK
+              customs/Global Trade Tracker reported 7.15&nbsp;Mt versus 6.45&nbsp;Mt. These are close
+              enough to confirm a large increase but different enough that they should not be silently
+              spliced into the finished-steel series above. UN-Comtrade-derived data put the 2025 value of
+              HS Chapter 72 &ldquo;iron and steel&rdquo; at about US$7.02&nbsp;billion; OEC reports the
+              same broad trade category at approximately &pound;5.32&nbsp;billion in its sterling
+              presentation.
+            </p>
+
+            <h3>Major sources</h3>
+            <p>
+              In 2024, the top origins of finished steel were approximately the Netherlands (~640&nbsp;kt),
+              Spain (~580&nbsp;kt), Germany (~510&nbsp;kt), Belgium (~450&nbsp;kt), Turkey (~450&nbsp;kt),
+              India (~390&nbsp;kt), France (~370&nbsp;kt), South Korea (~310&nbsp;kt), Portugal
+              (~250&nbsp;kt) and Vietnam (~210&nbsp;kt). The precise heights should be treated as
+              approximate because the published source is a graphical series rather than a downloadable
+              table.
+            </p>
+            <p>
+              By 2025, U.S. government steel trade data identified India, the Netherlands and South Korea
+              as the UK&rsquo;s top three sources under its steel-product definition, demonstrating the
+              increasing role of non-EU supply alongside the still-dominant European trade relationship.
+              UK Steel has also highlighted rapid import growth from India, Vietnam, China, South Korea,
+              Turkey and Algeria.
+            </p>
+            <p>
+              The EU relationship remains economically dominant on the export side as well: 78% of UK
+              finished-steel exports went to the EU in 2024, around 1.9&nbsp;Mt, while 64% of finished
+              imports came from EU states. Britain is therefore not simply &ldquo;protecting itself from
+              foreign steel&rdquo;; the sector is embedded in a highly integrated European two-way market.
+            </p>
+
+            <h3>Flat, long, stainless and coated &mdash; a methodological warning</h3>
+            <p>
+              These categories are not mutually exclusive customs concepts. &ldquo;Flat&rdquo; and
+              &ldquo;long&rdquo; describe product shape; &ldquo;stainless&rdquo; describes chemistry;
+              &ldquo;coated&rdquo; describes surface treatment. A stainless sheet is both stainless and
+              flat; a galvanised coil is both coated and flat. Summing four independently extracted
+              categories would therefore double-count trade. HMRC&rsquo;s trade API permits data to be
+              extracted by detailed commodity code, country, month, value and net mass, making an
+              explicit HS mapping essential.
+            </p>
+            <p>For an auditable custom analysis, a practical mapping is:</p>
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Analytical bucket</th>
+                    <th>Principal HS headings</th>
+                    <th>Important caveat</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Flat, uncoated non-stainless</td>
+                    <td>7208, 7209, 7211 plus relevant non-stainless alloy products within 7225/7226</td>
+                    <td>Exclude coated and stainless headings to make the bucket mutually exclusive</td>
+                  </tr>
+                  <tr>
+                    <td>Long, non-stainless</td>
+                    <td>7213&ndash;7217 and relevant 7227&ndash;7229</td>
+                    <td>Includes wire rod, bars, sections and wire; tariff-measure categories subdivide these further</td>
+                  </tr>
+                  <tr>
+                    <td>Stainless</td>
+                    <td>7218&ndash;7223</td>
+                    <td>Contains both flat and long stainless products; classify stainless first if constructing exclusive buckets</td>
+                  </tr>
+                  <tr>
+                    <td>Coated</td>
+                    <td>Mainly 7210 and coated products within 7212, plus relevant alloy-coated headings</td>
+                    <td>Includes galvanised, metallic-coated, organic-coated and related sheet; tin mill products have their own tariff category</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              This mapping is an analytical aggregation, not a legal substitute for the UK Trade Tariff.
+              Individual consignments must be classified at the full UK import commodity-code level
+              before duties or quotas are determined. HMRC specifically directs importers to use
+              commodity classification and the UK Trade Tariff when completing CDS declarations.
+            </p>
+            <p>
+              One category for which recent independent tonnage is available illustrates the issue
+              particularly clearly: UK imports of stainless bars and light sections were reported at
+              48,992&nbsp;tonnes in 2024 and 44,011&nbsp;tonnes in 2025, of which EU-origin material
+              accounted for 33,181&nbsp;tonnes in 2025. That volume should be compared with the much
+              smaller tariff-free allocations for the new stainless-bars quota category discussed below.
+            </p>
+          </section>
+
+          <section id="regime">
+            <h2>The post-July 2026 tariff regime</h2>
+            <p>The date to remember is <strong>1&nbsp;July&nbsp;2026</strong>.</p>
+            <p>
+              Before that date, the UK operated a trade-remedy steel safeguard inherited from the earlier
+              EU approach. Safeguards had originally been introduced in Europe in 2018 amid concerns that
+              U.S. Section&nbsp;232 measures would divert global steel into Europe. The UK&rsquo;s final
+              safeguard year ran to 30&nbsp;June&nbsp;2026 and imposed a 25% additional safeguard duty on
+              out-of-quota imports. Government stated that the safeguard had to expire in June&nbsp;2026
+              in accordance with the time limits applying to safeguard measures.
+            </p>
+            <p>
+              The government therefore constructed a replacement under its general customs-tariff powers
+              rather than attempting another safeguard extension. The relevant legislation includes the
+              Taxation (Cross-border Trade) Act 2018, as amended, the Customs (Tariff and Miscellaneous
+              Amendments) (No.&nbsp;4) Regulations 2026 (SI 2026/572) and the associated quota amendments,
+              including the No.&nbsp;5 Regulations 2026 (SI 2026/703).
+            </p>
+
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Question</th><th>Current position from 1 July 2026</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>What products are covered?</td><td>20 steel categories the government considers capable of UK production</td></tr>
+                  <tr><td>What happens inside quota?</td><td>The steel-measure tariff is avoided / tariff-free quota treatment is available subject to the applicable customs conditions</td></tr>
+                  <tr><td>What happens outside quota?</td><td>50% tariff on covered steel</td></tr>
+                  <tr><td>How much were quotas reduced?</td><td>Final implementation: 51% overall reduction versus the former safeguard</td></tr>
+                  <tr><td>Is the old 25% safeguard still charged?</td><td>No. It ceased on 30&nbsp;June&nbsp;2026</td></tr>
+                  <tr><td>Are FTAs automatically exempt?</td><td>No. The measure was designed to apply broadly, including FTA partners</td></tr>
+                  <tr><td>Ukraine?</td><td>Ukraine is excluded from the new measure, subject to the relevant preferential-origin conditions</td></tr>
+                  <tr><td>Quota period?</td><td>Four quarters: Jul&ndash;Sep, Oct&ndash;Dec, Jan&ndash;Mar, Apr&ndash;Jun</td></tr>
+                  <tr><td>Allocation method?</td><td>Primarily HMRC first-come, first-served</td></tr>
+                  <tr><td>Does unused quota carry over?</td><td>It can roll into the next quarter, but not beyond the quota year</td></tr>
+                  <tr><td>Tariff trigger?</td><td>Exhaustion of the applicable quota &mdash; not a market-price or import-surge trigger</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p>
+              The measure covers categories including hot-rolled sheet and strip, metallic-coated and
+              organic-coated sheet, tin mill products, quarto plate, merchant bar, rebar, stainless bar,
+              stainless wire rod, other wire rod, angles/shapes/sections, railway products, gas pipes,
+              hollow sections, welded tubes, cold-finished bars and non-alloy wire.
+            </p>
+
+            <h3>Base annual tariff-free quota by category (2026/27)</h3>
+            <p>
+              The following table aggregates the government&rsquo;s country-specific and residual
+              allocations. These are the arithmetic sums of the official allocations; the total excludes
+              the separate restricted Category&nbsp;1 authorised-use quota.
+            </p>
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Product</th>
+                    <th class="num">Approx. base annual quota</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>1</td><td>Hot-rolled sheets and strips</td><td class="num">467,004 t</td></tr>
+                  <tr><td>4</td><td>Metallic-coated sheets</td><td class="num">1,011,305 t</td></tr>
+                  <tr><td>5</td><td>Organic-coated sheets</td><td class="num">75,523 t</td></tr>
+                  <tr><td>6</td><td>Tin mill products</td><td class="num">69,795 t</td></tr>
+                  <tr><td>7</td><td>Quarto plate</td><td class="num">249,844 t</td></tr>
+                  <tr><td>12A</td><td>Alloy merchant bars / light sections</td><td class="num">105,900 t</td></tr>
+                  <tr><td>12B</td><td>Non-alloy merchant bars / light sections</td><td class="num">70,812 t</td></tr>
+                  <tr><td>13</td><td>Rebar</td><td class="num">267,980 t</td></tr>
+                  <tr><td>14</td><td>Stainless bars / light sections</td><td class="num">20,685 t</td></tr>
+                  <tr><td>15</td><td>Stainless wire rod</td><td class="num">1,327 t</td></tr>
+                  <tr><td>16</td><td>Non-alloy / alloy wire rod</td><td class="num">178,975 t</td></tr>
+                  <tr><td>17</td><td>Angles, shapes and sections</td><td class="num">270,762 t</td></tr>
+                  <tr><td>19</td><td>Railway material</td><td class="num">7,482 t</td></tr>
+                  <tr><td>20</td><td>Gas pipes</td><td class="num">61,598 t</td></tr>
+                  <tr><td>21</td><td>Hollow sections</td><td class="num">146,133 t</td></tr>
+                  <tr><td>25A</td><td>Large welded tubes</td><td class="num">10,172 t</td></tr>
+                  <tr><td>25B</td><td>Large welded tubes</td><td class="num">37,291 t</td></tr>
+                  <tr><td>26</td><td>Other welded tubes</td><td class="num">76,555 t</td></tr>
+                  <tr><td>27</td><td>Cold-finished bars</td><td class="num">29,530 t</td></tr>
+                  <tr><td>28</td><td>Non-alloy wire</td><td class="num">59,734 t</td></tr>
+                  <tr><td colspan="2"><strong>Total base quotas</strong></td><td class="num"><strong>~3.218 Mt</strong></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Grouped by broad product family</h3>
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Broad product family</th>
+                    <th>Relevant measure categories</th>
+                    <th class="num">Approx. base annual quota</th>
+                    <th class="num">Out-of-quota rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Flat, uncoated</td><td>Hot-rolled Cat 1 + quarto plate Cat 7</td><td class="num">~716,848 t</td><td class="num">50%</td></tr>
+                  <tr><td>Coated / packaging flat</td><td>Categories 4, 5 and 6</td><td class="num">~1,156,623 t</td><td class="num">50%</td></tr>
+                  <tr><td>Long carbon/alloy</td><td>12A, 12B, 13, 16, 17, 19, 27, 28</td><td class="num">~991,175 t</td><td class="num">50%</td></tr>
+                  <tr><td>Stainless long products</td><td>14 and 15</td><td class="num">~22,012 t</td><td class="num">50%</td></tr>
+                  <tr><td>Pipes / tubes / hollows</td><td>20, 21, 25A, 25B, 26</td><td class="num">~331,749 t</td><td class="num">50%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Stainless flat sheet is not represented simply by Categories&nbsp;14&ndash;15; these figures
+              therefore must not be interpreted as the entire UK stainless market.
+            </p>
+            <p>
+              Category&nbsp;1 has a significant additional mechanism because the UK&rsquo;s temporary
+              flat-steel production gap creates problems for processors that need imported coil. Government
+              therefore created an <strong>authorised-use quota</strong> for Category&nbsp;1 for steel
+              that will be processed into specified downstream products. It is a global FCFS quota with a
+              40% maximum country share. The published quarterly volumes are 595,950&nbsp;t,
+              595,950&nbsp;t, 582,993&nbsp;t and 589,468&nbsp;t respectively &mdash; approximately
+              2.364&nbsp;Mt over the quota year &mdash; but this material is restricted to the
+              authorised-use procedure and is not simply another general-market Category&nbsp;1 allowance.
+            </p>
+            <p>
+              There is also a <strong>transitional exemption</strong>. Relevant goods contracted before
+              14&nbsp;March&nbsp;2026 can be fully exempt from the new 50% out-of-quota duty when
+              imported between 1&nbsp;July and 30&nbsp;September&nbsp;2026, provided the importer can
+              prove that the contract falls within the arrangement. This is temporary and therefore
+              particularly important for shipments arriving before 30&nbsp;September&nbsp;2026.
+            </p>
+
+            <h3>Tariff chronology</h3>
+            <dl class="primer-timeline">
+              <div><dt>2018</dt><dd>EU introduces steel safeguard amid trade-diversion concerns</dd></div>
+              <div><dt>2021</dt><dd>UK operates independent post-Brexit safeguard framework</dd></div>
+              <div><dt>2024</dt><dd>Safeguard extended toward maximum June-2026 endpoint</dd></div>
+              <div><dt>2025</dt><dd>Government consults on post-2026 steel trade measures</dd></div>
+              <div><dt>March 2026</dt><dd>New UK Steel Strategy and tighter quota/tariff policy announced</dd></div>
+              <div><dt>30 June 2026</dt><dd>Old 25% out-of-quota safeguard ends</dd></div>
+              <div><dt>1 July 2026</dt><dd>New 20-category quota regime begins; out-of-quota tariff becomes 50%</dd></div>
+              <div><dt>Jul&ndash;Sep 2026</dt><dd>Transitional exemption for qualifying pre-14-March contracts</dd></div>
+              <div><dt>2026&ndash;27</dt><dd>Quarterly FCFS quota administration</dd></div>
+            </dl>
+
+            <h3>Worked example</h3>
+            <p>The most important cost point is that a &ldquo;50% tariff&rdquo; can dominate the landed-cost calculation.</p>
+            <div class="primer-equation">1,000 tonnes &times; &pound;800 customs value per tonne = &pound;800,000 customs value.
+Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
+   before considering import VAT or any separate trade-remedy liability.</div>
+            <p>
+              That calculation is illustrative; the legally relevant customs value must be determined
+              under HMRC valuation rules, which generally start with transaction value and can require
+              freight, insurance and other costs to the UK border to be included.
+            </p>
+            <p>
+              The 50% steel measure also does not remove the need to check <strong>anti-dumping and
+              anti-subsidy</strong> measures. Those are distinct instruments. An importer must check the
+              exact commodity code, origin and current UK Trade Tariff because a product can be affected
+              by more than one customs/trade-policy rule.
+            </p>
+            <p>
+              Another major steel-specific check concerns <strong>sanctions</strong>. The UK prohibits
+              imports of specified Russian-origin iron and steel and also prohibits specified iron/steel
+              products processed in third countries where they incorporate Russian-origin iron or steel.
+              These third-country processing restrictions have applied since September&nbsp;2023 and
+              remain relevant in 2026. Importers therefore need to know the mill/material origin, not
+              merely the country from which a trader ships the finished product.
+            </p>
+          </section>
+
+          <section id="quotas">
+            <h2>How steel quotas work</h2>
+            <p>
+              A tariff-rate quota does not normally mean that importing is forbidden after the quota is
+              full. It means a certain volume receives the favourable tariff treatment; imports above it
+              remain possible but face the specified out-of-quota duty. Under the new steel measure, that
+              economic penalty is 50%, making quota availability central to commercial planning.
+            </p>
+
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Quota model</th>
+                    <th>Used now?</th>
+                    <th>How it operates</th>
+                    <th>Main importer risk</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Country-specific FCFS</td><td>Yes</td><td>A specified origin receives its own volume; qualifying claims are allocated chronologically by Customs</td><td>Country&rsquo;s quota can fill before the quarter ends</td></tr>
+                  <tr><td>Residual FCFS</td><td>Yes</td><td>Origins without a dedicated allocation compete for a common residual volume</td><td>Many countries draw from the same pool</td></tr>
+                  <tr><td>Global authorised-use</td><td>Category 1 only</td><td>Additional quota for approved downstream processing; FCFS with a 40% country cap</td><td>Requires HMRC authorised-use procedure and compliance after import</td></tr>
+                  <tr><td>Licence-based</td><td>Not principal 2026 steel model</td><td>Rights allocated through licences rather than simply chronological customs claims</td><td>Licence eligibility / application rather than arrival timing</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Practical FCFS sequence</h3>
+            <ol>
+              <li><strong>Classify the steel.</strong> Determine the correct UK import commodity code from its composition, dimensions, manufacturing process and finish. A description such as &ldquo;steel coil&rdquo; is not sufficient.</li>
+              <li><strong>Determine origin.</strong> Country of origin can differ from the seller&rsquo;s country, warehouse country, invoice country or port of loading. Preferential rules of origin matter for normal tariff claims, while non-preferential origin and sanctions can also be important.</li>
+              <li><strong>Check whether the commodity code falls within one of the 20 steel categories.</strong> If it does not, the new steel measure does not apply, although ordinary duty and trade remedies may still apply.</li>
+              <li><strong>Identify the correct quota pool.</strong> An origin may have a dedicated country-specific quota; otherwise it may fall into the residual allocation.</li>
+              <li><strong>Check the current balance/status immediately before declaration.</strong> Published quota balances change as other importers make claims. HMRC&rsquo;s quota data are therefore more important than a spreadsheet created when the purchase order was placed.</li>
+              <li><strong>Place the six-digit order number in CDS DE 8/1.</strong> Without a correct quota claim, the customs system cannot simply assume that the importer intended to use the quota.</li>
+              <li><strong>Submit a complete, acceptable declaration and supporting evidence.</strong> FCFS priority follows Customs&rsquo; acceptance/registration of claims rather than the date of the purchase order or vessel departure.</li>
+              <li><strong>HMRC allocates against the balance.</strong> An open quota can be granted while quantity remains. For a quota treated as critical, security for the full potential duty can be required pending final allocation. An exhausted quota attracts the full applicable out-of-quota treatment.</li>
+              <li><strong>Reconcile the customs decision and accounting.</strong> The importer should retain the declaration, quota evidence, origin documents and underlying commercial records in case of audit.</li>
+            </ol>
+
+            <p>
+              A particular risk arises with <strong>simplified declarations</strong>. If the full quota
+              claim is not finalised until the supplementary declaration, a quota that looked available
+              when the goods arrived may have been consumed by the time the valid claim is processed.
+              HMRC explicitly warns importers to understand this risk.
+            </p>
+            <p>
+              A <strong>customs warehouse</strong> creates a similar timing issue. Goods can enter a
+              customs warehouse with duty and import VAT suspended, but the quota claim is generally
+              relevant when those goods are eventually released to free circulation. A warehouse can
+              therefore improve cash flow and allow goods to be re-exported without UK import duty, but
+              it does not necessarily &ldquo;lock in&rdquo; a steel quota balance when the shipment first
+              reaches Britain.
+            </p>
+            <p>
+              Unused steel quota can roll into the immediately following quarter, but not indefinitely
+              beyond the quota year. That creates an incentive to monitor quarter-end balances: the
+              available amount in October, for example, can differ from the nominal new-quarter
+              allocation if unused July&ndash;September volume carried forward.
+            </p>
+
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Quarter</th><th>Period</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Q1</td><td>1&nbsp;July &ndash; 30&nbsp;September</td></tr>
+                  <tr><td>Q2</td><td>1&nbsp;October &ndash; 31&nbsp;December</td></tr>
+                  <tr><td>Q3</td><td>1&nbsp;January &ndash; 31&nbsp;March</td></tr>
+                  <tr><td>Q4</td><td>1&nbsp;April &ndash; 30&nbsp;June</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Enforcement, penalties and appeals</h3>
+            <p>
+              There is not a special &ldquo;quota fine&rdquo; merely because a quota is exhausted &mdash;
+              the commercial consequence is that the favourable quota treatment is unavailable and the
+              higher duty is due. But false classification, false origin, invalid documentation or other
+              customs contraventions can generate customs debt, interest and civil or criminal
+              enforcement depending on the conduct involved. HMRC&rsquo;s current customs civil-penalty
+              guidance provides for penalties of up to &pound;2,500 for significant contraventions, with
+              lower standard penalty levels used in many cases; deliberate fraud or evasion can be
+              treated more seriously.
+            </p>
+            <p>
+              An importer that disagrees with an HMRC customs-duty decision can normally seek an
+              independent HMRC review or appeal to the tax tribunal, typically within 30 days of the
+              relevant decision/review offer. That is different from asking HMRC for a commercial
+              exception because a quota has filled: the review route concerns whether customs law has
+              been applied correctly. The tariff measure itself is legislation/policy, not a
+              discretionary importer-by-importer waiver program.
+            </p>
+          </section>
+
+          <section id="routes">
+            <h2>Import routes and procurement channels</h2>
+            <p>
+              &ldquo;Means of importing&rdquo; actually combine three different concepts. Transport modes
+              are sea, RoRo/road, air and rail. Customs/storage procedures include bonded or customs
+              warehousing. Commercial sourcing channels include direct mill purchase, traders/agents and
+              online marketplaces. They can therefore be combined. For example, a buyer can purchase
+              Korean coil directly from a mill, transport by sea and place it in a UK customs warehouse.
+              HMRC&rsquo;s customs requirements follow the actual movement and importer, not the
+              marketing channel through which the sale was arranged.
+            </p>
+
+            <h3>Comparison of import methods</h3>
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Best suited to</th>
+                    <th>Typical transit</th>
+                    <th>Cost characteristics</th>
+                    <th>Key documents</th>
+                    <th>Main steel risk</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Deep-sea / short-sea freight</td>
+                    <td>Coils, plate, billets, bars, pipe; medium/large lots</td>
+                    <td>Europe often days; Asia commonly several weeks</td>
+                    <td>Usually lowest unit freight for heavy bulk; breakbulk/container rates highly volatile</td>
+                    <td>Commercial invoice, packing list, bill of lading, origin evidence, CDS declaration, ENS where applicable</td>
+                    <td>Quota may change during long voyage</td>
+                  </tr>
+                  <tr>
+                    <td>RoRo / road</td>
+                    <td>EU-origin coils, plate, bars, fabricated steel, just-in-time loads</td>
+                    <td>Commonly 1&ndash;3 days from nearby continental markets before disruption/clearance</td>
+                    <td>Higher &pound;/t than large sea lots; 2025/26 European FTL benchmarks roughly &euro;1.10&ndash;&euro;1.90/km</td>
+                    <td>Invoice, packing list, CMR, CDS MRN, GMR/GVMS at relevant ports, origin proof</td>
+                    <td>Very short lead time means rapid quota checking is essential</td>
+                  </tr>
+                  <tr>
+                    <td>Air freight</td>
+                    <td>Samples, emergency specialty steel, very high-value / light consignments</td>
+                    <td>Often 1&ndash;5 days</td>
+                    <td>Extremely expensive for dense steel; general 2026 commercial air benchmarks roughly US$2.50&ndash;8/kg</td>
+                    <td>Invoice, packing list, air waybill, CDS entry, origin documents</td>
+                    <td>Usually economically irrational for bulk steel</td>
+                  </tr>
+                  <tr>
+                    <td>Rail</td>
+                    <td>Selected Eurasian/intermodal movements and European rail flows</td>
+                    <td>China&ndash;UK commercial services can be around 23&ndash;27 days; European routes much shorter</td>
+                    <td>Middle ground between sea and air but highly route-dependent</td>
+                    <td>Rail consignment note, transit documents, invoice, packing list, CDS declaration</td>
+                    <td>Transits multiple customs / geopolitical jurisdictions</td>
+                  </tr>
+                  <tr>
+                    <td>Inland waterway / barge</td>
+                    <td>Heavy lots moved domestically from port to river / estuary-connected site</td>
+                    <td>Usually a domestic post-port leg rather than international UK entry mode</td>
+                    <td>Potentially efficient for very heavy bulk where infrastructure exists</td>
+                    <td>Port/customs documents plus domestic barge transport records</td>
+                    <td>Limited UK network / access; does not replace border customs procedure</td>
+                  </tr>
+                  <tr>
+                    <td>Customs / bonded warehouse</td>
+                    <td>Inventory awaiting sale, processing, quota decision or re-export</td>
+                    <td>Storage can be days to months</td>
+                    <td>Storage/handling/admin cost; duty and VAT cash payment suspended</td>
+                    <td>Warehouse procedure declaration, inventory records, subsequent free-circulation declaration</td>
+                    <td>Quota may exhaust while goods wait in storage</td>
+                  </tr>
+                  <tr>
+                    <td>Direct mill purchase</td>
+                    <td>Large predictable volume and established specifications</td>
+                    <td>Chosen physical mode determines transit</td>
+                    <td>Potentially lowest purchase margin, but buyer handles more sourcing/logistics risk</td>
+                    <td>Mill contract + all transport/customs docs</td>
+                    <td>Minimum order sizes, quality/origin verification, quota exposure</td>
+                  </tr>
+                  <tr>
+                    <td>Trader / agent / stockholder</td>
+                    <td>Smaller lots, mixed grades, shorter lead times</td>
+                    <td>Depends whether goods already in UK or overseas</td>
+                    <td>Trader margin but less procurement complexity; UK-held stock avoids new import process for buyer</td>
+                    <td>Overseas import docs if buyer is importer; otherwise domestic invoice after trader clears goods</td>
+                    <td>Need to identify who is legally importer and who bears tariff risk</td>
+                  </tr>
+                  <tr>
+                    <td>Online B2B marketplace</td>
+                    <td>Supplier discovery, price comparison, smaller or spot purchases</td>
+                    <td>Chosen physical mode determines transit</td>
+                    <td>Platform/payment cost plus normal freight and customs</td>
+                    <td>Same customs documents as any other transaction</td>
+                    <td>Counterparty, mill-origin, quality and sanctions verification</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              The road-freight benchmark is a broad European FTL market estimate, not a quotation for
+              steel; general 2026 air rates are similarly illustrative. Rail operator Davies&nbsp;Turner
+              advertises China&ndash;UK rail transit in the approximate 23&ndash;27-day range. All steel
+              freight should ultimately be quoted for the precise route, tonnage, dimensions, handling
+              requirements and Incoterm. Freight costs in 2026 are particularly volatile.
+            </p>
+
+            <h3>Sea freight &mdash; step by step</h3>
+            <ol>
+              <li>Qualify the mill/supplier: legal entity, quality accreditation, product specification, mill location and sanctions exposure.</li>
+              <li>Obtain grade, dimensions, coating, chemistry and manufacturing details needed to determine the commodity code.</li>
+              <li>Establish non-preferential origin and whether preferential origin evidence is relevant.</li>
+              <li>Check current UK duty, steel-measure category, quota pool and any anti-dumping/sanctions measures.</li>
+              <li>Agree price and Incoterm, clearly allocating ocean freight, insurance, port handling and UK clearance responsibilities.</li>
+              <li>Book container, breakbulk/general-cargo or other suitable sea service.</li>
+              <li>Obtain commercial invoice, packing list, mill/quality documentation and bill of lading.</li>
+              <li>Ensure the carrier/forwarder handles the required safety and security filing.</li>
+              <li>Pre-lodge the CDS import declaration; where quota is being claimed, enter the correct quota order number.</li>
+              <li>Vessel arrives; port presents goods to Customs.</li>
+              <li>Customs performs any documentary/physical check and HMRC processes the quota request.</li>
+              <li>Pay or secure duty, use postponed import VAT accounting where eligible, and obtain release.</li>
+              <li>Arrange port collection and final inland delivery.</li>
+            </ol>
+
+            <h3>RoRo / road &mdash; step by step</h3>
+            <ol>
+              <li>Qualify supplier and origin exactly as for sea freight.</li>
+              <li>Classify the steel and check tariff, quota, sanctions and trade remedies.</li>
+              <li>Agree Incoterm and book a compliant heavy-goods vehicle/trailer.</li>
+              <li>Prepare invoice, packing list, origin evidence, mill certificate as necessary and CMR road consignment note.</li>
+              <li>Prepare/pre-lodge the CDS import declaration and obtain the relevant customs movement reference.</li>
+              <li>Where the route uses the Goods Vehicle Movement Service, link the required declarations into the Goods Movement Reference.</li>
+              <li>Carrier completes required Entry Summary Declaration / safety-security requirements.</li>
+              <li>Vehicle checks in for ferry / Eurotunnel movement.</li>
+              <li>On arrival, comply with any inspection/customs instruction.</li>
+              <li>Quota is allocated if valid and available; otherwise the applicable out-of-quota tariff applies.</li>
+              <li>Account for duty/VAT and release the vehicle for UK delivery.</li>
+            </ol>
+
+            <h3>Air freight &mdash; step by step</h3>
+            <ol>
+              <li>Confirm that the high transport cost is commercially justified; this mode usually makes sense for urgent specialty material or samples rather than commodity steel.</li>
+              <li>Verify supplier, specification, HS code and origin.</li>
+              <li>Check quota, sanctions and trade-remedy status.</li>
+              <li>Book airline/forwarder capacity.</li>
+              <li>Issue commercial invoice and packing list; carrier issues air waybill.</li>
+              <li>Provide declaration data to customs broker before arrival.</li>
+              <li>Submit CDS declaration with quota order number where applicable.</li>
+              <li>Aircraft arrives and cargo is presented to Customs.</li>
+              <li>Pay/account for duty and import VAT and respond to any inspection request.</li>
+              <li>Release to courier / road feeder for final delivery.</li>
+            </ol>
+
+            <h3>Rail &mdash; step by step</h3>
+            <ol>
+              <li>Verify the supplier, country of origin and route.</li>
+              <li>Determine whether the journey uses Common Transit Convention procedures and/or other transit regimes.</li>
+              <li>Classify goods and check UK tariffs, quotas, sanctions and trade remedies before departure.</li>
+              <li>Book rail/intermodal capacity and first-mile road collection.</li>
+              <li>Prepare invoice, packing list, origin evidence and rail consignment documentation.</li>
+              <li>Open any required transit movement and obtain its movement reference/document.</li>
+              <li>Cargo travels to the UK rail terminal/Channel crossing.</li>
+              <li>Complete UK CDS import formalities and close the relevant transit procedure.</li>
+              <li>Claim steel quota through CDS if applicable.</li>
+              <li>Pay/account for duties and VAT.</li>
+              <li>Release for final UK road/rail delivery.</li>
+            </ol>
+
+            <h3>Customs / bonded warehouse &mdash; step by step</h3>
+            <ol>
+              <li>Arrange overseas purchase and transport normally.</li>
+              <li>On UK arrival, place goods under the authorised customs warehousing procedure instead of immediately entering free circulation.</li>
+              <li>Submit the required warehouse customs declaration.</li>
+              <li>Move goods to the authorised warehouse and record them in the warehouse inventory system.</li>
+              <li>Customs Duty and import VAT remain suspended while the procedure is correctly maintained.</li>
+              <li>Goods can potentially be re-exported without ever entering UK free circulation.</li>
+              <li>When a UK sale/use is required, check the quota balance again at that time.</li>
+              <li>Submit the declaration releasing the steel to free circulation.</li>
+              <li>Claim the quota order number if quota is available and eligibility is satisfied.</li>
+              <li>Pay/account for the duty and import VAT due at release.</li>
+              <li>Remove goods from customs control and deliver to customer.</li>
+            </ol>
+
+            <h3>Direct mill purchase &mdash; step by step</h3>
+            <ol>
+              <li>Identify and audit the actual mill.</li>
+              <li>Agree exact grade, standard, dimensions, tolerances, coating and testing requirements.</li>
+              <li>Obtain origin / mill traceability before negotiating final landed price.</li>
+              <li>Classify the product and model normal duty, quota availability, potential 50% duty and VAT.</li>
+              <li>Agree Incoterm and payment terms.</li>
+              <li>Sign supply contract and production schedule.</li>
+              <li>Book selected freight mode.</li>
+              <li>Supplier issues invoice, packing list and quality/origin documentation.</li>
+              <li>Importer/broker submits CDS entry.</li>
+              <li>Claim quota if available.</li>
+              <li>Clear customs and deliver.</li>
+              <li>Reconcile received material to certificates / heat numbers and customs records.</li>
+            </ol>
+
+            <h3>Trader / agent purchase &mdash; step by step</h3>
+            <ol>
+              <li>Determine whether the trader is selling goods already customs-cleared in the UK or arranging an overseas shipment specifically for you.</li>
+              <li>If already cleared, the transaction is essentially a domestic purchase; the trader/importer has borne the import process.</li>
+              <li>If not cleared, identify contractually who is the importer of record and who carries tariff/quota risk.</li>
+              <li>Obtain mill identity, origin and specification even when buying through an intermediary.</li>
+              <li>Verify tariff treatment independently.</li>
+              <li>Agree price/commission and delivery terms.</li>
+              <li>Trader coordinates mill and freight booking.</li>
+              <li>Importer or appointed broker makes the CDS declaration.</li>
+              <li>Make quota claim where appropriate.</li>
+              <li>Customs clears goods and final delivery occurs.</li>
+            </ol>
+            <p>
+              A trader does not change the customs origin of steel simply by invoicing it from another
+              country. Rules of origin determine economic nationality and preferential entitlement; for
+              sanctions purposes, evidence regarding the underlying steelmaking origin can be
+              particularly important.
+            </p>
+
+            <h3>Online marketplace &mdash; step by step</h3>
+            <ol>
+              <li>Use the platform to discover potential mills/traders rather than treating the listing itself as proof of compliance.</li>
+              <li>Verify legal identity, mill, production location, technical specifications and quality certification.</li>
+              <li>Establish real country of origin.</li>
+              <li>Screen the supplier and underlying material against sanctions.</li>
+              <li>Obtain sufficient specifications to determine the UK commodity code.</li>
+              <li>Check duty, quota and trade-remedy exposure.</li>
+              <li>Agree who acts as importer and the applicable Incoterm.</li>
+              <li>Arrange secure commercial payment and chosen freight mode.</li>
+              <li>Obtain the same invoice, packing list, transport and origin documents required for an offline transaction.</li>
+              <li>Submit CDS declaration and quota claim.</li>
+              <li>Clear customs, account for VAT/duties and inspect received goods.</li>
+            </ol>
+            <p>
+              An online marketplace does not create a special customs exemption for a commercial steel
+              shipment; normal import classification, origin, quota, duty and VAT rules continue to
+              apply.
+            </p>
+          </section>
+
+          <section id="process">
+            <h2>End-to-end import process and documentation</h2>
+            <p>
+              For a new steel importer, the most useful way to understand the system is as a sequence of
+              commercial decisions followed by customs controls: select and audit the mill; define the
+              grade, dimensions, finish and standard; determine the commodity code; establish the actual
+              country of origin; check sanctions, anti-dumping and other remedies; determine whether the
+              product is covered by the 2026 steel measure; check the country-specific or residual
+              quota; model the potential 50% tariff; agree Incoterm, contract and payment; book the
+              chosen mode; collect invoice, packing list, transport and origin documents; pre-lodge the
+              CDS declaration; enter the six-digit order number in CDS DE&nbsp;8/1 if a quota claim
+              applies; goods arrive and are presented to Customs; the applicable in-quota or 50%
+              out-of-quota treatment is applied; import VAT is calculated or accounted for; customs
+              releases the goods for UK delivery.
+            </p>
+
+            <h3>Major documents and data</h3>
+            <div class="primer-table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Document / data</th><th>Why it matters</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>GB EORI</td><td>Required for normal imports into England, Scotland and Wales; Northern Ireland can require an XI EORI</td></tr>
+                  <tr><td>Commercial invoice</td><td>Establishes seller/buyer, price, currency, terms, description and valuation evidence</td></tr>
+                  <tr><td>Packing / weight list</td><td>Shows package/coil/plate quantities, gross/net weight and dimensions</td></tr>
+                  <tr><td>Purchase contract / order</td><td>Commercial evidence; particularly important for the temporary pre-14-March-2026 transitional exemption</td></tr>
+                  <tr><td>Bill of lading</td><td>Sea-freight title / transport document</td></tr>
+                  <tr><td>CMR consignment note</td><td>International road freight</td></tr>
+                  <tr><td>Air waybill</td><td>Air freight</td></tr>
+                  <tr><td>Rail consignment / transit document</td><td>Rail and intermodal movements</td></tr>
+                  <tr><td>Proof / statement of origin</td><td>Supports preferential tariff claims and establishes origin evidence</td></tr>
+                  <tr><td>Mill test / mill certificate and traceability</td><td>Technical quality evidence and potentially important sanctions / origin due diligence</td></tr>
+                  <tr><td>Commodity code</td><td>Determines tariffs, quota category, trade remedies and import controls</td></tr>
+                  <tr><td>Six-digit quota order number</td><td>Entered in CDS DE&nbsp;8/1 to make an FCFS tariff-quota claim</td></tr>
+                  <tr><td>CDS import declaration</td><td>Current legal / electronic customs declaration mechanism</td></tr>
+                  <tr><td>GMR / MRN where applicable</td><td>Connects RoRo movement to customs systems</td></tr>
+                  <tr><td>ENS</td><td>Safety and security entry data handled in the applicable transport process</td></tr>
+                  <tr><td>Customs warehouse / authorised-use approval</td><td>Required where those special procedures are being claimed</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>CHIEF, CDS and C88</h3>
+            <ul>
+              <li><strong>CHIEF</strong> was the old Customs Handling of Import and Export Freight system. HMRC states that traders can no longer continue using CHIEF for imports and must use CDS.</li>
+              <li><strong>CDS</strong> &mdash; the Customs Declaration Service &mdash; is the operative system for import declarations, using numbered data elements rather than the old CHIEF box structure.</li>
+              <li><strong>C88</strong> refers historically to the Single Administrative Document / customs-entry format. Brokers and businesses may still informally call a customs-entry printout a &ldquo;C88&rdquo;, but a modern import workflow should be designed around the data submitted through CDS, not around completing an old CHIEF form.</li>
+            </ul>
+
+            <p>
+              Origin is separate from shipment country. Rules of origin establish where goods
+              economically originate and determine whether preferential tariff treatment can be claimed.
+              Proof can take forms such as an origin declaration, importer knowledge or relevant movement
+              certificate depending on the trade agreement. For steel, origin has an additional strategic
+              importance because of the Russian iron-and-steel prohibitions. Buying steel from a trader
+              in Turkey, the UAE, India or the EU does not by itself demonstrate that the steel inputs
+              are non-Russian. The importer should maintain sufficiently strong mill and supply-chain
+              evidence to demonstrate compliance where the product falls within the sanctions scope.
+            </p>
+            <p>
+              Customs value generally begins with the transaction value but can require additions for
+              transport, insurance, loading and other specified costs up to the point of entry. HMRC
+              states, for example, that sea-freight costs to the place of introduction are included when
+              applying the relevant valuation rules, while identifiable post-import UK transport can in
+              appropriate circumstances be excluded.
+            </p>
+            <p>
+              Import VAT is separate from Customs Duty. VAT-registered UK businesses can generally use
+              <strong>postponed VAT accounting</strong>, declaring import VAT on the VAT return rather
+              than paying it as a cash charge at the border and then reclaiming it later, subject to the
+              normal rules. This can be extremely important where the customs value of steel
+              consignments runs into hundreds of thousands or millions of pounds.
+            </p>
+
+            <h3>Pre-shipment checklist</h3>
+            <ul>
+              <li>GB EORI active.</li>
+              <li>CDS access / broker authority arranged.</li>
+              <li>Exact 10-digit import commodity classification checked in the UK Trade Tariff.</li>
+              <li>Mill / manufacturing origin established.</li>
+              <li>Preferential origin documentation obtained where relevant.</li>
+              <li>Russian-steel and wider sanctions screening completed.</li>
+              <li>Anti-dumping / countervailing measures checked.</li>
+              <li>2026 steel category checked.</li>
+              <li>Correct country-specific / residual quota and order number identified.</li>
+              <li>Worst-case 50% out-of-quota landed cost modelled before purchase.</li>
+              <li>Incoterm and importer-of-record responsibility agreed in writing.</li>
+              <li>Commercial invoice, packing / weight list and appropriate transport document ready.</li>
+              <li>Mill / quality documentation retained.</li>
+              <li>CDS entry prepared before arrival wherever operationally possible.</li>
+              <li>Quota balance checked again immediately before claim.</li>
+              <li>Import VAT / PVA method confirmed.</li>
+              <li>Customs clearance / release confirmed before unrestricted delivery.</li>
+            </ul>
+            <p>Every one of these steps can materially alter the landed cost or legality of the shipment.</p>
+          </section>
+
+          <section id="implications">
+            <h2>Analytical implications for buyers, traders and UK manufacturers</h2>
+            <p>The new regime changes the economics of steel importing in several important ways.</p>
+            <p>
+              <strong>First, quota risk has become a procurement risk</strong>, not merely a
+              customs-department issue. Under a 25% safeguard, an out-of-quota shipment was already
+              expensive; at a 50% rate, a purchasing manager who buys without modelling quota exhaustion
+              can destroy the economic rationale for an entire shipment. The issue is most severe for
+              long-lead-time deep-sea orders because the importer may place the order months before the
+              quota claim can be registered.
+            </p>
+            <p>
+              <strong>Second, origin diversification does not necessarily eliminate risk.</strong> Some
+              origins have dedicated country quotas while others compete in residual pools. A buyer
+              therefore has to compare not only ex-mill prices but also which quota pool each origin
+              uses, how quickly that pool is being consumed, freight lead time and exposure to separate
+              trade remedies.
+            </p>
+            <p>
+              <strong>Third, the cheapest ex-works steel is not necessarily the cheapest landed
+              steel.</strong> Consider two otherwise identical offers at &pound;800/t and &pound;850/t.
+              If the &pound;800/t source reaches an exhausted quota and incurs 50%, its steel-measure
+              cost alone becomes &pound;400/t, vastly outweighing the original &pound;50/t purchasing
+              advantage. The correct sourcing metric is therefore risk-adjusted landed cost, not mill
+              price.
+            </p>
+            <p>
+              <strong>Fourth, EU supply has a structural logistics advantage.</strong> EU suppliers
+              represented 64% of UK finished-steel imports in 2024, and nearby European steel can reach
+              Britain by short-sea vessel or RoRo truck far faster than material from Asia. A buyer can
+              consequently make a quota decision closer to the customs-claim date. Asian suppliers may
+              nevertheless remain competitive on ex-mill price and certain grades, which helps explain
+              the rising role of India, South Korea and Vietnam.
+            </p>
+            <p>
+              <strong>Fifth, some downstream UK businesses face a genuine tension between protection and
+              supply availability.</strong> The new measure protects domestic melt capacity, but the UK
+              currently cannot make all products and quantities that downstream users consume,
+              particularly during the Port Talbot transition. The government&rsquo;s Category&nbsp;1
+              authorised-use quota is explicitly designed to address part of this tension by permitting
+              additional imported material for qualifying downstream processing.
+            </p>
+            <p>
+              <strong>Sixth, stainless illustrates how restrictive individual category quotas can
+              be.</strong> Reported stainless bars/light-section imports were about 44,011&nbsp;t in
+              2025, while the new Category&nbsp;14 base annual tariff-free quota totals only about
+              20,685&nbsp;t across the specified country and residual allocations. The numbers are not
+              perfectly identical product definitions in every statistical respect, but they demonstrate
+              why specialist downstream users are closely monitoring quota availability.
+            </p>
+            <p>
+              <strong>Seventh, customs warehousing can manage cash flow but is not a guaranteed
+              quota-management solution.</strong> Suspending duty while steel is in a customs warehouse
+              is commercially valuable, particularly for traders that may re-export material. But
+              because the quota claim is associated with release to free circulation, warehousing can
+              simply postpone the quota decision &mdash; and potentially expose the importer to a later
+              exhausted quota.
+            </p>
+            <p>
+              <strong>Eighth, the contract should allocate tariff risk expressly.</strong> A steel
+              purchase agreement should make clear who bears an unexpected 50% duty, who controls the
+              timing of the customs declaration, whether a supplier&rsquo;s price is conditional on
+              quota availability, who provides origin evidence, and what happens if documentation proves
+              insufficient. Incoterms allocate important transport/customs responsibilities, but
+              commercial tariff-risk clauses should still be explicit.
+            </p>
+
+            <h3>A commercial decision equation</h3>
+            <div class="primer-equation">Risk-adjusted landed steel cost
+  = ex-mill price
+  + inland origin freight
+  + ocean / RoRo / rail / air freight
+  + insurance
+  + port / terminal / handling
+  + customs brokerage
+  + ordinary customs duties where applicable
+  + probability-adjusted 50% steel tariff exposure
+  + anti-dumping / countervailing exposure
+  + storage / demurrage
+  + financing cost
+  + non-recoverable tax / costs.</div>
+            <p>
+              For a VAT-registered importer using postponed VAT accounting, import VAT is normally
+              principally a tax-accounting and working-capital issue rather than an ultimate cost to the
+              extent it is recoverable under the normal VAT rules.
+            </p>
+            <p>
+              From a domestic industrial-policy perspective, the government&rsquo;s objective is to
+              reverse some of the UK&rsquo;s very high import dependence. The 2026 Steel Strategy sets an
+              ambition to materially increase the proportion of UK demand served domestically, alongside
+              investment in electric-arc production, stronger trade protection and government financing.
+              Achieving that objective will depend not just on tariff protection but on whether UK mills
+              develop the capacity, grades, quality, cost competitiveness and delivery performance
+              required by sectors such as automotive, construction, engineering, energy and defence.
+            </p>
+          </section>
+
+          <section id="methodology">
+            <h2>Data methodology, interpretation and key sources</h2>
+            <p>Steel trade numbers should always be read with a definition attached. The following concepts are different:</p>
+            <ul>
+              <li><strong>Crude steel production</strong> measures liquid/raw steel output from BF/BOF or EAF melt shops.</li>
+              <li><strong>Semi-finished steel</strong> includes slab, billet and bloom.</li>
+              <li><strong>Finished steel</strong> includes rolled/finished mill products.</li>
+              <li><strong>Steel mill products</strong> can use a wider industry classification.</li>
+              <li><strong>HS Chapter 72</strong> is &ldquo;iron and steel.&rdquo;</li>
+              <li><strong>HS Chapter 73</strong> contains many articles made from iron or steel, including numerous fabricated products.</li>
+              <li><strong>The 2026 steel tariff measure</strong> uses its own list of detailed commodity codes grouped into 20 policy categories.</li>
+            </ul>
+            <p>
+              That is why one reputable source can report around 5.7&nbsp;Mt of finished imports in 2024
+              while another customs-based steel definition reports approximately 6.5&ndash;6.6&nbsp;Mt.
+              Neither figure is necessarily wrong; they are measuring different baskets.
+            </p>
+            <p>
+              For serious purchasing or investment work, <strong>HMRC UK Trade Info</strong> should be
+              treated as the primary quantitative source. Its REST API and bulk datasets allow imports
+              and exports to be filtered by commodity, country and month and provide trade value and
+              quantity/net mass. HMRC states that the API is open access and covers Overseas Trade
+              Statistics, imports, exports, traders and commodities. The downloadable bulk import files
+              are updated with revisions, meaning users should use the latest replacement dataset rather
+              than assuming an older monthly file remains final.
+            </p>
+            <p>
+              For the flat/long/stainless/coated analysis, an audit-quality five-year dataset should
+              therefore be constructed by fixing a commodity-code mapping; making categories mutually
+              exclusive, for example stainless first &rarr; coated second &rarr; long third &rarr;
+              remaining flat fourth; extracting 2021&ndash;2025 import and export value and net mass
+              from HMRC; grouping country origins consistently; separately flagging products covered by
+              the 2026 tariff categories; and never mixing tonnes from one product definition with
+              &pound; values from another.
+            </p>
+            <p>
+              HMRC&rsquo;s API documentation confirms that OTS records support commodity, country, flow,
+              month, value and quantity data, while its bulk files are specifically provided for
+              large-volume analysis.
+            </p>
+            <p>
+              The principal sources underpinning this reference are the UK Government&rsquo;s
+              March/July 2026 steel trade measure and Steel Strategy, HMRC&rsquo;s CDS/quota/import
+              guidance, UK legislation governing the new tariff and quota arrangements, HMRC UK Trade
+              Info, UK Steel&rsquo;s statistical publications, World Steel data embedded in UK
+              Steel&rsquo;s statistics, ONS trade series, U.S. International Trade Administration
+              steel-import data and selected logistics/industry sources where government data do not
+              provide freight-market benchmarks.
+            </p>
+
+            <div class="primer-callout" role="note">
+              <span class="primer-callout__label">Operational rule</span>
+              <p>
+                Do not place an overseas steel order on the assumption that today&rsquo;s quota balance
+                will still exist when the goods clear UK Customs. Classify the exact product, identify
+                the exact origin and quota order number, model the 50% out-of-quota scenario, and check
+                the live UK Trade Tariff again immediately before the CDS claim.
+              </p>
+            </div>
+
+            <p>
+              That approach reflects the design of the UK&rsquo;s post-1&nbsp;July&nbsp;2026 steel
+              regime: quota allocation is customs-based and first-come, first-served, while exhaustion of
+              the applicable quota creates a potentially very large change in landed cost.
+            </p>
+          </section>
+        </article>
+      </div>
     </main>
   </body>
 </html>
