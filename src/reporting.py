@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
@@ -14,6 +15,67 @@ from .utils import to_month_label, write_json
 
 
 plt.switch_backend("Agg")
+
+CHART_INK = "#0b1f2a"
+CHART_MUTED = "#6b7a84"
+CHART_LINE = "#d7dbe0"
+CHART_BAR = "#0f4c5c"
+CHART_BAR_ALT = "#b45309"
+CHART_ACCENT = "#0f4c5c"
+CHART_BG = "#ffffff"
+
+plt.rcParams.update({
+    "font.family": ["Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
+    "font.size": 11,
+    "axes.edgecolor": CHART_LINE,
+    "axes.labelcolor": CHART_MUTED,
+    "axes.titlecolor": CHART_INK,
+    "axes.titleweight": "semibold",
+    "axes.titlesize": 15,
+    "axes.titlelocation": "left",
+    "axes.titlepad": 14,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "axes.spines.left": False,
+    "axes.grid": True,
+    "grid.color": CHART_LINE,
+    "grid.linestyle": "-",
+    "grid.linewidth": 0.6,
+    "grid.alpha": 0.7,
+    "xtick.color": CHART_MUTED,
+    "ytick.color": CHART_MUTED,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "figure.facecolor": CHART_BG,
+    "axes.facecolor": CHART_BG,
+    "savefig.facecolor": CHART_BG,
+    "savefig.bbox": "tight",
+    "savefig.pad_inches": 0.25,
+})
+
+
+def _format_number_short(value: float, _pos=None) -> str:
+    if value is None:
+        return ""
+    absval = abs(value)
+    for divisor, suffix in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "k")):
+        if absval >= divisor:
+            scaled = value / divisor
+            text = f"{scaled:.1f}"
+            if text.endswith(".0"):
+                text = text[:-2]
+            return f"{text}{suffix}"
+    if value == int(value):
+        return f"{int(value):,}"
+    return f"{value:,.1f}"
+
+
+def _format_full_number(value: float) -> str:
+    if value is None:
+        return ""
+    if value == int(value):
+        return f"{int(value):,}"
+    return f"{value:,.1f}"
 
 
 def write_outputs(
@@ -104,16 +166,18 @@ def create_charts(
         country_summary.head(20),
         "origin_country",
         "total_tonnes",
-        "Top 20 Origin Countries by Tonnes",
-        color="#0f766e",
+        "Top 20 origin countries by tonnes",
+        color=CHART_BAR,
+        value_suffix=" t",
     )
     chart_paths["top_countries_value"] = bar_chart(
         charts_dir / "top_countries_value.png",
         country_summary.head(20),
         "origin_country",
         "total_value",
-        "Top 20 Origin Countries by Value",
-        color="#b45309",
+        "Top 20 origin countries by value",
+        color=CHART_BAR_ALT,
+        value_prefix="£",
     )
     products = (
         flows.groupby("steel_product_group")["tonnes"]
@@ -126,8 +190,9 @@ def create_charts(
         products.head(12),
         "steel_product_group",
         "tonnes",
-        "Top Steel Product Groups by Tonnes",
-        color="#1d4ed8",
+        "Top steel product groups by tonnes",
+        color=CHART_BAR,
+        value_suffix=" t",
     )
     transport = (
         transport_summary.groupby("estimated_transport_mode")["tonnes"]
@@ -140,8 +205,9 @@ def create_charts(
         transport,
         "estimated_transport_mode",
         "tonnes",
-        "Steel Tonnes by Transport Mode",
-        color="#7c3aed",
+        "Steel tonnes by transport mode",
+        color=CHART_BAR,
+        value_suffix=" t",
     )
     monthly_importers = (
         company_commodity.groupby("first_seen").size().reset_index(name="new_company_commodity_links")
@@ -160,8 +226,8 @@ def create_charts(
         activity_by_month,
         "period_label",
         "active_companies",
-        "Active Steel Importers by Latest Seen Month",
-        color="#be123c",
+        "Active steel importers by latest-seen month",
+        color=CHART_ACCENT,
     )
     route_frame = (
         routes.assign(route=routes["origin_country_name"] + " -> " + routes["dispatch_country_name"])
@@ -172,32 +238,103 @@ def create_charts(
         route_frame,
         "route",
         "tonnes",
-        "Top Origin to Dispatch Routes",
-        color="#0f172a",
+        "Top origin to dispatch routes",
+        color=CHART_INK,
+        value_suffix=" t",
     )
     return chart_paths
 
 
-def bar_chart(path: Path, frame: pd.DataFrame, category_col: str, value_col: str, title: str, color: str) -> Path:
-    fig, ax = plt.subplots(figsize=(12, 7))
-    values = frame[value_col].fillna(0)
-    ax.barh(frame[category_col].astype(str), values, color=color)
-    ax.set_title(title, fontsize=16, fontweight="bold")
+def bar_chart(
+    path: Path,
+    frame: pd.DataFrame,
+    category_col: str,
+    value_col: str,
+    title: str,
+    color: str = CHART_BAR,
+    value_prefix: str = "",
+    value_suffix: str = "",
+) -> Path:
+    categories = frame[category_col].astype(str).tolist()
+    values = frame[value_col].fillna(0).astype(float).tolist()
+
+    n = max(len(categories), 1)
+    height = max(5.5, 0.42 * n + 2.2)
+    fig, ax = plt.subplots(figsize=(12, height))
+
+    bars = ax.barh(categories, values, color=color, height=0.72, edgecolor="none")
+    ax.set_title(title)
     ax.invert_yaxis()
-    ax.grid(axis="x", alpha=0.25)
-    plt.tight_layout()
+
+    ax.xaxis.set_major_formatter(FuncFormatter(_format_number_short))
+    ax.tick_params(axis="x", which="both", length=0, pad=6)
+    ax.tick_params(axis="y", which="both", length=0, pad=8)
+
+    ax.grid(axis="x", color=CHART_LINE, linewidth=0.6, alpha=0.9)
+    ax.grid(axis="y", visible=False)
+    ax.set_axisbelow(True)
+
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    max_val = max(values) if values else 0
+    offset = max_val * 0.01 if max_val else 0
+    for bar, value in zip(bars, values):
+        label = f"{value_prefix}{_format_full_number(value)}{value_suffix}"
+        ax.text(
+            bar.get_width() + offset,
+            bar.get_y() + bar.get_height() / 2,
+            label,
+            va="center",
+            ha="left",
+            fontsize=9.5,
+            color=CHART_INK,
+        )
+
+    if max_val:
+        ax.set_xlim(0, max_val * 1.14)
+
+    for label in ax.get_yticklabels():
+        label.set_color(CHART_INK)
+        label.set_fontweight("medium")
+
     fig.savefig(path, dpi=180)
     plt.close(fig)
     return path
 
 
-def line_chart(path: Path, frame: pd.DataFrame, x_col: str, y_col: str, title: str, color: str) -> Path:
-    fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(frame[x_col].astype(str), frame[y_col].fillna(0), color=color, linewidth=2.5)
-    ax.set_title(title, fontsize=16, fontweight="bold")
-    ax.grid(axis="y", alpha=0.25)
-    ax.tick_params(axis="x", rotation=45)
-    plt.tight_layout()
+def line_chart(
+    path: Path,
+    frame: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    title: str,
+    color: str = CHART_ACCENT,
+) -> Path:
+    x = frame[x_col].astype(str).tolist()
+    y = frame[y_col].fillna(0).astype(float).tolist()
+
+    fig, ax = plt.subplots(figsize=(12, 5.5))
+    ax.plot(x, y, color=color, linewidth=2.2, marker="o", markersize=4.5, markerfacecolor=color, markeredgecolor=CHART_BG, markeredgewidth=1.2)
+    ax.fill_between(range(len(x)), y, color=color, alpha=0.08)
+
+    ax.set_title(title)
+
+    ax.yaxis.set_major_formatter(FuncFormatter(_format_number_short))
+    ax.tick_params(axis="x", which="both", length=0, pad=6)
+    ax.tick_params(axis="y", which="both", length=0, pad=6)
+
+    ax.grid(axis="y", color=CHART_LINE, linewidth=0.6, alpha=0.9)
+    ax.grid(axis="x", visible=False)
+    ax.set_axisbelow(True)
+
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    step = max(1, len(x) // 12)
+    ax.set_xticks(range(0, len(x), step))
+    ax.set_xticklabels([x[i] for i in range(0, len(x), step)], rotation=35, ha="right")
+
     fig.savefig(path, dpi=180)
     plt.close(fig)
     return path
