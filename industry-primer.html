@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="nav.css">
     <style>
       .primer-shell {
-        width: min(1240px, calc(100% - 48px));
+        width: min(1440px, calc(100% - 48px));
         margin: 0 auto;
         padding: 24px 0 64px;
         display: grid;
@@ -376,9 +376,21 @@
         margin: 0 0 4px;
         max-width: none;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
         gap: 10px;
         align-items: stretch;
+      }
+
+      @media (max-width: 1024px) {
+        .primer-article .workflow-phases ol.workflow {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .primer-article .workflow-phases ol.workflow {
+          grid-template-columns: minmax(0, 1fr);
+        }
       }
 
       .primer-article .workflow-phase + .workflow-phase {
@@ -1233,7 +1245,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             <div class="workflow-phases">
               <div class="workflow-phase">
                 <div class="workflow-phase__label"><span>Phase A</span> Before the shipment</div>
-                <ol class="workflow workflow--titled">
+                <ol class="workflow workflow--titled" style="--cols: 4">
                   <li>
                     <div class="workflow__content">
                       <div class="workflow__title">Classify the product to the full commodity code</div>
@@ -1263,7 +1275,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
 
               <div class="workflow-phase">
                 <div class="workflow-phase__label"><span>Phase B</span> At the customs declaration</div>
-                <ol class="workflow workflow--titled">
+                <ol class="workflow workflow--titled" style="--cols: 3">
                   <li>
                     <div class="workflow__content">
                       <div class="workflow__title">Verify the live quota balance immediately before declaration</div>
@@ -1287,7 +1299,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
 
               <div class="workflow-phase">
                 <div class="workflow-phase__label"><span>Phase C</span> After HMRC&rsquo;s decision</div>
-                <ol class="workflow workflow--titled">
+                <ol class="workflow workflow--titled" style="--cols: 2">
                   <li>
                     <div class="workflow__content">
                       <div class="workflow__title">HMRC allocates against the running quota balance</div>
