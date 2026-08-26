@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UK Steel Industry Primer</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="nav.css">
+    <style>
+      .primer-shell {
+        width: min(1240px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 24px 0 64px;
+        display: grid;
+        gap: 24px;
+      }
+
+      .primer-header {
+        background: #ffffff;
+        border: 1px solid #e3e6ea;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+        padding: clamp(28px, 3.5vw, 44px);
+        display: grid;
+        gap: 18px;
+      }
+
+      .primer-header .hero-text {
+        margin-bottom: 0;
+      }
+
+      .primer-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 28px;
+        padding-top: 8px;
+        border-top: 1px solid #e3e6ea;
+      }
+
+      .primer-meta > div {
+        display: grid;
+        gap: 2px;
+      }
+
+      .primer-meta dt {
+        color: #6b7a84;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .primer-meta dd {
+        margin: 0;
+        color: #0b1f2a;
+        font-weight: 600;
+      }
+
+      .primer-viewer {
+        background: #ffffff;
+        border: 1px solid #e3e6ea;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+        overflow: hidden;
+      }
+
+      .primer-viewer__frame {
+        width: 100%;
+        height: min(85vh, 1000px);
+        border: 0;
+        display: block;
+        background: #f4f5f7;
+      }
+
+      .primer-fallback {
+        padding: 24px;
+        color: #33434f;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="index.html">Steel intelligence</a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="index.html">Dashboard</a>
+        <a class="site-nav__link is-active" href="industry-primer.html" aria-current="page">Industry primer</a>
+        <a class="site-nav__link" href="order-tool.html">Order tool</a>
+      </div>
+    </nav>
+
+    <main class="primer-shell">
+      <header class="primer-header">
+        <p class="eyebrow">Reference briefing</p>
+        <h1>How the UK steel industry works</h1>
+        <p class="hero-text">
+          Domestic production, international imports, tariffs, quotas and the
+          post-safeguard import process, compiled as a reference for
+          commercial and procurement reviews.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="docs/uk-steel-industry-primer.pdf" download>Download PDF</a>
+          <a class="button button-secondary" href="docs/uk-steel-industry-primer.pdf" target="_blank" rel="noopener">Open in new tab</a>
+        </div>
+        <dl class="primer-meta">
+          <div>
+            <dt>Format</dt>
+            <dd>PDF, 27 pages</dd>
+          </div>
+          <div>
+            <dt>Scope</dt>
+            <dd>UK production, imports, tariffs, quotas, CDS process</dd>
+          </div>
+          <div>
+            <dt>Regime</dt>
+            <dd>Post 1 July 2026 UK steel measure</dd>
+          </div>
+        </dl>
+      </header>
+
+      <section class="primer-viewer" aria-label="Industry primer PDF">
+        <object
+          class="primer-viewer__frame"
+          data="docs/uk-steel-industry-primer.pdf#view=FitH"
+          type="application/pdf"
+        >
+          <div class="primer-fallback">
+            <p>The inline PDF viewer is not available in this browser.</p>
+            <p><a href="docs/uk-steel-industry-primer.pdf">Download the primer</a> instead.</p>
+          </div>
+        </object>
+      </section>
+    </main>
+  </body>
+</html>
