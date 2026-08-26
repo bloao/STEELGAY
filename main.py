@@ -6,6 +6,7 @@ from src.analysis import (
     build_company_tables,
     build_country_summary,
     build_origin_dispatch_routes,
+    build_road_freight_analysis,
     build_transport_summary,
     enrich_flows,
     load_product_groups,
@@ -48,6 +49,7 @@ def main() -> None:
     country_summary = build_country_summary(flows)
     routes = build_origin_dispatch_routes(flows)
     transport_summary = build_transport_summary(flows)
+    road_freight_detail, road_freight_countries = build_road_freight_analysis(flows)
     company_activity, company_commodity, company_market_context = build_company_tables(
         importers_result.importer_activity,
         controls_result.lookup,
@@ -72,6 +74,8 @@ def main() -> None:
         country_summary=country_summary,
         routes=routes,
         transport_summary=transport_summary,
+        road_freight_detail=road_freight_detail,
+        road_freight_countries=road_freight_countries,
         company_activity=company_activity,
         company_commodity=company_commodity,
         company_market_context=company_market_context,

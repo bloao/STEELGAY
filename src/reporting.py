@@ -87,6 +87,8 @@ def write_outputs(
     country_summary: pd.DataFrame,
     routes: pd.DataFrame,
     transport_summary: pd.DataFrame,
+    road_freight_detail: pd.DataFrame,
+    road_freight_countries: pd.DataFrame,
     company_activity: pd.DataFrame,
     company_commodity: pd.DataFrame,
     company_market_context: pd.DataFrame,
@@ -98,6 +100,8 @@ def write_outputs(
     country_summary.to_csv(output_dir / "country_summary.csv", index=False)
     routes.to_csv(output_dir / "origin_dispatch_routes.csv", index=False)
     transport_summary.to_csv(output_dir / "transport_summary.csv", index=False)
+    road_freight_detail.to_csv(output_dir / "road_freight_imports.csv", index=False)
+    road_freight_countries.to_csv(output_dir / "road_freight_country_ranking.csv", index=False)
     company_activity.to_csv(output_dir / "company_activity.csv", index=False)
     company_commodity.to_csv(output_dir / "company_commodity_activity.csv", index=False)
     company_market_context.to_csv(output_dir / "company_market_context.csv", index=False)
@@ -111,12 +115,20 @@ def write_outputs(
         flows,
         routes,
         transport_summary,
+        road_freight_detail,
+        road_freight_countries,
         company_activity,
         company_commodity,
         quality,
         chart_paths,
     )
     write_website_summary(website_dir / "analysis-summary.json", flows, country_summary, transport_summary, company_activity, routes)
+    write_road_freight_summary(
+        website_dir / "road-freight-summary.json",
+        flows,
+        road_freight_detail,
+        road_freight_countries,
+    )
 
 
 def write_quality_report(path: Path, quality: dict) -> None:
@@ -346,6 +358,8 @@ def build_workbook(
     flows: pd.DataFrame,
     routes: pd.DataFrame,
     transport_summary: pd.DataFrame,
+    road_freight_detail: pd.DataFrame,
+    road_freight_countries: pd.DataFrame,
     company_activity: pd.DataFrame,
     company_commodity: pd.DataFrame,
     quality: dict,
@@ -371,6 +385,8 @@ def build_workbook(
         ),
         "Origin-Dispatch": routes,
         "Transport": transport_summary,
+        "Road Freight Countries": road_freight_countries,
+        "Road Freight Imports": road_freight_detail,
         "Importers": company_activity,
         "Company Activity": company_activity,
         "Company Products": company_commodity,
@@ -403,6 +419,70 @@ def build_workbook(
             overview.add_image(XLImage(str(chart_paths[chart_name])), cell)
 
     workbook.save(path)
+
+
+def write_road_freight_summary(
+    path: Path,
+    flows: pd.DataFrame,
+    detail: pd.DataFrame,
+    countries: pd.DataFrame,
+) -> None:
+    monthly = (
+        detail.groupby(["period", "road_freight_class"], dropna=False)
+        .agg(tonnes=("tonnes", "sum"), value=("statistical_value_gbp", "sum"))
+        .reset_index()
+        .sort_values(["period", "road_freight_class"])
+    )
+    products = (
+        detail.groupby("steel_product_group", dropna=False)
+        .agg(tonnes=("tonnes", "sum"), value=("statistical_value_gbp", "sum"))
+        .reset_index()
+        .sort_values("tonnes", ascending=False)
+    )
+    locations = (
+        detail.assign(port_code=lambda df: df["port_code"].fillna("").replace("", "Not supplied"))
+        .groupby("port_code", dropna=False)
+        .agg(tonnes=("tonnes", "sum"), value=("statistical_value_gbp", "sum"))
+        .reset_index()
+        .sort_values("tonnes", ascending=False)
+    )
+    top_flows = detail.nlargest(150, "tonnes")[
+        [
+            "period",
+            "dispatch_country_name",
+            "origin_country_name",
+            "steel_product_group",
+            "commodity_code",
+            "road_freight_class",
+            "port_code",
+            "tonnes",
+            "statistical_value_gbp",
+        ]
+    ]
+    direct = detail.loc[detail["transport_mode_code"].astype(str) == "30"]
+    roro = detail.loc[detail["road_freight_class"] == "Ro-Ro"]
+    payload = {
+        "generatedAt": pd.Timestamp.utcnow().isoformat(),
+        "coverage": {
+            "firstPeriod": int(detail["period"].min()),
+            "lastPeriod": int(detail["period"].max()),
+            "monthsCovered": int(detail["period"].nunique()),
+        },
+        "kpis": {
+            "roadFreightTonnes": round(float(detail["tonnes"].sum()), 3),
+            "roadFreightValueGbp": round(float(detail["statistical_value_gbp"].sum()), 2),
+            "directRoadTonnes": round(float(direct["tonnes"].sum()), 3),
+            "roroTonnes": round(float(roro["tonnes"].sum()), 3),
+            "shareOfAllSteelTonnes": round(float(detail["tonnes"].sum() / flows["tonnes"].sum()), 4),
+            "dispatchCountries": int(detail["dispatch_country_name"].nunique()),
+        },
+        "countries": countries.to_dict(orient="records"),
+        "monthly": monthly.to_dict(orient="records"),
+        "products": products.head(12).to_dict(orient="records"),
+        "locations": locations.head(12).to_dict(orient="records"),
+        "topFlows": top_flows.to_dict(orient="records"),
+    }
+    write_json(path, payload)
 
 
 def write_dataframe_sheet(worksheet, frame: pd.DataFrame) -> None:

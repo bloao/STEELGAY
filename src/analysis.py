@@ -225,6 +225,109 @@ def build_transport_summary(flows: pd.DataFrame) -> pd.DataFrame:
     return summary.sort_values(["year", "tonnes"], ascending=[True, False])
 
 
+def build_road_freight_analysis(flows: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Build Steps 1 and 2 of the road-freight analysis from declared HMRC modes."""
+    declared = flows.loc[
+        flows["transport_mode_reliable"]
+        & flows["transport_mode_code"].astype(str).isin({"30", "60"})
+    ].copy()
+    declared["road_freight_class"] = declared["transport_mode_code"].astype(str).map(
+        {"30": "HMRC-declared Road (code 30; route unverified)", "60": "Ro-Ro"}
+    )
+
+    detail_keys = [
+        "period",
+        "year",
+        "month",
+        "commodity_code",
+        "commodity_description",
+        "steel_product_group",
+        "origin_country_code",
+        "origin_country_name",
+        "dispatch_country_code",
+        "dispatch_country_name",
+        "port_code",
+        "port_name_if_available",
+        "transport_mode_code",
+        "transport_mode",
+        "road_freight_class",
+    ]
+    detail = (
+        declared.groupby(detail_keys, dropna=False)
+        .agg(
+            tonnes=("tonnes", "sum"),
+            statistical_value_gbp=("statistical_value_gbp", "sum"),
+            source_records=("commodity_code", "size"),
+        )
+        .reset_index()
+        .sort_values(["period", "tonnes"], ascending=[False, False])
+    )
+    detail["gbp_per_tonne"] = (
+        detail["statistical_value_gbp"] / detail["tonnes"].where(detail["tonnes"] > 0)
+    ).round(2)
+
+    all_dispatch = (
+        flows.groupby(["dispatch_country_code", "dispatch_country_name"], dropna=False)
+        .agg(country_total_steel_tonnes=("tonnes", "sum"))
+        .reset_index()
+    )
+    records = []
+    grouped = declared.groupby(["dispatch_country_code", "dispatch_country_name"], dropna=False)
+    for (code, name), frame in grouped:
+        direct = frame["transport_mode_code"].astype(str).eq("30")
+        roro = frame["transport_mode_code"].astype(str).eq("60")
+        direct_frame = frame.loc[direct]
+        roro_frame = frame.loc[roro]
+        records.append(
+            {
+                "dispatch_country_code": code,
+                "dispatch_country": name,
+                "direct_road_tonnes": frame.loc[direct, "tonnes"].sum(),
+                "roro_tonnes": frame.loc[roro, "tonnes"].sum(),
+                "road_freight_tonnes": frame["tonnes"].sum(),
+                "direct_road_value_gbp": frame.loc[direct, "statistical_value_gbp"].sum(),
+                "roro_value_gbp": frame.loc[roro, "statistical_value_gbp"].sum(),
+                "road_freight_value_gbp": frame["statistical_value_gbp"].sum(),
+                "active_months": frame["period"].nunique(),
+                "steel_products": frame["commodity_code"].nunique(),
+                "product_groups": frame["steel_product_group"].nunique(),
+                "origin_countries": frame["origin_country_name"].nunique(),
+                "main_origin_country": dominant_value(frame, "origin_country_name", "tonnes"),
+                "main_product_group": dominant_value(frame, "steel_product_group", "tonnes"),
+                "direct_road_active_months": direct_frame["period"].nunique(),
+                "direct_road_steel_products": direct_frame["commodity_code"].nunique(),
+                "direct_road_main_origin_country": dominant_value(direct_frame, "origin_country_name", "tonnes"),
+                "roro_active_months": roro_frame["period"].nunique(),
+                "roro_steel_products": roro_frame["commodity_code"].nunique(),
+                "roro_main_origin_country": dominant_value(roro_frame, "origin_country_name", "tonnes"),
+            }
+        )
+
+    country = pd.DataFrame(records).merge(
+        all_dispatch,
+        how="left",
+        left_on=["dispatch_country_code", "dispatch_country"],
+        right_on=["dispatch_country_code", "dispatch_country_name"],
+    )
+    country = country.drop(columns=["dispatch_country_name"])
+    country["direct_road_share_of_country_steel"] = (
+        country["direct_road_tonnes"] / country["country_total_steel_tonnes"].where(country["country_total_steel_tonnes"] > 0)
+    )
+    country["roro_share_of_country_steel"] = (
+        country["roro_tonnes"] / country["country_total_steel_tonnes"].where(country["country_total_steel_tonnes"] > 0)
+    )
+    country["road_freight_share_of_country_steel"] = (
+        country["road_freight_tonnes"] / country["country_total_steel_tonnes"].where(country["country_total_steel_tonnes"] > 0)
+    )
+    total_road_freight = country["road_freight_tonnes"].sum()
+    country["share_of_uk_road_freight"] = (
+        country["road_freight_tonnes"] / total_road_freight if total_road_freight else 0
+    )
+    country = country.sort_values("road_freight_tonnes", ascending=False).reset_index(drop=True)
+    country.insert(0, "rank", country.index + 1)
+    return detail, country
+
+
 def build_company_tables(importers: pd.DataFrame, controls: pd.DataFrame, flows: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if importers.empty:
         empty = pd.DataFrame()

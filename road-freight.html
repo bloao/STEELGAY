@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="HMRC analysis of UK Chapter 72 steel imports declared as Road or Roll-on/Roll-off freight.">
+    <title>UK Steel Road Freight | Market Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="road-freight.css">
+  </head>
+  <body class="road-page">
+    <div class="road-shell">
+      <nav class="road-nav" aria-label="Analysis navigation">
+        <a class="brand-mark" href="index.html"><span>UK</span> Steel Intelligence</a>
+        <div class="road-nav-links">
+          <a href="index.html">Market overview</a>
+          <a class="active" href="road-freight.html" aria-current="page">Road freight</a>
+          <a href="order-tool.html">Order tool</a>
+        </div>
+      </nav>
+
+      <header class="road-hero">
+        <div class="road-hero-copy">
+          <p class="road-kicker">Route study / Steps 01-02</p>
+          <h1>Steel crossing into Britain by road.</h1>
+          <p>
+            A focused view of Chapter 72 imports declared to HMRC as direct Road or
+            Roll-on/Roll-off. It identifies what moved, where it was dispatched from,
+            and which foreign dispatch markets matter most.
+          </p>
+          <div class="road-legend" aria-label="Transport mode definitions">
+            <span><i class="legend-road"></i>HMRC-declared Road · code 30 · route unverified</span>
+            <span><i class="legend-roro"></i>Ro-Ro · mode 60</span>
+          </div>
+        </div>
+        <aside class="road-scope">
+          <span class="scope-number">02</span>
+          <p>Completed stages</p>
+          <ol>
+            <li><strong>Identify</strong> road freight imports</li>
+            <li><strong>Rank</strong> dispatch countries</li>
+          </ol>
+          <small>Route and crossing inference begins at Step 3 and is not included here.</small>
+        </aside>
+      </header>
+
+      <main>
+        <section class="road-kpis" aria-label="Road freight headline figures">
+          <article><span>Road + Ro-Ro tonnes</span><strong id="road-total-tonnes">-</strong><small id="road-total-share">-</small></article>
+          <article><span>Statistical value</span><strong id="road-total-value">-</strong><small>HMRC statistical value</small></article>
+          <article><span>HMRC-declared Road</span><strong id="road-direct-tonnes">-</strong><small>Code 30 · route unverified</small></article>
+          <article><span>Ro-Ro</span><strong id="road-roro-tonnes">-</strong><small>Declared mode 60</small></article>
+          <article><span>Dispatch markets</span><strong id="road-country-count">-</strong><small id="road-coverage">-</small></article>
+        </section>
+
+        <section class="analysis-block step-one">
+          <div class="analysis-heading">
+            <div><p class="step-label">Step 01</p><h2>What entered by road freight?</h2></div>
+            <p>Monthly HMRC records filtered to reliable, declared modes 30 and 60 only. These are aggregate trade records, not individual trucks, orders or delivery days.</p>
+          </div>
+          <div class="trend-layout">
+            <article class="trend-card">
+              <div class="card-heading"><h3>Monthly tonnage</h3><span>HMRC Road code 30 + Ro-Ro</span></div>
+              <div class="trend-chart" id="monthly-chart" role="img" aria-label="Monthly road freight steel tonnage chart"></div>
+              <div class="trend-axis"><span id="trend-first">-</span><span id="trend-last">-</span></div>
+            </article>
+            <article class="product-card">
+              <div class="card-heading"><h3>Product mix</h3><span>Top groups by tonnes</span></div>
+              <div class="bar-list" id="product-bars"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="analysis-block step-two">
+          <div class="analysis-heading">
+            <div><p class="step-label">Step 02</p><h2>Highest road-freight dispatch markets</h2></div>
+            <p>“Exporter” is used here at country level: the HMRC public file identifies the country of dispatch, not the named overseas supplier or mill.</p>
+          </div>
+          <div class="ranking-controls" aria-label="Country ranking controls">
+            <div class="mode-tabs" role="group" aria-label="Tonnage measure">
+              <button class="active" type="button" data-metric="road_freight_tonnes">Road + Ro-Ro</button>
+              <button type="button" data-metric="direct_road_tonnes">HMRC Road · unverified</button>
+              <button type="button" data-metric="roro_tonnes">Ro-Ro</button>
+            </div>
+            <a class="data-link" href="output/road_freight_country_ranking.csv">Download country ranking</a>
+          </div>
+          <div class="country-ranking" id="country-ranking"></div>
+        </section>
+
+        <section class="analysis-block flow-section">
+          <div class="analysis-heading">
+            <div><p class="step-label">Step 01 detail</p><h2>Largest monthly steel flows</h2></div>
+            <a class="data-link" href="output/road_freight_imports.csv">Download all filtered records</a>
+          </div>
+          <div class="flow-filters">
+            <label>Mode<select id="flow-mode"><option value="all">Road + Ro-Ro</option><option value="HMRC-declared Road (code 30; route unverified)">HMRC Road code 30 · unverified</option><option value="Ro-Ro">Ro-Ro</option></select></label>
+            <label>Dispatch country<select id="flow-country"><option value="all">All dispatch countries</option></select></label>
+          </div>
+          <div class="table-scroll">
+            <table class="road-table">
+              <thead><tr><th>Month</th><th>Dispatch</th><th>Origin</th><th>Product</th><th>Mode</th><th>UK location</th><th>Tonnes</th><th>Value</th></tr></thead>
+              <tbody id="flow-table"></tbody>
+            </table>
+          </div>
+          <p class="method-note"><strong>Reading the data:</strong> origin is where the goods are recorded as originating; dispatch is the country they were sent from. Code 30 means HMRC-declared Road and is not proof of a physically road-only route. UK location codes are retained exactly as supplied and are not interpreted as confirmed Channel crossings.</p>
+        </section>
+      </main>
+    </div>
+    <script src="road-freight.js?v=2"></script>
+  </body>
+</html>
