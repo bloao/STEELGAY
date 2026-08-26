@@ -138,9 +138,21 @@
       }
 
       .primer-article h2 {
+        position: relative;
         margin-bottom: 18px;
-        padding-bottom: 10px;
+        padding: 4px 0 12px 18px;
         border-bottom: 1px solid #e3e6ea;
+      }
+
+      .primer-article h2::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 6px;
+        bottom: 20px;
+        width: 4px;
+        background: #0f4c5c;
+        border-radius: 3px;
       }
 
       .primer-article h3 {
@@ -302,6 +314,242 @@
         white-space: pre-wrap;
       }
 
+      /* ---------- Workflow step cards ---------- */
+
+      .primer-article ol.workflow {
+        list-style: none;
+        counter-reset: workflow;
+        margin: 8px 0 28px;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+        max-width: 78ch;
+      }
+
+      .primer-article ol.workflow > li {
+        counter-increment: workflow;
+        margin: 0;
+        padding: 14px 18px;
+        background: #ffffff;
+        border: 1px solid #e3e6ea;
+        border-radius: 8px;
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        column-gap: 14px;
+        align-items: baseline;
+        line-height: 1.55;
+        transition: border-color 120ms ease, box-shadow 120ms ease;
+      }
+
+      .primer-article ol.workflow > li:hover {
+        border-color: #b8c5cd;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.05);
+      }
+
+      .primer-article ol.workflow > li::before {
+        content: counter(workflow, decimal-leading-zero);
+        display: inline-block;
+        color: #0f4c5c;
+        font-weight: 700;
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+        font-variant-numeric: tabular-nums;
+        padding: 2px 0 0;
+      }
+
+      .primer-article ol.workflow > li::marker {
+        content: none;
+      }
+
+      /* Titled variant: bold headline + body paragraph beneath */
+      .primer-article ol.workflow--titled > li {
+        align-items: start;
+        padding: 16px 20px;
+      }
+
+      .primer-article ol.workflow--titled > li::before {
+        padding-top: 4px;
+      }
+
+      .primer-article .workflow__title {
+        color: #0b1f2a;
+        font-weight: 600;
+        font-size: 1rem;
+        line-height: 1.35;
+        margin-bottom: 4px;
+      }
+
+      .primer-article .workflow__body {
+        margin: 0;
+        max-width: none;
+        color: #33434f;
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      /* ---------- Checklist ---------- */
+
+      .primer-article ul.checklist {
+        list-style: none;
+        margin: 8px 0 24px;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 8px;
+        max-width: none;
+      }
+
+      .primer-article ul.checklist > li {
+        margin: 0;
+        padding: 12px 14px 12px 42px;
+        background: #f8f9fb;
+        border: 1px solid #e3e6ea;
+        border-radius: 6px;
+        position: relative;
+        font-size: 0.94rem;
+        line-height: 1.45;
+      }
+
+      .primer-article ul.checklist > li::before {
+        content: "";
+        position: absolute;
+        left: 14px;
+        top: 14px;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid #0f4c5c;
+        border-radius: 4px;
+        background: #ffffff;
+      }
+
+      .primer-article ul.checklist > li::after {
+        content: "";
+        position: absolute;
+        left: 18px;
+        top: 17px;
+        width: 8px;
+        height: 4px;
+        border-left: 1.5px solid #0f4c5c;
+        border-bottom: 1.5px solid #0f4c5c;
+        transform: rotate(-45deg);
+      }
+
+      /* ---------- Refined callout ---------- */
+
+      .primer-callout {
+        position: relative;
+        padding-left: 56px;
+      }
+
+      .primer-callout::before {
+        content: "!";
+        position: absolute;
+        left: 18px;
+        top: 20px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #0f4c5c;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+
+      /* ---------- TOC active state ---------- */
+
+      .primer-toc a.is-active {
+        background: #e5eef1;
+        color: #0f4c5c;
+        font-weight: 600;
+      }
+
+      .primer-toc a.is-active::before {
+        color: #0f4c5c;
+      }
+
+      /* ---------- Timeline items ---------- */
+
+      .primer-timeline div {
+        position: relative;
+        padding-left: 34px;
+        transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+      }
+
+      .primer-timeline div::before {
+        content: "";
+        position: absolute;
+        left: 16px;
+        top: 20px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #0f4c5c;
+        transition: transform 220ms ease, box-shadow 220ms ease;
+      }
+
+      .primer-timeline div:hover {
+        border-color: #b8c5cd;
+        transform: translateY(-2px);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 20px rgba(15, 23, 42, 0.06);
+      }
+
+      .primer-timeline div:hover::before {
+        transform: scale(1.4);
+        box-shadow: 0 0 0 4px rgba(15, 76, 92, 0.15);
+      }
+
+      /* ---------- Reveal-on-scroll animation ---------- */
+
+      @media (prefers-reduced-motion: no-preference) {
+        .reveal {
+          opacity: 0;
+          transform: translateY(14px);
+          transition: opacity 520ms cubic-bezier(0.22, 0.61, 0.36, 1), transform 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
+          will-change: opacity, transform;
+        }
+
+        .reveal.is-visible {
+          opacity: 1;
+          transform: none;
+        }
+
+        .primer-article ol.workflow > li.reveal {
+          transition-delay: calc(var(--reveal-index, 0) * 45ms);
+        }
+
+        .primer-article ul.checklist > li.reveal {
+          transition-delay: calc(var(--reveal-index, 0) * 25ms);
+        }
+
+        .primer-timeline div.reveal {
+          transition-delay: calc(var(--reveal-index, 0) * 40ms);
+        }
+      }
+
+      /* ---------- Callout pulse ---------- */
+
+      @media (prefers-reduced-motion: no-preference) {
+        .primer-callout.is-visible::before {
+          animation: primer-callout-pulse 1600ms ease-out 200ms 1;
+        }
+      }
+
+      @keyframes primer-callout-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(15, 76, 92, 0.5); }
+        70% { box-shadow: 0 0 0 12px rgba(15, 76, 92, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(15, 76, 92, 0); }
+      }
+
+      /* ---------- Smooth TOC transitions ---------- */
+
+      .primer-toc a {
+        transition: background-color 180ms ease, color 180ms ease;
+      }
+
       @media (max-width: 900px) {
         .primer-layout {
           grid-template-columns: 1fr;
@@ -351,7 +599,7 @@
       <div class="primer-layout">
         <aside class="primer-toc" aria-label="On this page">
           <p class="primer-toc__label">On this page</p>
-          <ol>
+          <ol class="workflow">
             <li><a href="#summary">Executive summary</a></li>
             <li><a href="#production">Domestic production &amp; geography</a></li>
             <li><a href="#trade-flows">Supply chains &amp; five-year trade flows</a></li>
@@ -925,17 +1173,44 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
               </table>
             </div>
 
-            <h3>Practical FCFS sequence</h3>
-            <ol>
-              <li><strong>Classify the steel.</strong> Determine the correct UK import commodity code from its composition, dimensions, manufacturing process and finish. A description such as &ldquo;steel coil&rdquo; is not sufficient.</li>
-              <li><strong>Determine origin.</strong> Country of origin can differ from the seller&rsquo;s country, warehouse country, invoice country or port of loading. Preferential rules of origin matter for normal tariff claims, while non-preferential origin and sanctions can also be important.</li>
-              <li><strong>Check whether the commodity code falls within one of the 20 steel categories.</strong> If it does not, the new steel measure does not apply, although ordinary duty and trade remedies may still apply.</li>
-              <li><strong>Identify the correct quota pool.</strong> An origin may have a dedicated country-specific quota; otherwise it may fall into the residual allocation.</li>
-              <li><strong>Check the current balance/status immediately before declaration.</strong> Published quota balances change as other importers make claims. HMRC&rsquo;s quota data are therefore more important than a spreadsheet created when the purchase order was placed.</li>
-              <li><strong>Place the six-digit order number in CDS DE 8/1.</strong> Without a correct quota claim, the customs system cannot simply assume that the importer intended to use the quota.</li>
-              <li><strong>Submit a complete, acceptable declaration and supporting evidence.</strong> FCFS priority follows Customs&rsquo; acceptance/registration of claims rather than the date of the purchase order or vessel departure.</li>
-              <li><strong>HMRC allocates against the balance.</strong> An open quota can be granted while quantity remains. For a quota treated as critical, security for the full potential duty can be required pending final allocation. An exhausted quota attracts the full applicable out-of-quota treatment.</li>
-              <li><strong>Reconcile the customs decision and accounting.</strong> The importer should retain the declaration, quota evidence, origin documents and underlying commercial records in case of audit.</li>
+            <h3>Making an FCFS quota claim in practice</h3>
+            <ol class="workflow workflow--titled">
+              <li>
+                <div class="workflow__title">Classify the product to the full commodity code</div>
+                <p class="workflow__body">Establish the correct UK import commodity code from the product&rsquo;s composition, dimensions, manufacturing process and surface finish. Generic descriptions such as &ldquo;steel coil&rdquo; do not meet the classification requirement.</p>
+              </li>
+              <li>
+                <div class="workflow__title">Establish the country of origin</div>
+                <p class="workflow__body">Origin is a customs-law concept and is distinct from the seller&rsquo;s country, the warehouse country, the invoice country and the port of loading. Preferential rules of origin govern reduced-tariff claims; non-preferential origin governs tariff, trade-remedy and sanctions treatment.</p>
+              </li>
+              <li>
+                <div class="workflow__title">Confirm whether the code falls within the 2026 steel measure</div>
+                <p class="workflow__body">If the code sits outside the 20 categories covered by the measure, the 50% out-of-quota tariff does not apply. Ordinary customs duty, trade remedies and sanctions obligations are still assessed independently.</p>
+              </li>
+              <li>
+                <div class="workflow__title">Identify the applicable quota pool</div>
+                <p class="workflow__body">Each covered origin either draws on a dedicated country-specific quota or competes in the residual quota for that category. Confirm which pool governs the consignment before pricing it.</p>
+              </li>
+              <li>
+                <div class="workflow__title">Check the live quota balance immediately before declaration</div>
+                <p class="workflow__body">Quota balances are consumed on a rolling basis by other importers. HMRC&rsquo;s published live balance is the authoritative figure at the moment of claim &mdash; not any balance recorded when the purchase order was placed.</p>
+              </li>
+              <li>
+                <div class="workflow__title">Enter the six-digit quota order number in CDS Data Element&nbsp;8/1</div>
+                <p class="workflow__body">The quota is claimed by populating CDS DE&nbsp;8/1 with the correct six-digit order number on the import declaration. Without that entry, HMRC cannot infer that the importer intended to rely on the quota.</p>
+              </li>
+              <li>
+                <div class="workflow__title">Lodge a complete, acceptable declaration with the supporting evidence</div>
+                <p class="workflow__body">First-come, first-served priority is determined by the moment HMRC accepts and registers the declaration &mdash; not by the date of the purchase order, contract signature or vessel departure.</p>
+              </li>
+              <li>
+                <div class="workflow__title">HMRC allocates against the running quota balance</div>
+                <p class="workflow__body">While the quota remains open, an accepted claim receives in-quota treatment. If the quota is treated as critical, HMRC may require security equal to the full potential duty pending final allocation. If the quota is exhausted, the consignment receives full out-of-quota treatment.</p>
+              </li>
+              <li>
+                <div class="workflow__title">Reconcile the customs decision and retain the record</div>
+                <p class="workflow__body">Retain the accepted declaration, the quota-allocation confirmation, origin evidence and the underlying commercial records. These are the primary documents that support the entry if HMRC subsequently reviews or audits it.</p>
+              </li>
             </ol>
 
             <p>
@@ -1104,7 +1379,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </p>
 
             <h3>Sea freight &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Qualify the mill/supplier: legal entity, quality accreditation, product specification, mill location and sanctions exposure.</li>
               <li>Obtain grade, dimensions, coating, chemistry and manufacturing details needed to determine the commodity code.</li>
               <li>Establish non-preferential origin and whether preferential origin evidence is relevant.</li>
@@ -1121,7 +1396,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </ol>
 
             <h3>RoRo / road &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Qualify supplier and origin exactly as for sea freight.</li>
               <li>Classify the steel and check tariff, quota, sanctions and trade remedies.</li>
               <li>Agree Incoterm and book a compliant heavy-goods vehicle/trailer.</li>
@@ -1136,7 +1411,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </ol>
 
             <h3>Air freight &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Confirm that the high transport cost is commercially justified; this mode usually makes sense for urgent specialty material or samples rather than commodity steel.</li>
               <li>Verify supplier, specification, HS code and origin.</li>
               <li>Check quota, sanctions and trade-remedy status.</li>
@@ -1150,7 +1425,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </ol>
 
             <h3>Rail &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Verify the supplier, country of origin and route.</li>
               <li>Determine whether the journey uses Common Transit Convention procedures and/or other transit regimes.</li>
               <li>Classify goods and check UK tariffs, quotas, sanctions and trade remedies before departure.</li>
@@ -1165,7 +1440,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </ol>
 
             <h3>Customs / bonded warehouse &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Arrange overseas purchase and transport normally.</li>
               <li>On UK arrival, place goods under the authorised customs warehousing procedure instead of immediately entering free circulation.</li>
               <li>Submit the required warehouse customs declaration.</li>
@@ -1180,7 +1455,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </ol>
 
             <h3>Direct mill purchase &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Identify and audit the actual mill.</li>
               <li>Agree exact grade, standard, dimensions, tolerances, coating and testing requirements.</li>
               <li>Obtain origin / mill traceability before negotiating final landed price.</li>
@@ -1196,7 +1471,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </ol>
 
             <h3>Trader / agent purchase &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Determine whether the trader is selling goods already customs-cleared in the UK or arranging an overseas shipment specifically for you.</li>
               <li>If already cleared, the transaction is essentially a domestic purchase; the trader/importer has borne the import process.</li>
               <li>If not cleared, identify contractually who is the importer of record and who carries tariff/quota risk.</li>
@@ -1216,7 +1491,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </p>
 
             <h3>Online marketplace &mdash; step by step</h3>
-            <ol>
+            <ol class="workflow">
               <li>Use the platform to discover potential mills/traders rather than treating the listing itself as proof of compliance.</li>
               <li>Verify legal identity, mill, production location, technical specifications and quality certification.</li>
               <li>Establish real country of origin.</li>
@@ -1312,7 +1587,7 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </p>
 
             <h3>Pre-shipment checklist</h3>
-            <ul>
+            <ul class="checklist">
               <li>GB EORI active.</li>
               <li>CDS access / broker authority arranged.</li>
               <li>Exact 10-digit import commodity classification checked in the UK Trade Tariff.</li>
@@ -1500,5 +1775,81 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
         </article>
       </div>
     </main>
+    <script>
+      (function () {
+        var links = Array.from(document.querySelectorAll('.primer-toc a[href^="#"]'));
+        if (!links.length) return;
+        var entries = links
+          .map(function (a) {
+            var id = a.getAttribute('href').slice(1);
+            var section = document.getElementById(id);
+            return section ? { link: a, section: section } : null;
+          })
+          .filter(Boolean);
+        if (!entries.length) return;
+        var raf = 0;
+        function update() {
+          raf = 0;
+          var threshold = 120;
+          var current = entries[0];
+          for (var i = 0; i < entries.length; i++) {
+            var top = entries[i].section.getBoundingClientRect().top;
+            if (top - threshold <= 0) current = entries[i];
+          }
+          entries.forEach(function (e) {
+            e.link.classList.toggle('is-active', e === current);
+          });
+        }
+        function schedule() {
+          if (raf) return;
+          raf = requestAnimationFrame(update);
+        }
+        window.addEventListener('scroll', schedule, { passive: true });
+        window.addEventListener('resize', schedule);
+        update();
+      })();
+
+      (function () {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (!('IntersectionObserver' in window)) return;
+
+        var selectors = [
+          '.primer-article > section > h2',
+          '.primer-article > section > h3',
+          '.primer-article ol.workflow > li',
+          '.primer-article ul.checklist > li',
+          '.primer-article .primer-table-wrap',
+          '.primer-article .primer-timeline > div',
+          '.primer-article .primer-equation',
+          '.primer-article .primer-callout'
+        ];
+        var targets = document.querySelectorAll(selectors.join(','));
+        if (!targets.length) return;
+
+        var groupCounters = new Map();
+        targets.forEach(function (el) {
+          el.classList.add('reveal');
+          var parent = el.parentElement;
+          if (
+            el.matches('ol.workflow > li, ul.checklist > li, .primer-timeline > div')
+          ) {
+            var n = groupCounters.get(parent) || 0;
+            el.style.setProperty('--reveal-index', String(n));
+            groupCounters.set(parent, n + 1);
+          }
+        });
+
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+        targets.forEach(function (el) { observer.observe(el); });
+      })();
+    </script>
   </body>
 </html>
