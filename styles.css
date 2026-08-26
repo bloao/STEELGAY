@@ -63,7 +63,7 @@ p {
 }
 
 .page-shell {
-  width: min(1240px, calc(100% - 48px));
+  width: min(1440px, calc(100% - 48px));
   margin: 0 auto;
   padding: 40px 0 64px;
   display: grid;
@@ -311,9 +311,8 @@ h3 {
 
 .chart-grid {
   display: grid;
-  grid-template-columns: 1.3fr 1fr 1fr;
-  grid-auto-rows: minmax(0, auto);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
 }
 
 .chart-card {
@@ -321,33 +320,33 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 18px;
+  padding: 22px;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   overflow: hidden;
 }
 
 .chart-card img {
   width: 100%;
+  height: auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: var(--surface-alt);
+  display: block;
 }
 
 .chart-card figcaption {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   letter-spacing: 0.02em;
 }
 
-.chart-card-large {
-  grid-row: span 2;
-}
-
+.chart-card-large,
 .chart-card-wide {
-  grid-column: span 2;
+  grid-column: auto;
+  grid-row: auto;
 }
 
 /* ---------- Data grid (tables + status) ---------- */

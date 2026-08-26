@@ -361,6 +361,55 @@
         content: none;
       }
 
+      /* Grouped phases: shared counter, labelled sub-lists */
+
+      .primer-article .workflow-phases {
+        counter-reset: workflow;
+        display: grid;
+        gap: 8px;
+        margin: 8px 0 28px;
+        max-width: none;
+      }
+
+      .primer-article .workflow-phases ol.workflow {
+        counter-reset: none;
+        margin: 0 0 4px;
+        max-width: none;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .primer-article .workflow-phase + .workflow-phase {
+        margin-top: 16px;
+      }
+
+      .primer-article .workflow-phase__label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 10px;
+        color: #0b1f2a;
+        font-family: var(--font-serif, "Iowan Old Style", Georgia, serif);
+        font-weight: 600;
+        font-size: 1.02rem;
+        letter-spacing: -0.005em;
+      }
+
+      .primer-article .workflow-phase__label span {
+        display: inline-block;
+        padding: 3px 10px;
+        background: #0f4c5c;
+        color: #ffffff;
+        border-radius: 999px;
+        font-family: var(--font-sans, "Inter", sans-serif);
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
       /* Titled variant: bold headline + body paragraph beneath */
       .primer-article ol.workflow--titled > li {
         align-items: start;
@@ -371,12 +420,19 @@
         padding-top: 4px;
       }
 
+      .primer-article .workflow__content {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+
       .primer-article .workflow__title {
         color: #0b1f2a;
         font-weight: 600;
         font-size: 1rem;
         line-height: 1.35;
-        margin-bottom: 4px;
+        margin-bottom: 0;
       }
 
       .primer-article .workflow__body {
@@ -1174,44 +1230,79 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
             </div>
 
             <h3>Making an FCFS quota claim in practice</h3>
-            <ol class="workflow workflow--titled">
-              <li>
-                <div class="workflow__title">Classify the product to the full commodity code</div>
-                <p class="workflow__body">Establish the correct UK import commodity code from the product&rsquo;s composition, dimensions, manufacturing process and surface finish. Generic descriptions such as &ldquo;steel coil&rdquo; do not meet the classification requirement.</p>
-              </li>
-              <li>
-                <div class="workflow__title">Establish the country of origin</div>
-                <p class="workflow__body">Origin is a customs-law concept and is distinct from the seller&rsquo;s country, the warehouse country, the invoice country and the port of loading. Preferential rules of origin govern reduced-tariff claims; non-preferential origin governs tariff, trade-remedy and sanctions treatment.</p>
-              </li>
-              <li>
-                <div class="workflow__title">Confirm whether the code falls within the 2026 steel measure</div>
-                <p class="workflow__body">If the code sits outside the 20 categories covered by the measure, the 50% out-of-quota tariff does not apply. Ordinary customs duty, trade remedies and sanctions obligations are still assessed independently.</p>
-              </li>
-              <li>
-                <div class="workflow__title">Identify the applicable quota pool</div>
-                <p class="workflow__body">Each covered origin either draws on a dedicated country-specific quota or competes in the residual quota for that category. Confirm which pool governs the consignment before pricing it.</p>
-              </li>
-              <li>
-                <div class="workflow__title">Check the live quota balance immediately before declaration</div>
-                <p class="workflow__body">Quota balances are consumed on a rolling basis by other importers. HMRC&rsquo;s published live balance is the authoritative figure at the moment of claim &mdash; not any balance recorded when the purchase order was placed.</p>
-              </li>
-              <li>
-                <div class="workflow__title">Enter the six-digit quota order number in CDS Data Element&nbsp;8/1</div>
-                <p class="workflow__body">The quota is claimed by populating CDS DE&nbsp;8/1 with the correct six-digit order number on the import declaration. Without that entry, HMRC cannot infer that the importer intended to rely on the quota.</p>
-              </li>
-              <li>
-                <div class="workflow__title">Lodge a complete, acceptable declaration with the supporting evidence</div>
-                <p class="workflow__body">First-come, first-served priority is determined by the moment HMRC accepts and registers the declaration &mdash; not by the date of the purchase order, contract signature or vessel departure.</p>
-              </li>
-              <li>
-                <div class="workflow__title">HMRC allocates against the running quota balance</div>
-                <p class="workflow__body">While the quota remains open, an accepted claim receives in-quota treatment. If the quota is treated as critical, HMRC may require security equal to the full potential duty pending final allocation. If the quota is exhausted, the consignment receives full out-of-quota treatment.</p>
-              </li>
-              <li>
-                <div class="workflow__title">Reconcile the customs decision and retain the record</div>
-                <p class="workflow__body">Retain the accepted declaration, the quota-allocation confirmation, origin evidence and the underlying commercial records. These are the primary documents that support the entry if HMRC subsequently reviews or audits it.</p>
-              </li>
-            </ol>
+            <div class="workflow-phases">
+              <div class="workflow-phase">
+                <div class="workflow-phase__label"><span>Phase A</span> Before the shipment</div>
+                <ol class="workflow workflow--titled">
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Classify the product to the full commodity code</div>
+                      <p class="workflow__body">Determine the applicable UK import commodity code by reference to the product&rsquo;s chemical composition, dimensions, manufacturing route and surface finish. Generic commercial descriptions such as &ldquo;steel coil&rdquo; do not satisfy the classification requirement under the UK Trade Tariff.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Establish the country of origin</div>
+                      <p class="workflow__body">Country of origin is a matter of customs law and must be distinguished from the seller&rsquo;s jurisdiction, the country of warehousing, the invoicing country and the port of loading. Preferential rules of origin determine eligibility for reduced-tariff treatment; non-preferential origin governs the application of ordinary duties, trade-remedy measures and sanctions.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Confirm whether the code falls within the 2026 steel measure</div>
+                      <p class="workflow__body">Where the commodity code does not fall within any of the twenty categories prescribed by the measure, the 50% out-of-quota tariff does not apply. Ordinary customs duty, applicable trade-remedy measures and sanctions obligations continue to be assessed separately.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Identify the applicable quota pool</div>
+                      <p class="workflow__body">Each covered origin is served either by a dedicated country-specific quota or by the residual quota for the relevant category. The applicable pool should be identified before the consignment is priced or contracted.</p>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+
+              <div class="workflow-phase">
+                <div class="workflow-phase__label"><span>Phase B</span> At the customs declaration</div>
+                <ol class="workflow workflow--titled">
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Verify the live quota balance immediately before declaration</div>
+                      <p class="workflow__body">Quota balances are drawn down on a rolling basis by concurrent claims, so the authoritative figure at the point of claim is the live balance published by HMRC; any balance recorded when the purchase order was placed is not determinative. The current balance should be re-checked against HMRC&rsquo;s published data immediately before the declaration is lodged, and the result recorded on the importer&rsquo;s file alongside the customs entry so that the position at the moment of claim can be evidenced on review.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Enter the six-digit quota order number in CDS Data Element&nbsp;8/1</div>
+                      <p class="workflow__body">The quota claim is made by entering the correct six-digit order number in CDS Data Element&nbsp;8/1 of the import declaration. In the absence of that entry, HMRC is not required to treat the importer as having elected to rely on the quota.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Lodge a complete and acceptable declaration with supporting evidence</div>
+                      <p class="workflow__body">For a first-come, first-served quota, priority is determined by the point at which HMRC accepts and registers the declaration. Neither the date of the purchase order, the date of contract signature, nor the vessel&rsquo;s departure date is material for this purpose.</p>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+
+              <div class="workflow-phase">
+                <div class="workflow-phase__label"><span>Phase C</span> After HMRC&rsquo;s decision</div>
+                <ol class="workflow workflow--titled">
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">HMRC allocates against the running quota balance</div>
+                      <p class="workflow__body">Where the quota remains open, an accepted claim is granted in-quota treatment. Where a quota has been designated critical, HMRC may require security in the amount of the full potential duty pending final allocation. Where the quota is exhausted, the consignment is subject to the full out-of-quota tariff.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="workflow__content">
+                      <div class="workflow__title">Reconcile the customs decision and retain the record</div>
+                      <p class="workflow__body">The accepted declaration, quota-allocation confirmation, origin documentation and underlying commercial records should be retained for the applicable statutory period. These are the primary evidential documents on which the entry will rely in the event of any subsequent HMRC review or audit.</p>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+            </div>
 
             <p>
               A particular risk arises with <strong>simplified declarations</strong>. If the full quota

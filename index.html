@@ -73,27 +73,29 @@
       <section class="story-grid">
         <article class="story-card">
           <p class="eyebrow">Country picture</p>
-          <h2>Who is supplying the UK steel market?</h2>
+          <h2>Origin and dispatch, tracked separately.</h2>
           <p>
-            The country view keeps origin and dispatch separate so we can see where steel is made
-            versus where it is commercially shipped from. That avoids the usual shortcut of treating
-            dispatch hubs as manufacturing origin.
+            The country view keeps origin and dispatch distinct, so mills and consolidation hubs are
+            never confused. That avoids the usual shortcut of treating dispatch countries as
+            manufacturing origin.
           </p>
         </article>
         <article class="story-card">
           <p class="eyebrow">Company picture</p>
-          <h2>Which importers stayed active?</h2>
+          <h2>Importer continuity, without false linkage.</h2>
           <p>
-            Company continuity is tracked by normalized company identity and monthly commodity activity,
-            while deliberately avoiding any false company-to-country or company-to-shipment inference.
+            Company continuity is measured from normalised company identity and monthly commodity
+            activity. Company-to-country and company-to-shipment links are deliberately not
+            fabricated where the underlying data cannot support them.
           </p>
         </article>
         <article class="story-card">
           <p class="eyebrow">Transport picture</p>
-          <h2>How does steel move into the UK?</h2>
+          <h2>Reported modes as fact, missing modes inferred.</h2>
           <p>
-            Reported HMRC transport modes are preserved as fact. Where mode is missing or unreliable,
-            a separate inference layer estimates the most likely mode with a confidence score.
+            Reported HMRC transport modes are preserved unchanged. Where a mode is missing or
+            unreliable, a separate inference layer estimates the most likely mode and attaches an
+            explicit confidence score.
           </p>
         </article>
       </section>
