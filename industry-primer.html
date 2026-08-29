@@ -258,6 +258,20 @@
         letter-spacing: 0.08em;
         text-transform: uppercase;
         border-bottom: 1px solid #cfd4da;
+        overflow-wrap: normal;
+        word-break: normal;
+        hyphens: none;
+      }
+
+      .primer-article thead th small {
+        display: block;
+        margin-top: 3px;
+        color: #94a3ab;
+        font-size: 0.66rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: none;
+        line-height: 1.3;
       }
 
       .primer-article tbody tr:last-child td {
@@ -394,7 +408,30 @@
       }
 
       .primer-article .workflow-phase + .workflow-phase {
-        margin-top: 16px;
+        margin-top: 28px;
+        position: relative;
+      }
+
+      .primer-article .workflow-phase + .workflow-phase::before {
+        content: "";
+        position: absolute;
+        left: 22px;
+        top: -22px;
+        width: 2px;
+        height: 22px;
+        background: #cfd4da;
+        border-radius: 2px;
+      }
+
+      .primer-article .workflow-phase + .workflow-phase::after {
+        content: "";
+        position: absolute;
+        left: 17px;
+        top: -6px;
+        width: 12px;
+        height: 8px;
+        background: #0f4c5c;
+        clip-path: polygon(50% 100%, 0 0, 100% 0);
       }
 
       .primer-article .workflow-phase__label {
@@ -426,6 +463,31 @@
       .primer-article ol.workflow--titled > li {
         align-items: start;
         padding: 16px 20px;
+      }
+
+      /* Flowchart connectors between adjacent cards in a phase row */
+      .primer-article .workflow-phases ol.workflow > li {
+        position: relative;
+      }
+
+      .primer-article .workflow-phases ol.workflow > li:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        right: -10px;
+        top: 50%;
+        transform: translate(50%, -50%);
+        width: 14px;
+        height: 10px;
+        background: #0f4c5c;
+        clip-path: polygon(0 20%, 60% 20%, 60% 0, 100% 50%, 60% 100%, 60% 80%, 0 80%);
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      @media (max-width: 1024px) {
+        .primer-article .workflow-phases ol.workflow > li:not(:last-child)::after {
+          display: none;
+        }
       }
 
       .primer-article ol.workflow--titled > li::before {
@@ -616,6 +678,457 @@
 
       .primer-toc a {
         transition: background-color 180ms ease, color 180ms ease;
+      }
+
+      /* ---------- Reader tools: highlights, comments, toolbar, sidebar ---------- */
+
+      mark.user-highlight {
+        background: linear-gradient(180deg, transparent 0%, transparent 20%, #fff2a8 20%, #fff2a8 92%, transparent 92%);
+        color: inherit;
+        padding: 0;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: filter 120ms ease;
+      }
+
+      mark.user-highlight:hover {
+        filter: brightness(0.96);
+      }
+
+      body.primer-mode-highlight .primer-article {
+        cursor: text;
+      }
+
+      body.primer-mode-highlight .primer-article ::selection {
+        background: #fff2a8;
+      }
+
+      body.primer-mode-comment .primer-article .primer-anchor {
+        cursor: crosshair;
+      }
+
+      body.primer-mode-comment .primer-article .primer-anchor:hover {
+        outline: 2px dashed rgba(15, 76, 92, 0.35);
+        outline-offset: 4px;
+        border-radius: 4px;
+      }
+
+      .primer-anchor {
+        position: relative;
+      }
+
+      .comment-pin {
+        position: absolute;
+        top: -6px;
+        right: -30px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: none;
+        background: #0f4c5c;
+        color: #ffffff;
+        font: 600 0.72rem/1 var(--font-sans, "Inter", sans-serif);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+        transition: transform 120ms ease, background-color 120ms ease;
+        z-index: 3;
+      }
+
+      .comment-pin::before {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+      }
+
+      .comment-pin:hover {
+        background: #0b3742;
+        transform: scale(1.08);
+      }
+
+      .primer-flash {
+        animation: primer-flash 1.2s ease-out 1;
+      }
+
+      @keyframes primer-flash {
+        0% { box-shadow: 0 0 0 0 rgba(15, 76, 92, 0.45); }
+        50% { box-shadow: 0 0 0 10px rgba(15, 76, 92, 0.15); }
+        100% { box-shadow: 0 0 0 0 rgba(15, 76, 92, 0); }
+      }
+
+      /* Toolbar */
+
+      .primer-toolbar {
+        position: fixed;
+        right: 20px;
+        bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: #ffffff;
+        border: 1px solid #e3e6ea;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08), 0 20px 40px rgba(15, 23, 42, 0.1);
+        padding: 8px;
+        z-index: 100;
+      }
+
+      .primer-toolbar__btn {
+        appearance: none;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #33434f;
+        padding: 8px 12px 8px 10px;
+        border-radius: 8px;
+        font: 500 0.85rem/1 var(--font-sans, "Inter", sans-serif);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 132px;
+        text-align: left;
+        transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+        position: relative;
+      }
+
+      .primer-toolbar__btn:hover {
+        background: #f4f5f7;
+        color: #0b1f2a;
+      }
+
+      .primer-toolbar__btn.is-active {
+        background: #0f4c5c;
+        color: #ffffff;
+        border-color: #0f4c5c;
+      }
+
+      .primer-toolbar__icon {
+        width: 18px;
+        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .primer-toolbar__icon svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .primer-toolbar__label {
+        flex: 1;
+      }
+
+      .primer-toolbar__count {
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        background: #e3e6ea;
+        color: #33434f;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .primer-toolbar__btn.is-active .primer-toolbar__count {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+      }
+
+      /* Popover */
+
+      .primer-popover {
+        background: #0b1f2a;
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font: 500 0.85rem/1.4 var(--font-sans, "Inter", sans-serif);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+        z-index: 200;
+        max-width: 320px;
+      }
+
+      .primer-popover button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: transparent;
+        color: #ffffff;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font: inherit;
+        cursor: pointer;
+        transition: background-color 120ms ease;
+      }
+
+      .primer-popover button:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .primer-popover__body {
+        margin-bottom: 8px;
+        white-space: pre-wrap;
+      }
+
+      .primer-popover__actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      /* Sidebar */
+
+      .primer-notes {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(400px, 100vw);
+        height: 100vh;
+        background: #ffffff;
+        border-left: 1px solid #e3e6ea;
+        box-shadow: -8px 0 32px rgba(15, 23, 42, 0.1);
+        transform: translateX(100%);
+        transition: transform 220ms ease;
+        z-index: 150;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .primer-notes.is-open {
+        transform: none;
+      }
+
+      .primer-notes__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 22px 14px;
+        border-bottom: 1px solid #e3e6ea;
+      }
+
+      .primer-notes__head strong {
+        display: block;
+        color: #0b1f2a;
+        font-size: 1.02rem;
+      }
+
+      .primer-notes__hint {
+        display: block;
+        color: #6b7a84;
+        font-size: 0.78rem;
+        margin-top: 2px;
+      }
+
+      .primer-notes__close {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: #6b7a84;
+        font-size: 1.4rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+
+      .primer-notes__close:hover {
+        background: #f4f5f7;
+        color: #0b1f2a;
+      }
+
+      .primer-notes__tabs {
+        display: flex;
+        gap: 4px;
+        padding: 10px 14px 0;
+        border-bottom: 1px solid #e3e6ea;
+      }
+
+      .primer-notes__tab {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: #6b7a84;
+        font: 600 0.82rem/1 var(--font-sans, "Inter", sans-serif);
+        padding: 10px 12px 12px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .primer-notes__tab.is-active {
+        color: #0b1f2a;
+        border-bottom-color: #0f4c5c;
+      }
+
+      .primer-notes__tab span {
+        color: #6b7a84;
+        font-size: 0.72rem;
+        background: #f4f5f7;
+        padding: 2px 6px;
+        border-radius: 999px;
+      }
+
+      .primer-notes__body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 14px 24px;
+      }
+
+      .primer-notes__list {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .primer-notes__list.is-active {
+        display: flex;
+      }
+
+      .primer-notes__empty {
+        color: #6b7a84;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        padding: 24px 6px;
+        text-align: center;
+      }
+
+      .primer-notes__row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        padding: 12px 14px;
+        background: #f8f9fb;
+        border: 1px solid #e3e6ea;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: border-color 120ms ease, background-color 120ms ease;
+      }
+
+      .primer-notes__row:hover {
+        border-color: #b8c5cd;
+        background: #ffffff;
+      }
+
+      .primer-notes__row-body {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .primer-notes__quote {
+        color: #33434f;
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .primer-notes__num {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #0f4c5c;
+        color: #ffffff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-align: center;
+        line-height: 20px;
+      }
+
+      .primer-notes__text {
+        color: #0b1f2a;
+        font-size: 0.94rem;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
+      .primer-notes__meta {
+        color: #6b7a84;
+        font-size: 0.75rem;
+        letter-spacing: 0.02em;
+      }
+
+      .primer-notes__row-del {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: #6b7a84;
+        font-size: 1.1rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        align-self: start;
+      }
+
+      .primer-notes__row-del:hover {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .primer-notes__clear {
+        appearance: none;
+        margin-top: 16px;
+        border: 1px dashed #cfd4da;
+        background: transparent;
+        color: #b91c1c;
+        font: 500 0.82rem/1 var(--font-sans, "Inter", sans-serif);
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        width: 100%;
+      }
+
+      .primer-notes__clear:hover {
+        background: #fef2f2;
+        border-color: #b91c1c;
+      }
+
+      /* Toast */
+
+      .primer-toast {
+        position: fixed;
+        left: 50%;
+        bottom: 32px;
+        transform: translate(-50%, 16px);
+        background: #0b1f2a;
+        color: #ffffff;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font: 500 0.88rem/1 var(--font-sans, "Inter", sans-serif);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease, transform 180ms ease;
+        z-index: 250;
+      }
+
+      .primer-toast.is-visible {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      @media (max-width: 720px) {
+        .primer-toolbar {
+          right: 12px;
+          bottom: 12px;
+        }
+        .primer-toolbar__label {
+          display: none;
+        }
+        .primer-toolbar__btn {
+          min-width: 0;
+          padding: 8px;
+        }
+        .comment-pin {
+          right: -12px;
+        }
       }
 
       @media (max-width: 900px) {
@@ -918,16 +1431,25 @@
             </p>
 
             <div class="primer-table-wrap">
-              <table>
+              <table class="cols-5yr">
+                <colgroup>
+                  <col style="width: 8%">
+                  <col style="width: 14%">
+                  <col style="width: 14%">
+                  <col style="width: 16%">
+                  <col style="width: 16%">
+                  <col style="width: 16%">
+                  <col style="width: 16%">
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Year</th>
-                    <th class="num">Finished imports (Mt)</th>
-                    <th class="num">Finished exports (Mt)</th>
-                    <th class="num">EU share of imports</th>
-                    <th class="num">EU share of exports</th>
-                    <th class="num">Mill-product import value</th>
-                    <th class="num">Export value</th>
+                    <th class="num">Imports<br><small>Mt, finished</small></th>
+                    <th class="num">Exports<br><small>Mt, finished</small></th>
+                    <th class="num">EU share<br><small>of imports</small></th>
+                    <th class="num">EU share<br><small>of exports</small></th>
+                    <th class="num">Import value<br><small>mill products</small></th>
+                    <th class="num">Export value<br><small>mill products</small></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1954,5 +2476,6 @@ Out-of-quota steel tariff = &pound;400,000, or &pound;400/t,
         targets.forEach(function (el) { observer.observe(el); });
       })();
     </script>
+    <script src="primer-tools.js"></script>
   </body>
 </html>
