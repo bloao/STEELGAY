@@ -728,6 +728,11 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname === "/api/steel-quotas") {
+      sendJson(response, 200, await getSteelQuotaRows());
+      return;
+    }
+
     if (url.pathname === "/api/quota-check") {
       const result = await quotaCheck(url);
       sendJson(response, result.statusCode, result.payload);

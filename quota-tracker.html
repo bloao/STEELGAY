@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <title>Live steel quotas · Datafab AGX</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="index.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="index.html">Dashboard</a>
+        <a class="site-nav__link" href="industry-primer.html">Industry primer</a>
+        <div class="site-nav__dropdown">
+          <button type="button" class="site-nav__link site-nav__link--menu">Supply routes</button>
+          <div class="site-nav__menu" role="menu">
+            <p class="site-nav__menu-heading">PHYSICAL ROUTES</p>
+            <a href="sea-freight.html">Sea freight</a>
+            <a href="road-freight.html">Road / RoRo</a>
+            <a href="rail-freight.html">Rail &amp; intermodal</a>
+            <a href="air-freight.html">Air freight</a>
+            <a href="inland-waterway.html">Inland waterway</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">CUSTOMS PROCEDURE</p>
+            <a href="customs-warehouse.html">Customs / bonded warehouse</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">COMMERCIAL CHANNELS</p>
+            <a href="direct-mill.html">Direct mill purchase</a>
+            <a href="trader-agent.html">Trader or agent</a>
+            <a href="online-marketplace.html">Online marketplace</a>
+          </div>
+        </div>
+        <a class="site-nav__link is-active" href="quota-tracker.html" aria-current="page">Live quotas</a>
+        <a class="site-nav__link" href="order-tool.html">Order tool</a>
+      </div>
+    </nav>
+
+    <main class="tracker-shell">
+      <header class="tracker-hero">
+        <p class="eyebrow">Live data &middot; HMRC quota feed</p>
+        <h1>UK steel quotas &mdash; live balance tracker.</h1>
+        <p class="tracker-hero__text">
+          Every UK steel tariff-rate quota in the 2026 measure, pulled live from the UK Trade Quotas
+          API, sorted by current pressure. Balances refresh automatically every few minutes; the "last
+          updated" stamp is always what the page has in memory right now.
+        </p>
+        <dl class="tracker-hero__meta">
+          <div>
+            <dt>Regime</dt>
+            <dd>Post 1&nbsp;July&nbsp;2026 UK steel measure</dd>
+          </div>
+          <div>
+            <dt>Allocation</dt>
+            <dd>First-come, first-served via CDS DE&nbsp;8/1</dd>
+          </div>
+          <div>
+            <dt>Out-of-quota rate</dt>
+            <dd>50% ad valorem</dd>
+          </div>
+          <div>
+            <dt>Quarterly rollover</dt>
+            <dd>Unused volume rolls one quarter, not beyond the quota year</dd>
+          </div>
+        </dl>
+        <p class="tracker-hero__note">
+          Ukraine-origin material is excluded from the measure subject to preferential-origin conditions.
+          Goods contracted before 14&nbsp;March&nbsp;2026 can be fully exempt from the 50%
+          out-of-quota duty when imported between 1&nbsp;July and 30&nbsp;September&nbsp;2026. This
+          tracker mirrors HMRC data as published; always re-check the live UK Trade Tariff immediately
+          before making a CDS quota claim.
+        </p>
+      </header>
+
+      <section class="tracker-summary" aria-label="Quota pressure summary">
+        <div class="tracker-summary__card">
+          <span class="tracker-summary__label">Total quotas tracked</span>
+          <strong data-metric="total">&mdash;</strong>
+        </div>
+        <div class="tracker-summary__card">
+          <span class="tracker-summary__label">Open (&lt;70%)</span>
+          <strong data-metric="open" class="is-open">&mdash;</strong>
+        </div>
+        <div class="tracker-summary__card">
+          <span class="tracker-summary__label">Watch (70&ndash;90%)</span>
+          <strong data-metric="watch" class="is-watch">&mdash;</strong>
+        </div>
+        <div class="tracker-summary__card">
+          <span class="tracker-summary__label">Critical (&gt;90%)</span>
+          <strong data-metric="critical" class="is-critical">&mdash;</strong>
+        </div>
+        <div class="tracker-summary__card">
+          <span class="tracker-summary__label">Exhausted</span>
+          <strong data-metric="exhausted" class="is-exhausted">&mdash;</strong>
+        </div>
+      </section>
+
+      <section class="tracker-controls" aria-label="Quota filters">
+        <div class="tracker-controls__group tracker-controls__search">
+          <label class="tracker-controls__label" for="q-search">Search</label>
+          <input id="q-search" type="search" placeholder="Order number, product, country&hellip;" autocomplete="off">
+        </div>
+        <div class="tracker-controls__group">
+          <label class="tracker-controls__label" for="q-status">Status</label>
+          <select id="q-status">
+            <option value="all">All quotas</option>
+            <option value="pressure">Under pressure (70%+ or exhausted)</option>
+            <option value="open">Open (&lt;70%)</option>
+            <option value="watch">Watch (70&ndash;90%)</option>
+            <option value="critical">Critical (&gt;90%)</option>
+            <option value="exhausted">Exhausted</option>
+          </select>
+        </div>
+        <div class="tracker-controls__group">
+          <label class="tracker-controls__label" for="q-sort">Sort</label>
+          <select id="q-sort">
+            <option value="fill-desc">Most used first</option>
+            <option value="fill-asc">Least used first</option>
+            <option value="balance-asc">Smallest balance first</option>
+            <option value="category">Category order</option>
+            <option value="country">Country A&ndash;Z</option>
+          </select>
+        </div>
+        <div class="tracker-controls__stamp">
+          <span class="tracker-controls__label">Last updated</span>
+          <strong data-updated>Fetching&hellip;</strong>
+          <button type="button" data-refresh class="tracker-controls__refresh" aria-label="Refresh now">Refresh</button>
+        </div>
+      </section>
+
+      <section class="tracker-table-wrap" aria-label="Live quota balances">
+        <table class="tracker-table">
+          <thead>
+            <tr>
+              <th scope="col">Status</th>
+              <th scope="col">Category</th>
+              <th scope="col">Order number</th>
+              <th scope="col">Country / area</th>
+              <th scope="col" class="num">Fill</th>
+              <th scope="col" class="num">Balance</th>
+              <th scope="col" class="num">Initial</th>
+              <th scope="col">Period</th>
+            </tr>
+          </thead>
+          <tbody data-tracker-body>
+            <tr><td colspan="8" class="tracker-table__empty" data-loading>Loading live quotas from HMRC&hellip;</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+    <script src="nav-menu.js"></script>
+    <script src="quota-tracker.js"></script>
+  </body>
+</html>
