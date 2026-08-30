@@ -748,6 +748,78 @@ tbody tr:hover td {
   border-bottom: 1px solid var(--line);
 }
 
+.route-panel-card__intro {
+  margin: -8px 0 20px;
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.journey {
+  list-style: none;
+  counter-reset: journey;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.journey__stage {
+  counter-increment: journey;
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  column-gap: 18px;
+}
+
+.journey__stage::before {
+  content: counter(journey, decimal-leading-zero);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  padding-top: 4px;
+}
+
+.journey__body {
+  min-width: 0;
+}
+
+.journey__body h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+  color: var(--deep);
+}
+
+.journey__intro {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.journey__body ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  max-width: 78ch;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.journey__body ul li strong {
+  color: var(--deep);
+}
+
 .route-steps {
   list-style: none;
   counter-reset: rstep;
