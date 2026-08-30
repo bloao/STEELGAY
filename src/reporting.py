@@ -16,12 +16,12 @@ from .utils import to_month_label, write_json
 
 plt.switch_backend("Agg")
 
-CHART_INK = "#0b1f2a"
-CHART_MUTED = "#6b7a84"
-CHART_LINE = "#d7dbe0"
-CHART_BAR = "#0f4c5c"
-CHART_BAR_ALT = "#b45309"
-CHART_ACCENT = "#0f4c5c"
+CHART_INK = "#0c0e12"
+CHART_MUTED = "#6f7a8a"
+CHART_LINE = "#e3e8ef"
+CHART_BAR = "#6190ae"
+CHART_BAR_ALT = "#b8642b"
+CHART_ACCENT = "#6190ae"
 CHART_BG = "#ffffff"
 
 plt.rcParams.update({

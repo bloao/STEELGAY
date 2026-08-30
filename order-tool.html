@@ -3,16 +3,41 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
     <title>Steel Order Scenario Tool</title>
     <link rel="stylesheet" href="order-tool.css">
     <link rel="stylesheet" href="nav.css">
   </head>
   <body>
-    <nav class="site-nav" aria-label="Primary">
-      <a class="site-nav__brand" href="index.html">Steel intelligence</a>
+<nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="index.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
       <div class="site-nav__links">
         <a class="site-nav__link" href="index.html">Dashboard</a>
         <a class="site-nav__link" href="industry-primer.html">Industry primer</a>
+        <div class="site-nav__dropdown">
+          <button type="button" class="site-nav__link site-nav__link--menu">Supply routes</button>
+          <div class="site-nav__menu" role="menu">
+            <p class="site-nav__menu-heading">PHYSICAL ROUTES</p>
+            <a href="sea-freight.html" class="">Sea freight</a>
+            <a href="road-freight.html" class="">Road / RoRo</a>
+            <a href="rail-freight.html" class="">Rail &amp; intermodal</a>
+            <a href="air-freight.html" class="">Air freight</a>
+            <a href="inland-waterway.html" class="">Inland waterway</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">CUSTOMS PROCEDURE</p>
+            <a href="customs-warehouse.html" class="">Customs / bonded warehouse</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">COMMERCIAL CHANNELS</p>
+            <a href="direct-mill.html" class="">Direct mill purchase</a>
+            <a href="trader-agent.html" class="">Trader or agent</a>
+            <a href="online-marketplace.html" class="">Online marketplace</a>
+          </div>
+        </div>
         <a class="site-nav__link is-active" href="order-tool.html" aria-current="page">Order tool</a>
       </div>
     </nav>
@@ -120,5 +145,6 @@
     <script src="steel-trade-measure.js"></script>
     <script src="steel-quotas.js"></script>
     <script src="app.js"></script>
+      <script src="nav-menu.js"></script>
   </body>
 </html>

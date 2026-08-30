@@ -3,190 +3,168 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
     <title>UK Steel Import Market Analysis</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="nav.css">
   </head>
   <body>
-    <nav class="site-nav" aria-label="Primary">
-      <a class="site-nav__brand" href="index.html">Steel intelligence</a>
+<nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="index.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
       <div class="site-nav__links">
         <a class="site-nav__link is-active" href="index.html" aria-current="page">Dashboard</a>
         <a class="site-nav__link" href="industry-primer.html">Industry primer</a>
+        <div class="site-nav__dropdown">
+          <button type="button" class="site-nav__link site-nav__link--menu">Supply routes</button>
+          <div class="site-nav__menu" role="menu">
+            <p class="site-nav__menu-heading">PHYSICAL ROUTES</p>
+            <a href="sea-freight.html" class="">Sea freight</a>
+            <a href="road-freight.html" class="">Road / RoRo</a>
+            <a href="rail-freight.html" class="">Rail &amp; intermodal</a>
+            <a href="air-freight.html" class="">Air freight</a>
+            <a href="inland-waterway.html" class="">Inland waterway</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">CUSTOMS PROCEDURE</p>
+            <a href="customs-warehouse.html" class="">Customs / bonded warehouse</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">COMMERCIAL CHANNELS</p>
+            <a href="direct-mill.html" class="">Direct mill purchase</a>
+            <a href="trader-agent.html" class="">Trader or agent</a>
+            <a href="online-marketplace.html" class="">Online marketplace</a>
+          </div>
+        </div>
         <a class="site-nav__link" href="order-tool.html">Order tool</a>
       </div>
     </nav>
 
     <div class="page-shell">
-      <header class="hero">
+      <header class="hero hero--solo">
         <div class="hero-copy">
-          <p class="eyebrow">HMRC trade intelligence</p>
-          <h1>UK steel imports, made boardroom-ready.</h1>
+          <p class="eyebrow">Steel intelligence</p>
+          <h1>UK steel supply, understood end to end.</h1>
           <p class="hero-text">
-            A polished 2024 to 2026 year-to-date analysis layer for Chapter 72 imports,
-            built from HMRC bulk files and packaged for direct use on the website, in Excel,
-            and in downstream commercial reviews.
+            A working reference on the UK steel market: the regulatory regime, the
+            physical and commercial routes by which steel reaches Britain, and a
+            scenario tool for testing an order against the current tariff and quota
+            picture.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="output/UK_Steel_Import_Analysis.xlsx">Download workbook</a>
-            <a class="button button-secondary" href="road-freight.html">Explore road freight</a>
-            <a class="button button-secondary" href="order-tool.html">Open order scenario tool</a>
+            <a class="button button-primary" href="industry-primer.html">Open industry primer</a>
+            <a class="button button-secondary" href="order-tool.html">Order scenario tool</a>
           </div>
         </div>
-
-        <aside class="hero-panel">
-          <p class="panel-label">Coverage</p>
-          <div class="coverage-row"><span>First month</span><strong id="coverage-first">Loading</strong></div>
-          <div class="coverage-row"><span>Latest month</span><strong id="coverage-last">Loading</strong></div>
-          <div class="coverage-row"><span>Months covered</span><strong id="coverage-months">Loading</strong></div>
-          <p class="panel-note">
-            2026 is treated as year-to-date, with comparisons intended against equivalent 2025 months.
-          </p>
-        </aside>
       </header>
-
-      <section class="kpi-grid" aria-label="Key performance indicators">
-        <article class="kpi-card">
-          <span>Total tonnes</span>
-          <strong id="kpi-tonnes">-</strong>
-          <small class="kpi-detail" id="kpi-tonnes-full"></small>
-        </article>
-        <article class="kpi-card">
-          <span>Total import value</span>
-          <strong id="kpi-value">-</strong>
-          <small class="kpi-detail" id="kpi-value-full"></small>
-        </article>
-        <article class="kpi-card">
-          <span>Origin countries</span>
-          <strong id="kpi-countries">-</strong>
-        </article>
-        <article class="kpi-card">
-          <span>Active steel importers</span>
-          <strong id="kpi-importers">-</strong>
-        </article>
-        <article class="kpi-card">
-          <span>Reliable HMRC transport share</span>
-          <strong id="kpi-transport">-</strong>
-        </article>
-      </section>
 
       <section class="story-grid">
         <article class="story-card">
-          <p class="eyebrow">Country picture</p>
-          <h2>Origin and dispatch, tracked separately.</h2>
+          <p class="eyebrow">Regulatory regime</p>
+          <h2>Post-1 July 2026 UK steel measure.</h2>
           <p>
-            The country view keeps origin and dispatch distinct, so mills and consolidation hubs are
-            never confused. That avoids the usual shortcut of treating dispatch countries as
-            manufacturing origin.
+            Twenty categories of steel that the UK considers capable of domestic production sit under a
+            tariff-rate quota. Within quota, tariff-free treatment applies; outside it, a 50% tariff
+            attaches on covered imports.
           </p>
         </article>
         <article class="story-card">
-          <p class="eyebrow">Company picture</p>
-          <h2>Importer continuity, without false linkage.</h2>
+          <p class="eyebrow">Supply routes</p>
+          <h2>How steel physically reaches the UK.</h2>
           <p>
-            Company continuity is measured from normalised company identity and monthly commodity
-            activity. Company-to-country and company-to-shipment links are deliberately not
-            fabricated where the underlying data cannot support them.
+            Sea, road, rail, air and inland waterway on the physical side; direct mill, trader, agent,
+            warehouse and marketplace on the commercial side. Each route has a distinct process,
+            document set and quota risk profile.
           </p>
         </article>
         <article class="story-card">
-          <p class="eyebrow">Transport picture</p>
-          <h2>Reported modes as fact, missing modes inferred.</h2>
+          <p class="eyebrow">Scenario tooling</p>
+          <h2>Model an order before you place it.</h2>
           <p>
-            Reported HMRC transport modes are preserved unchanged. Where a mode is missing or
-            unreliable, a separate inference layer estimates the most likely mode and attaches an
-            explicit confidence score.
+            The order-scenario tool combines commodity code, origin, tonnage and price to surface the
+            applicable quota, likely duty exposure and CBAM position, so risk-adjusted landed cost can
+            be checked before contracting.
           </p>
         </article>
       </section>
 
-      <section class="chart-grid">
-        <figure class="chart-card chart-card-large">
-          <img src="output/charts/top_countries_tonnes.png" alt="Top 20 countries by steel import tonnes">
-          <figcaption>Top origin countries by tonnage</figcaption>
-        </figure>
-        <figure class="chart-card">
-          <img src="output/charts/top_product_groups.png" alt="Top steel product groups by tonnes">
-          <figcaption>Top steel product groups</figcaption>
-        </figure>
-        <figure class="chart-card">
-          <img src="output/charts/transport_modes.png" alt="Transport modes for steel imports">
-          <figcaption>Transport mode mix</figcaption>
-        </figure>
-        <figure class="chart-card chart-card-wide">
-          <img src="output/charts/top_routes.png" alt="Top origin to dispatch routes">
-          <figcaption>Top origin to dispatch routes</figcaption>
-        </figure>
-      </section>
-
-      <section class="data-grid">
-        <article class="table-card">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Top suppliers</p>
-              <h2>Largest origin countries</h2>
-            </div>
-            <a href="output/country_summary.csv">CSV</a>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Country</th>
-                  <th>Tonnes</th>
-                  <th>Value</th>
-                  <th>Share</th>
-                  <th>Main product group</th>
-                </tr>
-              </thead>
-              <tbody id="top-countries-body"></tbody>
-            </table>
-          </div>
-        </article>
-
-        <article class="table-card">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Importer continuity</p>
-              <h2>Company status mix</h2>
-            </div>
-            <a href="output/company_activity.csv">CSV</a>
-          </div>
-          <div class="status-list" id="company-status-list"></div>
-        </article>
-      </section>
-
-      <section class="route-panel">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Route detail</p>
-            <h2>Most material origin to dispatch flows</h2>
-          </div>
-          <a href="output/origin_dispatch_routes.csv">CSV</a>
+      <section class="routes-directory" aria-labelledby="routes-directory-heading">
+        <div class="routes-directory__head">
+          <p class="eyebrow">Supply routes</p>
+          <h2 id="routes-directory-heading">Every route steel can take into the UK.</h2>
+          <p>
+            Nine practical routes for supplying steel into Britain &mdash; grouped by physical transport
+            mode, customs procedure and commercial channel. Each has its own process, documentary
+            requirements and tariff-quota risk profile.
+          </p>
         </div>
-        <div class="route-list" id="route-list"></div>
-      </section>
 
-      <section class="downloads">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Downloads</p>
-            <h2>Everything needed for analysis or publishing</h2>
+        <div class="routes-directory__group">
+          <p class="routes-directory__label">Physical routes</p>
+          <div class="routes-directory__grid">
+            <a class="route-tile" href="sea-freight.html">
+              <span class="route-tile__title">Sea freight</span>
+              <span class="route-tile__desc">Deep-sea and short-sea vessels &mdash; the workhorse for coil, plate, billet, bar and pipe in medium and large lots.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+            <a class="route-tile" href="road-freight.html">
+              <span class="route-tile__title">Road / RoRo</span>
+              <span class="route-tile__desc">European road and roll-on/roll-off flows where lead time and flexibility matter more than absolute unit cost.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+            <a class="route-tile" href="rail-freight.html">
+              <span class="route-tile__title">Rail &amp; intermodal</span>
+              <span class="route-tile__desc">Long-haul rail from Eurasian origins and shorter European rail flows &mdash; a middle ground on cost and speed.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+            <a class="route-tile" href="air-freight.html">
+              <span class="route-tile__title">Air freight</span>
+              <span class="route-tile__desc">Airfreight for samples, emergency specialty grades and very high-value, light consignments.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+            <a class="route-tile" href="inland-waterway.html">
+              <span class="route-tile__title">Inland waterway</span>
+              <span class="route-tile__desc">Barge and estuary movements for heavy lots between UK seaports and inland or riverine sites.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
           </div>
         </div>
-        <div class="download-grid">
-          <a href="output/UK_Steel_Import_Analysis.xlsx">Excel workbook</a>
-          <a href="output/steel_import_flows.csv">Steel import flows</a>
-          <a href="output/country_summary.csv">Country summary</a>
-          <a href="output/transport_summary.csv">Transport summary</a>
-          <a href="output/company_activity.csv">Company activity</a>
-          <a href="output/company_market_context.csv">Company market context</a>
-          <a href="output/data_quality_report.txt">Data quality report</a>
-          <a href="output/data_limitations.md">Data limitations</a>
+
+        <div class="routes-directory__group">
+          <p class="routes-directory__label">Customs procedure</p>
+          <div class="routes-directory__grid">
+            <a class="route-tile" href="customs-warehouse.html">
+              <span class="route-tile__title">Customs / bonded warehouse</span>
+              <span class="route-tile__desc">HMRC-authorised warehousing with duty and import VAT suspended until release or re-export.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="routes-directory__group">
+          <p class="routes-directory__label">Commercial channels</p>
+          <div class="routes-directory__grid">
+            <a class="route-tile" href="direct-mill.html">
+              <span class="route-tile__title">Direct mill purchase</span>
+              <span class="route-tile__desc">Predictable volume purchased directly from the mill on an agreed specification &mdash; best pricing, most responsibility.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+            <a class="route-tile" href="trader-agent.html">
+              <span class="route-tile__title">Trader or agent</span>
+              <span class="route-tile__desc">Smaller lots and mixed grades through an intermediary or UK stockholder &mdash; convenient, with importer-of-record nuance.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+            <a class="route-tile" href="online-marketplace.html">
+              <span class="route-tile__title">Online marketplace</span>
+              <span class="route-tile__desc">B2B platforms for supplier discovery, price comparison and smaller or spot purchases.</span>
+              <span class="route-tile__arrow" aria-hidden="true">&rarr;</span>
+            </a>
+          </div>
         </div>
       </section>
     </div>
-
-    <script src="dashboard.js"></script>
+      <script src="nav-menu.js"></script>
   </body>
 </html>

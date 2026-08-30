@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T13:23:15.102289+00:00",
+  "generatedAt": "2026-08-30T17:00:50.288238+00:00",
   "coverage": {
     "firstPeriod": 202401,
     "lastPeriod": 202605,
@@ -20,7 +20,7 @@
       "dispatch_country": "Germany",
       "direct_road_tonnes": 3.644,
       "roro_tonnes": 544537.307,
-      "road_freight_tonnes": 544540.9510000001,
+      "road_freight_tonnes": 544540.951,
       "direct_road_value_gbp": 28714,
       "roro_value_gbp": 694482098,
       "road_freight_value_gbp": 694510812,
@@ -39,8 +39,8 @@
       "country_total_steel_tonnes": 1263668.462,
       "direct_road_share_of_country_steel": 2.8836677574691265e-06,
       "roro_share_of_country_steel": 0.4309178581050953,
-      "road_freight_share_of_country_steel": 0.43092074177285283,
-      "share_of_uk_road_freight": 0.2580544908786021
+      "road_freight_share_of_country_steel": 0.4309207417728527,
+      "share_of_uk_road_freight": 0.25805449087860205
     },
     {
       "rank": 2,
