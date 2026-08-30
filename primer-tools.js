@@ -60,41 +60,71 @@
     return null;
   }
 
-  function charOffsetInRoot(root, container, offset) {
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-    var total = 0;
-    var node;
-    while ((node = walker.nextNode())) {
-      if (node === container) return total + offset;
-      total += node.nodeValue.length;
-    }
-    // container is an element; sum text lengths up to `offset` element-children boundary
-    if (container.nodeType === 1) {
-      var w2 = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-      var sum = 0;
-      var n2;
-      var stop = container.childNodes[offset] || null;
-      while ((n2 = w2.nextNode())) {
-        if (stop && (n2 === stop || (stop.contains && stop.contains(n2)))) return sum;
-        sum += n2.nodeValue.length;
+  // A text node counts toward character offsets only when it's part of the
+  // article's own content. Pin buttons, popovers and the reveal-clone shims
+  // that live inside a section must be excluded so offsets stay stable
+  // whether or not those elements happen to be attached right now.
+  function isCountableTextNode(node, root) {
+    var p = node.parentNode;
+    while (p && p !== root) {
+      if (p.classList) {
+        if (
+          p.classList.contains("comment-pin") ||
+          p.classList.contains("primer-toolbar") ||
+          p.classList.contains("primer-notes") ||
+          p.classList.contains("primer-popover") ||
+          p.classList.contains("primer-toast")
+        ) {
+          return false;
+        }
       }
-      return sum;
+      p = p.parentNode;
     }
-    return total;
+    return true;
   }
 
-  function wrapCharRange(root, startOff, endOff, tagName, className, dataAttrs) {
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+  function makeContentWalker(root, opts) {
+    opts = opts || {};
+    return document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: function (node) {
-        // Skip text already inside a user-highlight <mark> to avoid nesting
-        var p = node.parentNode;
-        while (p && p !== root) {
-          if (p.classList && p.classList.contains("user-highlight")) return NodeFilter.FILTER_REJECT;
-          p = p.parentNode;
+        if (!isCountableTextNode(node, root)) return NodeFilter.FILTER_REJECT;
+        if (opts.skipHighlights) {
+          var p = node.parentNode;
+          while (p && p !== root) {
+            if (p.classList && p.classList.contains("user-highlight")) return NodeFilter.FILTER_REJECT;
+            p = p.parentNode;
+          }
         }
         return NodeFilter.FILTER_ACCEPT;
       },
     });
+  }
+
+  function charOffsetInRoot(root, container, offset) {
+    if (container.nodeType === 3) {
+      var walker = makeContentWalker(root);
+      var total = 0;
+      var node;
+      while ((node = walker.nextNode())) {
+        if (node === container) return total + offset;
+        total += node.nodeValue.length;
+      }
+      return total;
+    }
+    // Element container: sum text up to the child at `offset`
+    var w2 = makeContentWalker(root);
+    var sum = 0;
+    var n2;
+    var stop = container.childNodes[offset] || null;
+    while ((n2 = w2.nextNode())) {
+      if (stop && (n2 === stop || (stop.contains && stop.contains(n2)))) return sum;
+      sum += n2.nodeValue.length;
+    }
+    return sum;
+  }
+
+  function wrapCharRange(root, startOff, endOff, tagName, className, dataAttrs) {
+    var walker = makeContentWalker(root, { skipHighlights: true });
     var pos = 0;
     var pieces = [];
     var node;
