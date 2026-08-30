@@ -61,6 +61,52 @@
         </div>
       </header>
 
+      <section class="dashboard-quotas" aria-label="Live quota pressure">
+        <div class="dashboard-quotas__head">
+          <div>
+            <p class="eyebrow">Live &middot; HMRC quota feed</p>
+            <h2>Current UK steel quota pressure</h2>
+            <p class="dashboard-quotas__intro">
+              Live balances for every UK steel tariff-rate quota, pulled straight from the HMRC UK
+              Trade Quotas API and refreshed automatically every few minutes.
+            </p>
+          </div>
+          <a class="button button-secondary" href="quota-tracker.html">Open full tracker</a>
+        </div>
+
+        <div class="dashboard-quotas__summary">
+          <div class="dashboard-quotas__metric">
+            <span>Total quotas</span>
+            <strong data-metric="total">&mdash;</strong>
+          </div>
+          <div class="dashboard-quotas__metric">
+            <span>Open</span>
+            <strong data-metric="open" class="is-open">&mdash;</strong>
+          </div>
+          <div class="dashboard-quotas__metric">
+            <span>Watch</span>
+            <strong data-metric="watch" class="is-watch">&mdash;</strong>
+          </div>
+          <div class="dashboard-quotas__metric">
+            <span>Critical</span>
+            <strong data-metric="critical" class="is-critical">&mdash;</strong>
+          </div>
+          <div class="dashboard-quotas__metric">
+            <span>Exhausted</span>
+            <strong data-metric="exhausted" class="is-exhausted">&mdash;</strong>
+          </div>
+        </div>
+
+        <div class="dashboard-quotas__list" data-quota-list>
+          <p class="dashboard-quotas__loading" data-loading>Loading live quotas from HMRC&hellip;</p>
+        </div>
+
+        <p class="dashboard-quotas__stamp">
+          Last updated <strong data-updated>fetching&hellip;</strong>
+          <span class="dashboard-quotas__stamp-note">&middot; refreshes every 5 minutes</span>
+        </p>
+      </section>
+
       <section class="routes-directory" aria-label="Supply routes">
         <div class="routes-directory__group">
           <p class="routes-directory__label">Physical routes</p>
@@ -127,5 +173,6 @@
       </section>
     </div>
       <script src="nav-menu.js"></script>
+    <script src="dashboard-quotas.js"></script>
   </body>
 </html>

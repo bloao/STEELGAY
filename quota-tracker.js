@@ -44,26 +44,27 @@
   var dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   var timeFormat = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-  // Map HMRC / UN-ECE measurement-unit codes to something a buyer can read.
-  var UNIT_MAP = {
-    TNE: "tonnes",
-    KGM: "kg",
-    KG: "kg",
-    "100 KGM": "100 kg",
-    LTR: "L",
-    MTQ: "m³",
-    NAR: "items",
-    PCE: "pieces",
-    MTR: "m",
-    HLT: "hl",
-  };
+  // HMRC returns display strings like "Kilogram (kg)" — pull the short form.
+  function shortUnit(raw) {
+    if (!raw) return "";
+    var s = String(raw).trim();
+    var m = s.match(/\(([^)]+)\)/);
+    if (m) return m[1].trim();
+    return s;
+  }
 
-  function formatUnit(code) {
-    if (!code) return "";
-    var trimmed = String(code).trim();
-    if (UNIT_MAP[trimmed]) return UNIT_MAP[trimmed];
-    if (UNIT_MAP[trimmed.toUpperCase()]) return UNIT_MAP[trimmed.toUpperCase()];
-    return trimmed.toLowerCase();
+  // Convert to a display-friendly (value, unit) pair. Steel quotas come in kg
+  // from HMRC; convert to tonnes for anything at or above 1 kg.
+  function displayValue(value, raw) {
+    if (value == null) return { text: "—", value: null };
+    var unit = shortUnit(raw);
+    var lower = unit.toLowerCase();
+    if (lower === "kg" || lower === "kgm") {
+      var tonnes = value / 1000;
+      var rounded = tonnes >= 100 ? Math.round(tonnes) : Math.round(tonnes * 10) / 10;
+      return { text: numberFormat.format(rounded) + " t", value: rounded };
+    }
+    return { text: numberFormat.format(Math.round(value)) + (unit ? " " + unit : ""), value: value };
   }
 
   function statusFor(fillRate) {
@@ -186,10 +187,7 @@
   }
 
   function fmtVolume(n, unit) {
-    if (n == null) return "&mdash;";
-    var human = formatUnit(unit);
-    var u = human ? " " + escapeHtml(human) : "";
-    return numberFormat.format(Math.round(n)) + u;
+    return displayValue(n, unit).text;
   }
 
   function escapeHtml(s) {
@@ -209,9 +207,8 @@
       var pctUsedLabel = fill >= 100 ? "100%" : pctFormat.format(fill) + "%";
       var remainingPct = Math.max(0, 100 - fill);
       var remainingLabel = remainingPct === 0 ? "0% left" : pctFormat.format(remainingPct) + "% left";
-      var unit = formatUnit(row.measurementUnit);
-      var balanceText = row.balance != null ? numberFormat.format(Math.round(row.balance)) + (unit ? " " + unit : "") : "—";
-      var initialText = row.initialVolume != null ? numberFormat.format(Math.round(row.initialVolume)) + (unit ? " " + unit : "") : "—";
+      var balanceText = displayValue(row.balance, row.measurementUnit).text;
+      var initialText = displayValue(row.initialVolume, row.measurementUnit).text;
       return (
         '<tr class="tracker-row tracker-row--' + s + '">' +
           '<td><span class="tracker-status tracker-status--' + s + '">' + statusLabel(s) + '</span></td>' +
