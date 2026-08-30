@@ -40,8 +40,31 @@
   };
 
   var numberFormat = new Intl.NumberFormat("en-GB");
+  var pctFormat = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   var dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   var timeFormat = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  // Map HMRC / UN-ECE measurement-unit codes to something a buyer can read.
+  var UNIT_MAP = {
+    TNE: "tonnes",
+    KGM: "kg",
+    KG: "kg",
+    "100 KGM": "100 kg",
+    LTR: "L",
+    MTQ: "m³",
+    NAR: "items",
+    PCE: "pieces",
+    MTR: "m",
+    HLT: "hl",
+  };
+
+  function formatUnit(code) {
+    if (!code) return "";
+    var trimmed = String(code).trim();
+    if (UNIT_MAP[trimmed]) return UNIT_MAP[trimmed];
+    if (UNIT_MAP[trimmed.toUpperCase()]) return UNIT_MAP[trimmed.toUpperCase()];
+    return trimmed.toLowerCase();
+  }
 
   function statusFor(fillRate) {
     if (fillRate >= 1) return "exhausted";
@@ -164,7 +187,8 @@
 
   function fmtVolume(n, unit) {
     if (n == null) return "&mdash;";
-    var u = unit ? " " + escapeHtml(unit) : "";
+    var human = formatUnit(unit);
+    var u = human ? " " + escapeHtml(human) : "";
     return numberFormat.format(Math.round(n)) + u;
   }
 
@@ -181,7 +205,13 @@
     }
     var html = rows.map(function (row) {
       var s = statusFor(row.fillRate);
-      var pct = Math.min(100, Math.round((row.fillRate || 0) * 100));
+      var fill = Math.min(100, Math.max(0, (row.fillRate || 0) * 100));
+      var pctUsedLabel = fill >= 100 ? "100%" : pctFormat.format(fill) + "%";
+      var remainingPct = Math.max(0, 100 - fill);
+      var remainingLabel = remainingPct === 0 ? "0% left" : pctFormat.format(remainingPct) + "% left";
+      var unit = formatUnit(row.measurementUnit);
+      var balanceText = row.balance != null ? numberFormat.format(Math.round(row.balance)) + (unit ? " " + unit : "") : "—";
+      var initialText = row.initialVolume != null ? numberFormat.format(Math.round(row.initialVolume)) + (unit ? " " + unit : "") : "—";
       return (
         '<tr class="tracker-row tracker-row--' + s + '">' +
           '<td><span class="tracker-status tracker-status--' + s + '">' + statusLabel(s) + '</span></td>' +
@@ -191,11 +221,18 @@
           '<td class="mono">' + escapeHtml(row.orderNumber || "—") + '</td>' +
           '<td>' + escapeHtml(countryLabel(row)) + '</td>' +
           '<td class="num tracker-fill">' +
-            '<div class="tracker-fill__bar"><span style="width:' + pct + '%"></span></div>' +
-            '<div class="tracker-fill__value">' + pct + '%</div>' +
+            '<div class="tracker-fill__bar">' +
+              '<span class="tracker-fill__fill" style="width:' + fill.toFixed(2) + '%"></span>' +
+              '<span class="tracker-fill__threshold tracker-fill__threshold--watch" title="Watch threshold (70%)"></span>' +
+              '<span class="tracker-fill__threshold tracker-fill__threshold--critical" title="Critical threshold (90%)"></span>' +
+            '</div>' +
+            '<div class="tracker-fill__meta">' +
+              '<span class="tracker-fill__used">' + pctUsedLabel + ' used</span>' +
+              '<span class="tracker-fill__remaining">' + remainingLabel + '</span>' +
+            '</div>' +
           '</td>' +
-          '<td class="num">' + fmtVolume(row.balance, row.measurementUnit) + '</td>' +
-          '<td class="num">' + fmtVolume(row.initialVolume, row.measurementUnit) + '</td>' +
+          '<td class="num">' + escapeHtml(balanceText) + '</td>' +
+          '<td class="num">' + escapeHtml(initialText) + '</td>' +
           '<td class="mono">' + periodLabel(row) + '</td>' +
         '</tr>'
       );
