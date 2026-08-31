@@ -179,6 +179,32 @@
     setMetric("watch", counts.watch);
     setMetric("critical", counts.critical);
     setMetric("exhausted", counts.exhausted);
+    renderPressureBar(rows.length, counts);
+  }
+
+  function renderPressureBar(total, counts) {
+    if (!total) return;
+    ["open", "watch", "critical", "exhausted"].forEach(function (key) {
+      var seg = document.querySelector('[data-pressure-seg="' + key + '"]');
+      if (!seg) return;
+      var pct = (counts[key] / total) * 100;
+      seg.style.width = pct.toFixed(2) + "%";
+      var label = seg.querySelector("span");
+      if (label) label.textContent = pct >= 4 ? Math.round(pct) + "%" : "";
+      seg.title = counts[key] + " " + key + " · " + pct.toFixed(1) + "%";
+    });
+    var caption = document.querySelector("[data-pressure-caption]");
+    if (caption) {
+      var underPressure = counts.watch + counts.critical + counts.exhausted;
+      var underPct = ((underPressure / total) * 100).toFixed(1);
+      caption.innerHTML =
+        underPressure +
+        " of " +
+        total +
+        " quotas are under pressure (Watch or worse) &mdash; " +
+        underPct +
+        "% of the regime";
+    }
   }
 
   function setMetric(name, value) {
@@ -255,6 +281,80 @@
   if (statusSelect) statusSelect.addEventListener("change", render);
   if (sortSelect) sortSelect.addEventListener("change", render);
   if (refreshBtn) refreshBtn.addEventListener("click", function () { fetchQuotas(); });
+
+  // --- Quota calendar ---
+
+  var todayLong = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+  var dayMonthYear = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+
+  function ukQuarter(today) {
+    // Quota year starts 1 July. Quarters:
+    // Q1 Jul-Sep, Q2 Oct-Dec, Q3 Jan-Mar, Q4 Apr-Jun.
+    var y = today.getUTCFullYear();
+    var m = today.getUTCMonth(); // 0-based
+    var d = today.getUTCDate();
+    var quotaYearStart;
+    if (m >= 6) { // Jul (6) or later
+      quotaYearStart = Date.UTC(y, 6, 1);
+    } else {
+      quotaYearStart = Date.UTC(y - 1, 6, 1);
+    }
+    var quotaYearEnd = Date.UTC(new Date(quotaYearStart).getUTCFullYear() + 1, 5, 30, 23, 59, 59);
+
+    var quarters = [
+      { n: 1, startM: 6, startY: 0, endM: 8, endD: 30, endY: 0, label: "Q1 · Jul–Sep" },
+      { n: 2, startM: 9, startY: 0, endM: 11, endD: 31, endY: 0, label: "Q2 · Oct–Dec" },
+      { n: 3, startM: 0, startY: 1, endM: 2, endD: 31, endY: 1, label: "Q3 · Jan–Mar" },
+      { n: 4, startM: 3, startY: 1, endM: 5, endD: 30, endY: 1, label: "Q4 · Apr–Jun" },
+    ];
+    var startY = new Date(quotaYearStart).getUTCFullYear();
+    var current = null;
+    for (var i = 0; i < quarters.length; i++) {
+      var q = quarters[i];
+      var qStart = Date.UTC(startY + q.startY, q.startM, 1);
+      var qEnd = Date.UTC(startY + q.endY, q.endM, q.endD, 23, 59, 59);
+      if (today.getTime() >= qStart && today.getTime() <= qEnd) {
+        current = { n: q.n, label: q.label, start: qStart, end: qEnd };
+        break;
+      }
+    }
+    return {
+      quarter: current,
+      quotaYearStart: quotaYearStart,
+      quotaYearEnd: quotaYearEnd,
+      quotaYearLabel: startY + "/" + String((startY + 1) % 100).padStart(2, "0"),
+    };
+  }
+
+  function daysBetween(fromMs, toMs) {
+    return Math.max(0, Math.ceil((toMs - fromMs) / (1000 * 60 * 60 * 24)));
+  }
+
+  function renderClock() {
+    var today = new Date();
+    var utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    var info = ukQuarter(utcToday);
+    setText("today", todayLong.format(today));
+    if (info.quarter) {
+      setText("quarter", info.quarter.label + " · " + info.quotaYearLabel);
+      setText("quarter-end", dayMonthYear.format(new Date(info.quarter.end)));
+      var qDays = daysBetween(utcToday.getTime(), info.quarter.end);
+      setText("quarter-countdown", qDays === 1 ? "1 day left" : qDays + " days left");
+    }
+    setText("year-end", dayMonthYear.format(new Date(info.quotaYearEnd)));
+    var yDays = daysBetween(utcToday.getTime(), info.quotaYearEnd);
+    setText("year-countdown", yDays === 1 ? "1 day left" : yDays + " days left");
+  }
+
+  function setText(key, value) {
+    var el = document.querySelector('[data-clock="' + key + '"]');
+    if (el) el.textContent = value;
+  }
+
+  renderClock();
+  // Re-render the clock every hour so the "days left" value ticks down as
+  // days pass without needing a page reload.
+  setInterval(renderClock, 60 * 60 * 1000);
 
   fetchQuotas();
   setInterval(fetchQuotas, REFRESH_MS);

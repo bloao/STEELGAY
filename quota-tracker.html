@@ -44,6 +44,27 @@
     </nav>
 
     <main class="tracker-shell">
+      <div class="tracker-clock" aria-label="Quota calendar">
+        <div class="tracker-clock__cell">
+          <span>Today</span>
+          <strong data-clock="today">&mdash;</strong>
+        </div>
+        <div class="tracker-clock__cell">
+          <span>Current quarter</span>
+          <strong data-clock="quarter">&mdash;</strong>
+        </div>
+        <div class="tracker-clock__cell">
+          <span>Quarter ends</span>
+          <strong data-clock="quarter-end">&mdash;</strong>
+          <em data-clock="quarter-countdown">&mdash;</em>
+        </div>
+        <div class="tracker-clock__cell">
+          <span>Quota year resets</span>
+          <strong data-clock="year-end">&mdash;</strong>
+          <em data-clock="year-countdown">&mdash;</em>
+        </div>
+      </div>
+
       <header class="tracker-hero">
         <p class="eyebrow">Live data &middot; HMRC quota feed</p>
         <h1>UK steel quotas &mdash; live balance tracker.</h1>
@@ -52,6 +73,25 @@
           API, sorted by current pressure. Balances refresh automatically every few minutes; the "last
           updated" stamp is always what the page has in memory right now.
         </p>
+        <div class="tracker-pressure" aria-label="Overall quota pressure">
+          <div class="tracker-pressure__label">
+            <span class="tracker-pressure__title">Overall quota pressure right now</span>
+            <span class="tracker-pressure__sub" data-pressure-caption>Composition of all tracked quotas by status</span>
+          </div>
+          <div class="tracker-pressure__stack" data-pressure-stack>
+            <div class="tracker-pressure__segment tracker-pressure__segment--open" data-pressure-seg="open" style="width:0"><span></span></div>
+            <div class="tracker-pressure__segment tracker-pressure__segment--watch" data-pressure-seg="watch" style="width:0"><span></span></div>
+            <div class="tracker-pressure__segment tracker-pressure__segment--critical" data-pressure-seg="critical" style="width:0"><span></span></div>
+            <div class="tracker-pressure__segment tracker-pressure__segment--exhausted" data-pressure-seg="exhausted" style="width:0"><span></span></div>
+          </div>
+          <ul class="tracker-pressure__legend">
+            <li><span class="dot dot--open"></span> Open <em>&lt;70% used</em></li>
+            <li><span class="dot dot--watch"></span> Watch <em>70&ndash;90%</em></li>
+            <li><span class="dot dot--critical"></span> Critical <em>&gt;90%</em></li>
+            <li><span class="dot dot--exhausted"></span> Exhausted <em>100%</em></li>
+          </ul>
+        </div>
+
         <dl class="tracker-hero__meta">
           <div>
             <dt>Regime</dt>
