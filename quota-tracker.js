@@ -288,7 +288,19 @@
       if (!groups[cat]) { groups[cat] = []; order.push(cat); }
       groups[cat].push(row);
     });
+    var sortMode = sortSelect ? sortSelect.value : "fill-desc";
+    var catAgg = {};
+    order.forEach(function (cat) {
+      var lines = groups[cat];
+      var ti = lines.reduce(function (s, r) { return s + (r.initialVolume || 0); }, 0);
+      var tb = lines.reduce(function (s, r) { return s + (r.balance || 0); }, 0);
+      catAgg[cat] = { fillPct: ti > 0 ? (1 - tb / ti) : 0, balance: tb };
+    });
     order.sort(function (a, b) {
+      if (sortMode === "fill-desc") return catAgg[b].fillPct - catAgg[a].fillPct;
+      if (sortMode === "fill-asc") return catAgg[a].fillPct - catAgg[b].fillPct;
+      if (sortMode === "balance-asc") return catAgg[a].balance - catAgg[b].balance;
+      // "category" and fallback: canonical measure order
       var ai = CATEGORY_ORDER.indexOf(a);
       var bi = CATEGORY_ORDER.indexOf(b);
       if (ai === -1 && bi === -1) return String(a).localeCompare(String(b), undefined, { numeric: true });
@@ -307,9 +319,20 @@
       var aggFillPct = totalInitial > 0 ? (1 - totalBalance / totalInitial) * 100 : 0;
       var aggStatus = statusFor(aggFillPct / 100);
       lines.sort(function (a, b) {
-        var f = (b.fillRate || 0) - (a.fillRate || 0);
-        if (f !== 0) return f;
-        return String(countryLabel(a)).localeCompare(String(countryLabel(b)));
+        switch (sortMode) {
+          case "fill-asc":
+            return (a.fillRate || 0) - (b.fillRate || 0);
+          case "balance-asc":
+            return (a.balance || 0) - (b.balance || 0);
+          case "country":
+            return String(countryLabel(a)).localeCompare(String(countryLabel(b)));
+          case "category":
+          case "fill-desc":
+          default:
+            var f = (b.fillRate || 0) - (a.fillRate || 0);
+            if (f !== 0) return f;
+            return String(countryLabel(a)).localeCompare(String(countryLabel(b)));
+        }
       });
       var name = CATEGORY_NAMES[cat] || (lines[0] && lines[0].description) || "";
 
