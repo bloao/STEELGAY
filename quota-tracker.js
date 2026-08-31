@@ -222,42 +222,145 @@
     });
   }
 
+  var CATEGORY_ORDER = ["1","4","5","6","7","12A","12B","13","14","15","16","17","19","20","21","25A","25B","26","27","28"];
+  var CATEGORY_NAMES = {
+    "1": "Hot-rolled sheets & strips",
+    "4": "Metallic-coated sheets",
+    "5": "Organic-coated sheets",
+    "6": "Tin mill products",
+    "7": "Quarto plate",
+    "12A": "Alloy merchant bars & light sections",
+    "12B": "Non-alloy merchant bars & light sections",
+    "13": "Rebar",
+    "14": "Stainless bars & light sections",
+    "15": "Stainless wire rod",
+    "16": "Non-alloy / alloy wire rod",
+    "17": "Angles, shapes & sections",
+    "19": "Railway material",
+    "20": "Gas pipes",
+    "21": "Hollow sections",
+    "25A": "Large welded tubes",
+    "25B": "Large welded tubes",
+    "26": "Other welded tubes",
+    "27": "Cold-finished bars",
+    "28": "Non-alloy wire",
+  };
+
+  function primaryCat(row) {
+    return (row.categoryIds || [])[0] || "?";
+  }
+
+  function shortDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(d);
+  }
+
+  function burnPace(row) {
+    if (!row.startDate || !row.endDate) return null;
+    var start = new Date(row.startDate).getTime();
+    var end = new Date(row.endDate).getTime();
+    if (!isFinite(start) || !isFinite(end) || end <= start) return null;
+    var now = Date.now();
+    if (now <= start) return null;
+    var elapsed = Math.min(1, (now - start) / (end - start));
+    if (elapsed <= 0.02) return null;
+    return (row.fillRate || 0) / elapsed;
+  }
+
+  function burnLabel(pace) {
+    if (pace == null) return "";
+    if (pace < 0.9) return pctFormat.format(pace) + "× slower than even pace";
+    if (pace <= 1.1) return "at an even pace";
+    return pctFormat.format(pace) + "× burn pace";
+  }
+
   function renderRows(rows) {
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="8" class="tracker-table__empty">No quotas match the current filters.</td></tr>';
+      body.innerHTML = '<p class="tracker-categories__loading">No quotas match the current filters.</p>';
       return;
     }
-    var html = rows.map(function (row) {
-      var s = statusFor(row.fillRate);
-      var fill = Math.min(100, Math.max(0, (row.fillRate || 0) * 100));
-      var pctUsedLabel = fill >= 100 ? "100%" : pctFormat.format(fill) + "%";
-      var remainingPct = Math.max(0, 100 - fill);
-      var remainingLabel = remainingPct === 0 ? "0% left" : pctFormat.format(remainingPct) + "% left";
-      var balanceText = displayValue(row.balance, row.measurementUnit).text;
-      var initialText = displayValue(row.initialVolume, row.measurementUnit).text;
+    var groups = {};
+    var order = [];
+    rows.forEach(function (row) {
+      var cat = primaryCat(row);
+      if (!groups[cat]) { groups[cat] = []; order.push(cat); }
+      groups[cat].push(row);
+    });
+    order.sort(function (a, b) {
+      var ai = CATEGORY_ORDER.indexOf(a);
+      var bi = CATEGORY_ORDER.indexOf(b);
+      if (ai === -1 && bi === -1) return String(a).localeCompare(String(b), undefined, { numeric: true });
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+
+    var html = order.map(function (cat) {
+      var lines = groups[cat];
+      var totalInitial = lines.reduce(function (s, r) { return s + (r.initialVolume || 0); }, 0);
+      var totalBalance = lines.reduce(function (s, r) { return s + (r.balance || 0); }, 0);
+      var unitCode = lines[0] && lines[0].measurementUnit;
+      var initialTxt = displayValue(totalInitial, unitCode).text;
+      var balanceTxt = displayValue(totalBalance, unitCode).text;
+      var aggFillPct = totalInitial > 0 ? (1 - totalBalance / totalInitial) * 100 : 0;
+      var aggStatus = statusFor(aggFillPct / 100);
+      lines.sort(function (a, b) {
+        var f = (b.fillRate || 0) - (a.fillRate || 0);
+        if (f !== 0) return f;
+        return String(countryLabel(a)).localeCompare(String(countryLabel(b)));
+      });
+      var name = CATEGORY_NAMES[cat] || (lines[0] && lines[0].description) || "";
+
+      var linesHtml = lines.map(function (row) {
+        var s = statusFor(row.fillRate);
+        var fill = Math.min(100, Math.max(0, (row.fillRate || 0) * 100));
+        var pctUsed = fill >= 100 ? "100%" : pctFormat.format(fill) + "%";
+        var lineBal = displayValue(row.balance, row.measurementUnit).text;
+        var lineInit = displayValue(row.initialVolume, row.measurementUnit).text;
+        var pace = burnPace(row);
+        var paceTxt = burnLabel(pace);
+        var lastAlloc = shortDate(row.lastAllocationDate);
+        var metaBits = [pctUsed + " used"];
+        if (lastAlloc) metaBits.push("last allocation " + lastAlloc);
+        if (paceTxt) metaBits.push(paceTxt);
+        var extLink = row.orderNumber
+          ? ' <a class="tracker-line__ext" href="https://www.trade-tariff.service.gov.uk/quota_search?order_number=' + encodeURIComponent(row.orderNumber) + '" target="_blank" rel="noopener" aria-label="Open on the UK Trade Tariff">&#8599;</a>'
+          : "";
+        return (
+          '<article class="tracker-line tracker-line--' + s + '">' +
+            '<div class="tracker-line__head">' +
+              '<div class="tracker-line__area">' + escapeHtml(countryLabel(row)) + '</div>' +
+              '<div class="tracker-line__order">#' + escapeHtml(row.orderNumber || "—") + extLink + '</div>' +
+              '<span class="tracker-status tracker-status--' + s + '">' + statusLabel(s) + '</span>' +
+            '</div>' +
+            '<div class="tracker-line__balance"><strong>' + escapeHtml(lineBal) + '</strong> left of ' + escapeHtml(lineInit) + '</div>' +
+            '<div class="tracker-line__bar">' +
+              '<span class="tracker-line__bar-fill" style="width:' + fill.toFixed(2) + '%"></span>' +
+              '<span class="tracker-line__bar-tick tracker-line__bar-tick--watch"></span>' +
+              '<span class="tracker-line__bar-tick tracker-line__bar-tick--critical"></span>' +
+            '</div>' +
+            '<div class="tracker-line__meta">' + metaBits.join(' &middot; ') + '</div>' +
+          '</article>'
+        );
+      }).join("");
+
       return (
-        '<tr class="tracker-row tracker-row--' + s + '">' +
-          '<td><span class="tracker-status tracker-status--' + s + '">' + statusLabel(s) + '</span></td>' +
-          '<td><div class="tracker-category">' + escapeHtml(categoryLabel(row).replace(/&amp;/g, "&").replace(/&middot;/g, "·").replace(/&mdash;/g, "—")) + '</div>' +
-            (row.description ? '<div class="tracker-category__desc">' + escapeHtml(row.description) + '</div>' : "") +
-          '</td>' +
-          '<td class="mono">' + escapeHtml(row.orderNumber || "—") + '</td>' +
-          '<td>' + escapeHtml(countryLabel(row)) + '</td>' +
-          '<td class="num tracker-fill">' +
-            '<div class="tracker-fill__bar">' +
-              '<span class="tracker-fill__fill" style="width:' + fill.toFixed(2) + '%"></span>' +
-              '<span class="tracker-fill__threshold tracker-fill__threshold--watch" title="Watch threshold (70%)"></span>' +
-              '<span class="tracker-fill__threshold tracker-fill__threshold--critical" title="Critical threshold (90%)"></span>' +
+        '<article class="tracker-cat tracker-cat--' + aggStatus + '">' +
+          '<header class="tracker-cat__head">' +
+            '<div class="tracker-cat__ident">' +
+              '<span class="tracker-cat__code">Cat ' + escapeHtml(cat) + '</span>' +
+              '<h3 class="tracker-cat__name">' + escapeHtml(name.replace(/&amp;/g, "&")) + '</h3>' +
+              '<p class="tracker-cat__summary"><strong>' + escapeHtml(balanceTxt) + '</strong> remaining of ' + escapeHtml(initialTxt) + ' across ' + lines.length + ' quota line' + (lines.length === 1 ? '' : 's') + '</p>' +
             '</div>' +
-            '<div class="tracker-fill__meta">' +
-              '<span class="tracker-fill__used">' + pctUsedLabel + ' used</span>' +
-              '<span class="tracker-fill__remaining">' + remainingLabel + '</span>' +
+            '<div class="tracker-cat__meta">' +
+              '<span class="tracker-cat__pct">' + pctFormat.format(aggFillPct) + '%</span>' +
+              '<em>used across all lines</em>' +
             '</div>' +
-          '</td>' +
-          '<td class="num">' + escapeHtml(balanceText) + '</td>' +
-          '<td class="num">' + escapeHtml(initialText) + '</td>' +
-          '<td class="mono">' + periodLabel(row) + '</td>' +
-        '</tr>'
+          '</header>' +
+          '<div class="tracker-cat__lines">' + linesHtml + '</div>' +
+        '</article>'
       );
     }).join("");
     body.innerHTML = html;
