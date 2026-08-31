@@ -1313,11 +1313,58 @@ tbody tr:hover td {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 16px 18px;
+  padding: 18px;
   display: grid;
-  grid-template-columns: minmax(260px, 2fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(200px, auto);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 14px;
   align-items: end;
+}
+
+.tracker-controls__search {
+  grid-column: 1 / -1;
+}
+
+.tracker-controls__actions {
+  display: flex;
+  align-items: end;
+  justify-content: flex-start;
+}
+
+.tracker-controls__reset {
+  appearance: none;
+  padding: 11px 16px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--deep);
+  border-radius: 0;
+  font: 700 0.72rem/1 var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  width: 100%;
+  min-height: 42px;
+}
+
+.tracker-controls__reset:hover {
+  background: var(--deep);
+  color: #ffffff;
+  border-color: var(--deep);
+}
+
+.tracker-controls__stamp {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 14px;
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.tracker-controls__stamp .tracker-controls__label {
+  margin-right: 4px;
 }
 
 .tracker-controls__group {
@@ -1354,13 +1401,6 @@ tbody tr:hover td {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.tracker-controls__stamp {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-start;
-}
-
 .tracker-controls__stamp strong {
   color: var(--deep);
   font-weight: 600;
@@ -1369,8 +1409,8 @@ tbody tr:hover td {
 
 .tracker-controls__refresh {
   appearance: none;
-  margin-top: 6px;
-  padding: 6px 12px;
+  margin-left: auto;
+  padding: 8px 14px;
   border: 1px solid var(--accent);
   background: transparent;
   color: var(--accent);

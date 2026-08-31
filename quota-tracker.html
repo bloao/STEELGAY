@@ -145,17 +145,66 @@
       <section class="tracker-controls" aria-label="Quota filters">
         <div class="tracker-controls__group tracker-controls__search">
           <label class="tracker-controls__label" for="q-search">Search</label>
-          <input id="q-search" type="search" placeholder="Order number, product, country&hellip;" autocomplete="off">
+          <input id="q-search" type="search" placeholder="Order number, product, country, commodity code&hellip;" autocomplete="off">
         </div>
         <div class="tracker-controls__group">
           <label class="tracker-controls__label" for="q-status">Status</label>
           <select id="q-status">
-            <option value="all">All quotas</option>
+            <option value="all">All statuses</option>
             <option value="pressure">Under pressure (70%+ or exhausted)</option>
             <option value="open">Open (&lt;70%)</option>
             <option value="watch">Watch (70&ndash;90%)</option>
             <option value="critical">Critical (&gt;90%)</option>
             <option value="exhausted">Exhausted</option>
+          </select>
+        </div>
+        <div class="tracker-controls__group">
+          <label class="tracker-controls__label" for="q-category">Category</label>
+          <select id="q-category">
+            <option value="all">All categories</option>
+            <option value="1">Cat 1 &middot; Hot-rolled sheets &amp; strips</option>
+            <option value="4">Cat 4 &middot; Metallic-coated sheets</option>
+            <option value="5">Cat 5 &middot; Organic-coated sheets</option>
+            <option value="6">Cat 6 &middot; Tin mill products</option>
+            <option value="7">Cat 7 &middot; Quarto plate</option>
+            <option value="12A">Cat 12A &middot; Alloy merchant bars</option>
+            <option value="12B">Cat 12B &middot; Non-alloy merchant bars</option>
+            <option value="13">Cat 13 &middot; Rebar</option>
+            <option value="14">Cat 14 &middot; Stainless bars</option>
+            <option value="15">Cat 15 &middot; Stainless wire rod</option>
+            <option value="16">Cat 16 &middot; Wire rod</option>
+            <option value="17">Cat 17 &middot; Angles, shapes &amp; sections</option>
+            <option value="19">Cat 19 &middot; Railway material</option>
+            <option value="20">Cat 20 &middot; Gas pipes</option>
+            <option value="21">Cat 21 &middot; Hollow sections</option>
+            <option value="25A">Cat 25A &middot; Large welded tubes</option>
+            <option value="25B">Cat 25B &middot; Large welded tubes</option>
+            <option value="26">Cat 26 &middot; Other welded tubes</option>
+            <option value="27">Cat 27 &middot; Cold-finished bars</option>
+            <option value="28">Cat 28 &middot; Non-alloy wire</option>
+          </select>
+        </div>
+        <div class="tracker-controls__group">
+          <label class="tracker-controls__label" for="q-country">Country / area</label>
+          <select id="q-country">
+            <option value="all">All origins</option>
+          </select>
+        </div>
+        <div class="tracker-controls__group">
+          <label class="tracker-controls__label" for="q-period">Quota period</label>
+          <select id="q-period">
+            <option value="current-year">Current quota year</option>
+            <option value="current-quarter">Current quarter only</option>
+            <option value="all">All periods on file</option>
+          </select>
+        </div>
+        <div class="tracker-controls__group">
+          <label class="tracker-controls__label" for="q-pace">Burn pace</label>
+          <select id="q-pace">
+            <option value="all">Any pace</option>
+            <option value="hot">Faster than even pace (&gt;1.1&times;)</option>
+            <option value="even">At an even pace</option>
+            <option value="slow">Slower than even pace</option>
           </select>
         </div>
         <div class="tracker-controls__group">
@@ -167,6 +216,9 @@
             <option value="category">Category order</option>
             <option value="country">Country A&ndash;Z</option>
           </select>
+        </div>
+        <div class="tracker-controls__actions">
+          <button type="button" data-clear-filters class="tracker-controls__reset">Reset filters</button>
         </div>
         <div class="tracker-controls__stamp">
           <span class="tracker-controls__label">Last updated</span>

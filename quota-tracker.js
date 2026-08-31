@@ -6,9 +6,14 @@
   if (!body) return;
   var searchInput = document.getElementById("q-search");
   var statusSelect = document.getElementById("q-status");
+  var categorySelect = document.getElementById("q-category");
+  var countrySelect = document.getElementById("q-country");
+  var periodSelect = document.getElementById("q-period");
+  var paceSelect = document.getElementById("q-pace");
   var sortSelect = document.getElementById("q-sort");
   var updatedEl = document.querySelector("[data-updated]");
   var refreshBtn = document.querySelector("[data-refresh]");
+  var resetBtn = document.querySelector("[data-clear-filters]");
 
   var state = {
     rows: [],
@@ -116,6 +121,7 @@
         state.rows = data.rows || [];
         state.fetchedAt = data.liveFetchedAt || new Date().toISOString();
         state.loading = false;
+        populateCountries(state.rows);
         render();
       })
       .catch(function (err) {
@@ -125,10 +131,51 @@
       });
   }
 
+  function currentQuotaYearBounds() {
+    var today = new Date();
+    var year = today.getUTCFullYear();
+    var month = today.getUTCMonth();
+    var yearStart = month >= 6 ? Date.UTC(year, 6, 1) : Date.UTC(year - 1, 6, 1);
+    var yearEnd = Date.UTC(new Date(yearStart).getUTCFullYear() + 1, 5, 30, 23, 59, 59);
+    return { start: yearStart, end: yearEnd };
+  }
+
+  function currentQuarterBounds() {
+    var y = currentQuotaYearBounds();
+    var now = Date.now();
+    var startY = new Date(y.start).getUTCFullYear();
+    var qs = [
+      { s: Date.UTC(startY, 6, 1), e: Date.UTC(startY, 8, 30, 23, 59, 59) },
+      { s: Date.UTC(startY, 9, 1), e: Date.UTC(startY, 11, 31, 23, 59, 59) },
+      { s: Date.UTC(startY + 1, 0, 1), e: Date.UTC(startY + 1, 2, 31, 23, 59, 59) },
+      { s: Date.UTC(startY + 1, 3, 1), e: Date.UTC(startY + 1, 5, 30, 23, 59, 59) },
+    ];
+    for (var i = 0; i < qs.length; i++) {
+      if (now >= qs[i].s && now <= qs[i].e) return qs[i];
+    }
+    return qs[0];
+  }
+
+  function rowOverlaps(row, start, end) {
+    if (!row.startDate || !row.endDate) return false;
+    var rs = new Date(row.startDate).getTime();
+    var re = new Date(row.endDate).getTime();
+    if (!isFinite(rs) || !isFinite(re)) return false;
+    return rs <= end && re >= start;
+  }
+
   function filterAndSort(rows) {
     var query = (searchInput.value || "").toLowerCase().trim();
     var statusFilter = statusSelect.value;
+    var categoryFilter = categorySelect ? categorySelect.value : "all";
+    var countryFilter = countrySelect ? countrySelect.value : "all";
+    var periodFilter = periodSelect ? periodSelect.value : "current-year";
+    var paceFilter = paceSelect ? paceSelect.value : "all";
     var sort = sortSelect.value;
+
+    var yearBounds = currentQuotaYearBounds();
+    var quarterBounds = currentQuarterBounds();
+
     var filtered = rows.filter(function (row) {
       if (query) {
         var hay = (
@@ -151,6 +198,26 @@
         } else if (s !== statusFilter) {
           return false;
         }
+      }
+      if (categoryFilter !== "all") {
+        if ((row.categoryIds || []).indexOf(categoryFilter) === -1) return false;
+      }
+      if (countryFilter !== "all") {
+        var areas = row.geographicalAreas || [];
+        if (areas.indexOf(countryFilter) === -1) return false;
+      }
+      if (periodFilter === "current-year") {
+        if (!rowOverlaps(row, yearBounds.start, yearBounds.end)) return false;
+      } else if (periodFilter === "current-quarter") {
+        if (!rowOverlaps(row, quarterBounds.s, quarterBounds.e)) return false;
+      }
+      if (paceFilter !== "all") {
+        var pace = burnPace(row);
+        if (pace == null) {
+          if (paceFilter !== "even") return false;
+        } else if (paceFilter === "hot" && pace <= 1.1) return false;
+        else if (paceFilter === "slow" && pace >= 0.9) return false;
+        else if (paceFilter === "even" && (pace < 0.9 || pace > 1.1)) return false;
       }
       return true;
     });
@@ -403,10 +470,45 @@
     renderUpdated();
   }
 
+  function populateCountries(rows) {
+    if (!countrySelect) return;
+    var current = countrySelect.value;
+    var set = {};
+    rows.forEach(function (r) {
+      (r.geographicalAreas || []).forEach(function (a) {
+        if (a) set[a] = true;
+      });
+    });
+    var options = Object.keys(set).sort(function (a, b) { return a.localeCompare(b); });
+    var html = '<option value="all">All origins</option>';
+    options.forEach(function (name) {
+      var label = name.length > 60 ? name.slice(0, 58) + "…" : name;
+      html += '<option value="' + escapeHtml(name) + '">' + escapeHtml(label) + '</option>';
+    });
+    countrySelect.innerHTML = html;
+    if (current && current !== "all" && set[current]) countrySelect.value = current;
+  }
+
+  function resetFilters() {
+    if (searchInput) searchInput.value = "";
+    if (statusSelect) statusSelect.value = "all";
+    if (categorySelect) categorySelect.value = "all";
+    if (countrySelect) countrySelect.value = "all";
+    if (periodSelect) periodSelect.value = "current-year";
+    if (paceSelect) paceSelect.value = "all";
+    if (sortSelect) sortSelect.value = "fill-desc";
+    render();
+  }
+
   if (searchInput) searchInput.addEventListener("input", render);
   if (statusSelect) statusSelect.addEventListener("change", render);
+  if (categorySelect) categorySelect.addEventListener("change", render);
+  if (countrySelect) countrySelect.addEventListener("change", render);
+  if (periodSelect) periodSelect.addEventListener("change", render);
+  if (paceSelect) paceSelect.addEventListener("change", render);
   if (sortSelect) sortSelect.addEventListener("change", render);
   if (refreshBtn) refreshBtn.addEventListener("click", function () { fetchQuotas(); });
+  if (resetBtn) resetBtn.addEventListener("click", resetFilters);
 
   // --- Quota calendar ---
 
