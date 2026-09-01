@@ -1056,11 +1056,34 @@ tbody tr:hover td {
   padding: clamp(32px, 4vw, 48px);
 }
 
+.plan2__hero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
 .plan2__hero h1 {
-  margin: 6px 0 16px;
+  margin: 6px 0 0;
   font-size: clamp(2rem, 3.4vw, 2.6rem);
   line-height: 1.05;
   max-width: 22ch;
+}
+
+.plan2__download {
+  min-height: 46px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.plan2__download span {
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
 .plan2__lede {
@@ -1103,6 +1126,47 @@ tbody tr:hover td {
   font-size: 0.98rem;
   line-height: 1.55;
   max-width: 82ch;
+}
+
+.plan2__section-lede {
+  color: var(--deep) !important;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.02rem !important;
+  line-height: 1.4 !important;
+}
+
+.section-meta {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.section-meta li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.section-meta li span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.section-meta li strong {
+  color: var(--deep);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.94rem;
+  letter-spacing: -0.005em;
 }
 
 /* ---- Flow (9 stages) ---- */
@@ -3340,5 +3404,152 @@ tbody tr:hover td {
 
   h1 {
     max-width: none;
+  }
+}
+
+/* ---------- Print (Download as PDF from the plan page) ---------- */
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm 14mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0c0e12 !important;
+    font-size: 10.5pt;
+  }
+
+  /* Hide chrome that shouldn't appear in the PDF */
+  .site-nav,
+  .plan2__download,
+  .primer-toolbar,
+  .primer-notes,
+  .primer-popover,
+  .primer-toast,
+  script,
+  nav {
+    display: none !important;
+  }
+
+  .plan2 {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 12pt !important;
+  }
+
+  .plan2__section,
+  .plan2__hero {
+    background: #ffffff !important;
+    border: 1px solid #d7dbe0 !important;
+    box-shadow: none !important;
+    padding: 14pt !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .plan2__hero h1 {
+    font-size: 20pt !important;
+    max-width: none !important;
+  }
+
+  .plan2__lede,
+  .plan2__section-head p {
+    font-size: 10.5pt !important;
+  }
+
+  .plan2__section-head h2,
+  .plan2__section-head p,
+  .plan2__hero-head,
+  .plan2__hero p {
+    color: #0c0e12 !important;
+  }
+
+  /* Overall flow keeps its S-shape 5x2 grid on landscape A4 */
+  .pflow {
+    gap: 10pt 24pt !important;
+  }
+
+  .pflow__stage {
+    background: #ffffff !important;
+    box-shadow: none !important;
+    padding: 8pt !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .pflow__stage h3 {
+    font-size: 10pt !important;
+  }
+
+  .pflow__stage ul {
+    font-size: 8.5pt !important;
+  }
+
+  /* Push each big section onto its own page(s) */
+  #databases,
+  #pilot,
+  #network,
+  #ddp,
+  #working-capital,
+  #connects,
+  #priority,
+  #objective {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Avoid breaks inside individual cards */
+  .db, .net, .wc-card, .wc-option, .phase, .pflow__stage {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Dark blocks: switch to light so ink cost is sane */
+  .plan2__section--dark,
+  .wc-principle {
+    background: #ffffff !important;
+    color: #0c0e12 !important;
+    border: 1px solid #cfd4da !important;
+  }
+
+  .plan2__section--dark .eyebrow,
+  .plan2__section--dark h2,
+  .plan2__section--dark strong,
+  .plan2__section--dark p,
+  .wc-principle p,
+  .wc-principle strong {
+    color: #0c0e12 !important;
+  }
+
+  .objective-quote {
+    color: #0c0e12 !important;
+  }
+
+  .objective-quote em {
+    color: #33434f !important;
+  }
+
+  /* Tables render tight in print */
+  .plan2__table {
+    font-size: 9pt !important;
+  }
+  .plan2__table th,
+  .plan2__table td {
+    padding: 6pt 8pt !important;
+  }
+
+  /* Keep flow arrows visible in print */
+  .pflow__stage::after,
+  .pflow__stage::before {
+    display: block !important;
+  }
+
+  a {
+    color: #0c0e12 !important;
+    text-decoration: none !important;
   }
 }

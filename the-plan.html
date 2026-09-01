@@ -46,8 +46,16 @@
 
     <main class="plan2">
       <header class="plan2__hero">
-        <p class="eyebrow">System design</p>
-        <h1>UK steel procurement intelligence system.</h1>
+        <div class="plan2__hero-head">
+          <div>
+            <p class="eyebrow">System design</p>
+            <h1>UK steel procurement intelligence system.</h1>
+          </div>
+          <button type="button" class="button button-primary plan2__download" data-download-pdf>
+            <span aria-hidden="true">&#8681;</span>
+            Download as PDF
+          </button>
+        </div>
         <p class="plan2__lede">
           A ten-stage engine, a set of feeding databases, and a live supplier network. It answers,
           for every product on the pilot list: who&rsquo;s selling it, who&rsquo;s making it, what the
@@ -65,9 +73,15 @@
 
       <section class="plan2__section" id="flow">
         <header class="plan2__section-head">
-          <p class="eyebrow">Section 1</p>
-          <h2>Overall flow</h2>
-          <p>Ten stages, feeding one another left to right in an S-flow. Each stage lists the inputs it needs and the outputs it hands to the next. The new stage 06 sits after the true landed cost is calculated and before the market forecast, so every option is compared on cash-adjusted total economic cost, not just headline &pound;/tonne.</p>
+          <p class="eyebrow">Section 1 &middot; The engine</p>
+          <h2>Overall flow.</h2>
+          <p class="plan2__section-lede">Ten stages. Read left to right along the top row, drop to stage&nbsp;06, then continue right to left along the bottom.</p>
+          <ul class="section-meta">
+            <li><span>Direction</span><strong>S-flow, 5&nbsp;&times;&nbsp;2 grid</strong></li>
+            <li><span>Each cell</span><strong>Inputs above, output below</strong></li>
+            <li><span>Pivot</span><strong>Stage&nbsp;06 &mdash; cash-adjusted comparison</strong></li>
+            <li><span>Ends at</span><strong>Stage&nbsp;10 &mdash; per-product recommendation</strong></li>
+          </ul>
         </header>
 
         <ol class="pflow">
@@ -899,5 +913,14 @@ Net:                                       &minus;&pound;4/t &rarr; <strong>Paym
       </section>
     </main>
     <script src="nav-menu.js"></script>
+    <script>
+      (function () {
+        var btn = document.querySelector("[data-download-pdf]");
+        if (!btn) return;
+        btn.addEventListener("click", function () {
+          window.print();
+        });
+      })();
+    </script>
   </body>
 </html>
