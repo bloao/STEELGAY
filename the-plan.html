@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="nav.css">
   </head>
-  <body>
+  <body class="plan-page">
     <nav class="site-nav" aria-label="Primary">
       <a class="site-nav__brand" href="index.html">
         <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
@@ -44,325 +44,142 @@
       </div>
     </nav>
 
-    <main class="plan-shell">
-      <header class="plan-hero">
-        <p class="eyebrow">Procurement intelligence &middot; System design</p>
-        <h1>The plan &mdash; from public trade data to a buy/wait recommendation.</h1>
-        <p class="plan-hero__text">
-          A seven-stage pipeline that fuses public trade data, supplier intelligence, live market
-          inputs and the company&rsquo;s own purchasing and inventory data to answer, for every steel
-          product: where it is coming from, who is likely supplying it, what the true landed cost is,
-          where the market is heading, when to buy, how much to buy, and which supplier or origin
-          offers the best risk-adjusted procurement cost.
-        </p>
-        <div class="plan-legend" aria-label="Data type legend">
+    <main class="deck">
+      <header class="deck__head">
+        <div class="deck__title">
+          <p class="eyebrow">Procurement intelligence &middot; system design</p>
+          <h1>From public trade data to a buy or wait recommendation.</h1>
+        </div>
+        <div class="deck__legend">
           <span class="plan-chip plan-chip--confirmed">Confirmed</span>
           <span class="plan-chip plan-chip--inferred">Inferred</span>
           <span class="plan-chip plan-chip--forecast">Forecast</span>
-          <span class="plan-chip plan-chip--internal">Internal company</span>
+          <span class="plan-chip plan-chip--internal">Internal</span>
         </div>
       </header>
 
-      <ol class="plan-stages">
+      <section class="deck__flow" aria-label="Seven-stage flowchart">
 
-        <li class="plan-stage" id="stage-1">
-          <header class="plan-stage__head">
-            <span class="plan-stage__num">01</span>
-            <div>
-              <p class="eyebrow">Stage 1</p>
-              <h2>Trade mapping</h2>
-              <p class="plan-stage__lede">Establish, from HMRC records, what steel is actually entering the UK, from where, on what routes and to whom.</p>
-            </div>
-          </header>
-          <div class="plan-io">
-            <section class="plan-io__col">
-              <h3>Inputs</h3>
-              <ul class="plan-io__list">
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>HMRC imports 2024&ndash;2026</strong> &mdash; commodity code, origin country, dispatch country, transport mode, tonnes, statistical value.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>HMRC control files</strong> &mdash; translate commodity codes into product descriptions.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>HMRC importer details</strong> &mdash; UK importer name, address/postcode, commodity codes imported, activity across 2024, 2025 and 2026.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>Customs declaration statistics</strong> &mdash; major UK entry locations and mode-of-transport context.</li>
-              </ul>
-            </section>
-            <section class="plan-io__col">
-              <h3>Outputs</h3>
-              <ul class="plan-io__list">
-                <li>Steel products entering the UK.</li>
-                <li>Countries of origin and countries of dispatch.</li>
-                <li>Import volumes and values.</li>
-                <li>Transport modes.</li>
-                <li>UK companies importing the products.</li>
-              </ul>
-            </section>
+        <article class="node node--r1c1">
+          <header><span class="node__num">01</span><h2>Trade mapping</h2></header>
+          <ul class="node__inputs">
+            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Imports 2024&ndash;2026</li>
+            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Control files</li>
+            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Importer details</li>
+            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Customs stats</li>
+          </ul>
+          <p class="node__out">&rarr; Products, origins, dispatch, routes, UK importers.</p>
+        </article>
+
+        <article class="node node--r1c2">
+          <header><span class="node__num">02</span><h2>Supplier discovery</h2></header>
+          <ul class="node__inputs">
+            <li><span class="plan-chip plan-chip--confirmed">Public</span> Origin export stats</li>
+            <li><span class="plan-chip plan-chip--confirmed">Public</span> Mill websites &amp; catalogues</li>
+            <li><span class="plan-chip plan-chip--inferred">Trade DB</span> Volza, Trademo, BoL</li>
+            <li><span class="plan-chip plan-chip--inferred">Market</span> Kallanish, NSA network</li>
+          </ul>
+          <p class="node__out">&rarr; Supplier universe &middot; candidate links &middot; evidence &amp; confidence score.</p>
+        </article>
+
+        <article class="node node--r1c3">
+          <header><span class="node__num">03</span><h2>Landed cost &amp; risk engine</h2></header>
+          <ul class="node__inputs">
+            <li><span class="plan-chip plan-chip--confirmed">Quotes</span> Supplier / trader offers</li>
+            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Live quotas + potential duty</li>
+            <li><span class="plan-chip plan-chip--confirmed">Market</span> Scrap, ore, energy, freight, FX, CBAM</li>
+            <li><span class="plan-chip plan-chip--inferred">Cost</span> Known transport lanes</li>
+          </ul>
+          <p class="node__out node__out--sum">&sum; price + transport + insurance + THC + duty + quota risk + FX + CBAM + financing = <strong>true landed cost / tonne</strong></p>
+        </article>
+
+        <article class="node node--r1c4">
+          <header><span class="node__num">04</span><h2>Inventory &amp; demand</h2></header>
+          <ul class="node__inputs">
+            <li><span class="plan-chip plan-chip--internal">Internal</span> Product master + target price</li>
+            <li><span class="plan-chip plan-chip--internal">Internal</span> Consumption &amp; stock</li>
+            <li><span class="plan-chip plan-chip--internal">Internal</span> Open POs, lead time, MOQ</li>
+            <li><span class="plan-chip plan-chip--internal">Internal</span> Supplier performance</li>
+          </ul>
+          <p class="node__out node__out--sum">stock cover = <strong>stock &divide; monthly use</strong>; reorder qty &amp; safety stock.</p>
+        </article>
+
+        <article class="node node--r2c4">
+          <header><span class="node__num">05</span><h2>Market forecast</h2></header>
+          <ul class="node__inputs">
+            <li><span class="plan-chip plan-chip--confirmed">Signals</span> MEPS, scrap, energy, FX, freight</li>
+            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Live quota utilisation</li>
+            <li><span class="plan-chip plan-chip--inferred">Intel</span> Kallanish + supplier network</li>
+          </ul>
+          <p class="node__out">
+            <span class="plan-chip plan-chip--forecast">Forecast</span>
+            30 / 60 / 90-day landed cost &middot; P(price rise) &middot; P(quota exhaustion).
+          </p>
+        </article>
+
+        <article class="node node--r2c3">
+          <header><span class="node__num">06</span><h2>Buying decision engine</h2></header>
+          <ul class="node__inputs">
+            <li>Target vs. current vs. forecast landed cost</li>
+            <li>Stock cover &amp; stock-out risk</li>
+            <li>Lead time, supplier reliability, origin risk</li>
+            <li>Quota exhaustion probability</li>
+          </ul>
+          <div class="node__actions">
+            <span class="plan-action plan-action--go">BUY NOW</span>
+            <span class="plan-action">WAIT</span>
+            <span class="plan-action">NEGOTIATE</span>
+            <span class="plan-action">SWITCH ORIGIN</span>
+            <span class="plan-action">RE-QUOTE</span>
+            <span class="plan-action">RESIZE ORDER</span>
           </div>
-        </li>
+        </article>
 
-        <li class="plan-stage" id="stage-2">
-          <header class="plan-stage__head">
-            <span class="plan-stage__num">02</span>
-            <div>
-              <p class="eyebrow">Stage 2</p>
-              <h2>Supplier discovery</h2>
-              <p class="plan-stage__lede">Move from &ldquo;country&rdquo; to &ldquo;mill&rdquo;. Assemble a supplier universe and infer likely supplier &rarr; UK importer relationships with a defensible evidence score.</p>
-            </div>
-          </header>
-          <div class="plan-io">
-            <section class="plan-io__col">
-              <h3>Inputs</h3>
-              <ul class="plan-io__list">
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>Origin-country export statistics</strong> &mdash; France, Germany, Turkey, other significant steel-producing / exporting countries.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>Supplier &amp; mill websites, product catalogues</strong> &mdash; products manufactured, grades, dimensions, export markets.</li>
-                <li><span class="plan-chip plan-chip--inferred">Inferred</span> <strong>Shipping &amp; trade databases</strong> &mdash; Volza, Trademo, bill-of-lading or shipment sources where available.</li>
-                <li><span class="plan-chip plan-chip--inferred">Inferred</span> <strong>Market intelligence</strong> &mdash; Kallanish, supplier network information, NSA and relevant industry-association information.</li>
-                <li><span class="plan-chip plan-chip--inferred">Inferred</span> <strong>Route validation datasets</strong> &mdash; RORO0901, PORT0203, PORT0204, PORT0205. Supporting evidence only, never the main supplier identifier.</li>
-              </ul>
-            </section>
-            <section class="plan-io__col">
-              <h3>Outputs</h3>
-              <ul class="plan-io__list">
-                <li>Foreign supplier universe by product and country.</li>
-                <li>Candidate supplier &rarr; UK importer relationships.</li>
-                <li>Evidence score for each candidate link.</li>
-                <li>Confidence score for the shortlist.</li>
-                <li>Likely supplier shortlist per product / importer.</li>
-              </ul>
-            </section>
-          </div>
-          <p class="plan-note">Route information is supporting evidence, never the primary basis for identifying a supplier. Direct mill&ndash;importer signals (contracts, catalogues, invoices) outrank inferred flows.</p>
-        </li>
+        <article class="node node--r2c2 node--final">
+          <header><span class="node__num">07</span><h2>Final per-product output</h2></header>
+          <ul class="node__inputs node__inputs--grid">
+            <li>Supplier shortlist</li>
+            <li>Best source country</li>
+            <li>Current quote vs. target</li>
+            <li>True landed cost</li>
+            <li>30 / 60 / 90-day forecast</li>
+            <li>Stock &amp; cover</li>
+            <li>Quota exposure</li>
+            <li>Recommended qty &amp; date</li>
+            <li>Estimated saving</li>
+            <li>Evidence / confidence</li>
+          </ul>
+        </article>
 
-        <li class="plan-stage" id="stage-3">
-          <header class="plan-stage__head">
-            <span class="plan-stage__num">03</span>
-            <div>
-              <p class="eyebrow">Stage 3</p>
-              <h2>Landed cost &amp; risk engine</h2>
-              <p class="plan-stage__lede">Convert every candidate supplier and route into a true landed / replacement cost per tonne, with quota, duty, FX and CBAM risk priced in.</p>
-            </div>
-          </header>
-          <div class="plan-io">
-            <section class="plan-io__col">
-              <h3>Inputs</h3>
-              <ul class="plan-io__list">
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>Supplier or trader quotes.</strong></li>
-                <li><span class="plan-chip plan-chip--inferred">Inferred</span> <strong>Known transport costs.</strong>
-                  <ul class="plan-inline-list">
-                    <li>EU merchant bar &mdash; approx. &pound;65&ndash;75 per tonne delivered, depending on depot.</li>
-                    <li>Turkish hollow section &mdash; sea freight &pound;80&ndash;90/t &middot; insurance &pound;5&ndash;10/t &middot; terminal handling / customs &pound;20/t &middot; docks to depot &pound;20/t.</li>
-                  </ul>
-                </li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>UK steel quota data</strong> &mdash; category, quota number, quarterly allocation, utilisation, remaining quota, exhaustion risk, potential duty.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>Currency</strong> &mdash; GBP/EUR, GBP/USD.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> <strong>Other market inputs</strong> &mdash; scrap prices, iron ore &amp; raw materials, energy prices, shipping / freight indexes, MEPS steel price benchmarks, Kallanish, CBAM exposure, financing / working-capital cost.</li>
-              </ul>
-            </section>
-            <section class="plan-io__col">
-              <h3>Calculation</h3>
-              <div class="plan-equation">Supplier price
-+ transport
-+ insurance
-+ terminal / customs
-+ inland haulage
-+ duties
-+ quota risk
-+ FX impact
-+ CBAM
-+ financing
-= TRUE LANDED / REPLACEMENT COST PER TONNE</div>
-              <h3 class="plan-io__subhead">Outputs</h3>
-              <ul class="plan-io__list">
-                <li>Risk-adjusted true landed cost per tonne, per supplier / origin.</li>
-                <li>Quota-exhaustion exposure per shipment.</li>
-                <li>Trade-remedy and CBAM exposure per shipment.</li>
-              </ul>
-            </section>
-          </div>
-        </li>
+        <!-- Empty cell to complete the S-shape grid -->
+        <div class="node__filler node__filler--r2c1" aria-hidden="true"></div>
 
-        <li class="plan-stage" id="stage-4">
-          <header class="plan-stage__head">
-            <span class="plan-stage__num">04</span>
-            <div>
-              <p class="eyebrow">Stage 4</p>
-              <h2>Inventory &amp; demand</h2>
-              <p class="plan-stage__lede">Bring in the company&rsquo;s own product master, consumption, stock and PO position so the system can reason about when the next order is actually needed.</p>
-            </div>
-          </header>
-          <div class="plan-io">
-            <section class="plan-io__col">
-              <h3>Inputs</h3>
-              <ul class="plan-io__list">
-                <li><span class="plan-chip plan-chip--internal">Internal</span> <strong>Product master</strong> &mdash; product, commodity code, target delivered purchase price.</li>
-                <li><span class="plan-chip plan-chip--internal">Internal</span> Monthly consumption per product.</li>
-                <li><span class="plan-chip plan-chip--internal">Internal</span> Current stock.</li>
-                <li><span class="plan-chip plan-chip--internal">Internal</span> Outstanding purchase orders.</li>
-                <li><span class="plan-chip plan-chip--internal">Internal</span> Supplier lead time, minimum order quantity, supplier performance.</li>
-              </ul>
-            </section>
-            <section class="plan-io__col">
-              <h3>Calculation</h3>
-              <div class="plan-equation">Stock cover = current stock &divide; monthly consumption</div>
-              <h3 class="plan-io__subhead">Outputs</h3>
-              <ul class="plan-io__list">
-                <li>Expected stock when the next order arrives.</li>
-                <li>Stock-out risk.</li>
-                <li>Required reorder quantity.</li>
-                <li>Safety-stock requirements per product.</li>
-              </ul>
-            </section>
-          </div>
-        </li>
+        <!-- Flow arrows (drawn absolutely) -->
+        <svg class="deck__arrows" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#6190ae"></path>
+            </marker>
+          </defs>
+        </svg>
+      </section>
 
-        <li class="plan-stage" id="stage-5">
-          <header class="plan-stage__head">
-            <span class="plan-stage__num">05</span>
-            <div>
-              <p class="eyebrow">Stage 5</p>
-              <h2>Market forecast</h2>
-              <p class="plan-stage__lede">Combine every price and pressure signal into a directional view on where the true landed cost is heading over the next 30, 60 and 90 days.</p>
-            </div>
-          </header>
-          <div class="plan-io">
-            <section class="plan-io__col">
-              <h3>Inputs</h3>
-              <ul class="plan-io__list">
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> Current supplier offers.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> MEPS benchmarks.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> Scrap price movement.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> Energy prices.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> FX.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> Shipping / freight rates.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> Quota utilisation.</li>
-                <li><span class="plan-chip plan-chip--confirmed">Confirmed</span> CBAM cost.</li>
-                <li><span class="plan-chip plan-chip--inferred">Inferred</span> Kallanish and supplier-network market intelligence.</li>
-              </ul>
-            </section>
-            <section class="plan-io__col">
-              <h3>Outputs</h3>
-              <ul class="plan-io__list">
-                <li><span class="plan-chip plan-chip--forecast">Forecast</span> Expected landed replacement cost in 30 days.</li>
-                <li><span class="plan-chip plan-chip--forecast">Forecast</span> Expected landed replacement cost in 60 days.</li>
-                <li><span class="plan-chip plan-chip--forecast">Forecast</span> Expected landed replacement cost in 90 days.</li>
-                <li><span class="plan-chip plan-chip--forecast">Forecast</span> Probability of price increases / decreases.</li>
-                <li><span class="plan-chip plan-chip--forecast">Forecast</span> Probability of quota exhaustion before delivery.</li>
-              </ul>
-            </section>
-          </div>
-        </li>
-
-        <li class="plan-stage" id="stage-6">
-          <header class="plan-stage__head">
-            <span class="plan-stage__num">06</span>
-            <div>
-              <p class="eyebrow">Stage 6</p>
-              <h2>Buying decision engine</h2>
-              <p class="plan-stage__lede">All prior stages converge here. The engine compares target vs. current vs. forecast prices against stock, lead time and risk to produce a concrete buying action per product.</p>
-            </div>
-          </header>
-          <div class="plan-io">
-            <section class="plan-io__col plan-io__col--wide">
-              <h3>Compare</h3>
-              <ul class="plan-io__list plan-io__list--compact">
-                <li>Target buy price</li>
-                <li>Current supplier offer</li>
-                <li>Current landed cost</li>
-                <li>Forecast landed replacement cost</li>
-                <li>Monthly consumption</li>
-                <li>Current stock</li>
-                <li>Stock cover</li>
-                <li>Supplier lead time</li>
-                <li>Quota risk</li>
-                <li>Supplier reliability</li>
-                <li>Origin-country risk</li>
-              </ul>
-            </section>
-            <section class="plan-io__col plan-io__col--wide">
-              <h3>Recommended actions</h3>
-              <div class="plan-actions">
-                <span class="plan-action plan-action--go">BUY NOW</span>
-                <span class="plan-action">WAIT</span>
-                <span class="plan-action">NEGOTIATE</span>
-                <span class="plan-action">REQUEST MORE QUOTES</span>
-                <span class="plan-action">SWITCH SUPPLIER</span>
-                <span class="plan-action">SWITCH ORIGIN COUNTRY</span>
-                <span class="plan-action">BUY SMALLER QUANTITY</span>
-                <span class="plan-action">BUY LARGER QUANTITY</span>
-                <span class="plan-action">ACCELERATE DELIVERY</span>
-              </div>
-            </section>
-          </div>
-        </li>
-
-        <li class="plan-stage" id="stage-7">
-          <header class="plan-stage__head">
-            <span class="plan-stage__num">07</span>
-            <div>
-              <p class="eyebrow">Stage 7</p>
-              <h2>Final output</h2>
-              <p class="plan-stage__lede">A single per-product view that a buyer or general manager can act on without opening any other system.</p>
-            </div>
-          </header>
-          <div class="plan-io plan-io--single">
-            <section class="plan-io__col">
-              <h3>Per-product display</h3>
-              <ul class="plan-io__list plan-io__list--grid">
-                <li>Likely supplier shortlist</li>
-                <li>Best source country</li>
-                <li>Current supplier quote</li>
-                <li>Target buy price</li>
-                <li>True landed cost per tonne</li>
-                <li>30 / 60 / 90-day replacement-cost forecast</li>
-                <li>Current stock</li>
-                <li>Monthly consumption</li>
-                <li>Stock cover</li>
-                <li>Quota exposure</li>
-                <li>Recommended order quantity</li>
-                <li>Recommended buying date</li>
-                <li>Estimated saving</li>
-                <li>Evidence / confidence score</li>
-              </ul>
-            </section>
-          </div>
-        </li>
-      </ol>
-
-      <section class="plan-pilot">
-        <header class="plan-pilot__head">
+      <footer class="deck__foot">
+        <div class="deck__pilot">
           <p class="eyebrow">Pilot products</p>
-          <h2>Where the system will prove itself first</h2>
-          <p>Five representative SKUs the system will be run against end-to-end, chosen to exercise different consumption profiles, quota categories and target-price bands.</p>
-        </header>
-        <div class="plan-pilot__table-wrap">
-          <table class="plan-pilot__table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Commodity code</th>
-                <th class="num">Monthly consumption</th>
-                <th class="num">Current stock</th>
-                <th class="num">Target delivered buy price</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>40&times;40&times;3 Angle</td><td class="mono">7216210000</td><td class="num">10 t</td><td class="num">35 t</td><td class="num">&pound;680/t</td></tr>
-              <tr><td>50&times;40&times;5 Angle</td><td class="mono">7216210000</td><td class="num">30 t</td><td class="num">100 t</td><td class="num">&pound;800/t</td></tr>
-              <tr><td>40&times;10 Flat</td><td class="mono">7214911090</td><td class="num">14 t</td><td class="num">46 t</td><td class="num">&pound;670/t</td></tr>
-              <tr><td>100&times;50 Flat</td><td class="mono">7214911090</td><td class="num">2 t</td><td class="num">5 t</td><td class="num">&pound;740/t</td></tr>
-              <tr><td>25 mm Round</td><td class="mono">7214993900</td><td class="num">3 t</td><td class="num">8 t</td><td class="num">&pound;690/t</td></tr>
-            </tbody>
-          </table>
+          <ul>
+            <li><strong>40&times;40&times;3 Angle</strong> 10&thinsp;t/mo &middot; 35&thinsp;t stock &middot; &pound;680/t</li>
+            <li><strong>50&times;40&times;5 Angle</strong> 30&thinsp;t/mo &middot; 100&thinsp;t stock &middot; &pound;800/t</li>
+            <li><strong>40&times;10 Flat</strong> 14&thinsp;t/mo &middot; 46&thinsp;t stock &middot; &pound;670/t</li>
+            <li><strong>100&times;50 Flat</strong> 2&thinsp;t/mo &middot; 5&thinsp;t stock &middot; &pound;740/t</li>
+            <li><strong>25&thinsp;mm Round</strong> 3&thinsp;t/mo &middot; 8&thinsp;t stock &middot; &pound;690/t</li>
+          </ul>
         </div>
-      </section>
-
-      <section class="plan-objective">
-        <p class="eyebrow">Commercial objective</p>
-        <h2>Minimise procurement and landed cost while maintaining sufficient stock and avoiding unnecessary quota, duty, FX, freight and supplier risk.</h2>
-        <p>
-          The flowchart is deliberately explicit about what is confirmed data, what is inferred, what is
-          forecast and what is internal &mdash; because every downstream recommendation needs to carry
-          its evidence provenance so a buyer can trust or override it.
-        </p>
-      </section>
+        <div class="deck__objective">
+          <p class="eyebrow">Objective</p>
+          <p>Minimise procurement &amp; landed cost while maintaining sufficient stock and avoiding unnecessary quota, duty, FX, freight and supplier risk.</p>
+        </div>
+      </footer>
     </main>
     <script src="nav-menu.js"></script>
   </body>
