@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="nav.css">
   </head>
-  <body class="plan-page">
+  <body>
     <nav class="site-nav" aria-label="Primary">
       <a class="site-nav__brand" href="index.html">
         <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
@@ -44,142 +44,506 @@
       </div>
     </nav>
 
-    <main class="deck">
-      <header class="deck__head">
-        <div class="deck__title">
-          <p class="eyebrow">Procurement intelligence &middot; system design</p>
-          <h1>From public trade data to a buy or wait recommendation.</h1>
-        </div>
-        <div class="deck__legend">
+    <main class="plan2">
+      <header class="plan2__hero">
+        <p class="eyebrow">System design</p>
+        <h1>UK steel procurement intelligence system.</h1>
+        <p class="plan2__lede">
+          A nine-stage engine, a set of feeding databases, and a live supplier network. It answers,
+          for every product on the pilot list: who&rsquo;s selling it, who&rsquo;s making it, what the
+          true landed cost is now, where the market is heading, and whether to buy today or wait.
+        </p>
+        <div class="plan2__legend">
+          <span class="plan-chip plan-chip--internal">Internal</span>
           <span class="plan-chip plan-chip--confirmed">Confirmed</span>
           <span class="plan-chip plan-chip--inferred">Inferred</span>
           <span class="plan-chip plan-chip--forecast">Forecast</span>
-          <span class="plan-chip plan-chip--internal">Internal</span>
         </div>
       </header>
 
-      <section class="deck__flow" aria-label="Seven-stage flowchart">
+      <section class="plan2__section" id="flow">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 1</p>
+          <h2>Overall flow</h2>
+          <p>Nine stages, feeding one another top to bottom. Each stage lists the inputs it needs and the outputs it hands to the next.</p>
+        </header>
 
-        <article class="node node--r1c1">
-          <header><span class="node__num">01</span><h2>Trade mapping</h2></header>
-          <ul class="node__inputs">
-            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Imports 2024&ndash;2026</li>
-            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Control files</li>
-            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Importer details</li>
-            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Customs stats</li>
-          </ul>
-          <p class="node__out">&rarr; Products, origins, dispatch, routes, UK importers.</p>
-        </article>
+        <ol class="pflow">
 
-        <article class="node node--r1c2">
-          <header><span class="node__num">02</span><h2>Supplier discovery</h2></header>
-          <ul class="node__inputs">
-            <li><span class="plan-chip plan-chip--confirmed">Public</span> Origin export stats</li>
-            <li><span class="plan-chip plan-chip--confirmed">Public</span> Mill websites &amp; catalogues</li>
-            <li><span class="plan-chip plan-chip--inferred">Trade DB</span> Volza, Trademo, BoL</li>
-            <li><span class="plan-chip plan-chip--inferred">Market</span> Kallanish, NSA network</li>
-          </ul>
-          <p class="node__out">&rarr; Supplier universe &middot; candidate links &middot; evidence &amp; confidence score.</p>
-        </article>
+          <li class="pflow__stage">
+            <header><span class="pflow__num">01</span><h3>Product / demand data</h3><span class="plan-chip plan-chip--internal">Internal</span></header>
+            <ul>
+              <li>Product ID / commodity code</li>
+              <li>Monthly consumption &middot; current stock</li>
+              <li>Target buy price</li>
+              <li>Lead time / MOQ</li>
+            </ul>
+          </li>
 
-        <article class="node node--r1c3">
-          <header><span class="node__num">03</span><h2>Landed cost &amp; risk engine</h2></header>
-          <ul class="node__inputs">
-            <li><span class="plan-chip plan-chip--confirmed">Quotes</span> Supplier / trader offers</li>
-            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Live quotas + potential duty</li>
-            <li><span class="plan-chip plan-chip--confirmed">Market</span> Scrap, ore, energy, freight, FX, CBAM</li>
-            <li><span class="plan-chip plan-chip--inferred">Cost</span> Known transport lanes</li>
-          </ul>
-          <p class="node__out node__out--sum">&sum; price + transport + insurance + THC + duty + quota risk + FX + CBAM + financing = <strong>true landed cost / tonne</strong></p>
-        </article>
+          <li class="pflow__stage">
+            <header><span class="pflow__num">02</span><h3>UK market mapping</h3><span class="plan-chip plan-chip--confirmed">HMRC</span></header>
+            <ul>
+              <li>What steel enters the UK &middot; from where</li>
+              <li>Which UK companies import</li>
+              <li>How much / what value</li>
+              <li>Which transport mode</li>
+            </ul>
+          </li>
 
-        <article class="node node--r1c4">
-          <header><span class="node__num">04</span><h2>Inventory &amp; demand</h2></header>
-          <ul class="node__inputs">
-            <li><span class="plan-chip plan-chip--internal">Internal</span> Product master + target price</li>
-            <li><span class="plan-chip plan-chip--internal">Internal</span> Consumption &amp; stock</li>
-            <li><span class="plan-chip plan-chip--internal">Internal</span> Open POs, lead time, MOQ</li>
-            <li><span class="plan-chip plan-chip--internal">Internal</span> Supplier performance</li>
-          </ul>
-          <p class="node__out node__out--sum">stock cover = <strong>stock &divide; monthly use</strong>; reorder qty &amp; safety stock.</p>
-        </article>
+          <li class="pflow__stage">
+            <header><span class="pflow__num">03</span><h3>Supplier discovery</h3><span class="plan-chip plan-chip--inferred">Inferred</span></header>
+            <ul>
+              <li>Which foreign mills make it</li>
+              <li>Which traders sell it</li>
+              <li>Who supplies UK market</li>
+              <li>Direct vs. trader sourcing</li>
+            </ul>
+          </li>
 
-        <article class="node node--r2c4">
-          <header><span class="node__num">05</span><h2>Market forecast</h2></header>
-          <ul class="node__inputs">
-            <li><span class="plan-chip plan-chip--confirmed">Signals</span> MEPS, scrap, energy, FX, freight</li>
-            <li><span class="plan-chip plan-chip--confirmed">HMRC</span> Live quota utilisation</li>
-            <li><span class="plan-chip plan-chip--inferred">Intel</span> Kallanish + supplier network</li>
-          </ul>
-          <p class="node__out">
-            <span class="plan-chip plan-chip--forecast">Forecast</span>
-            30 / 60 / 90-day landed cost &middot; P(price rise) &middot; P(quota exhaustion).
-          </p>
-        </article>
+          <li class="pflow__stage pflow__stage--wide">
+            <header><span class="pflow__num">04</span><h3>Market participant analysis</h3><span class="plan-chip plan-chip--inferred">Network</span></header>
+            <ul>
+              <li>Mill &rarr; trader relationships</li>
+              <li>Competitor / importer activity</li>
+              <li>Supplier concentration &amp; alternative sources</li>
+              <li>Quota competition &middot; DDP vs. non-DDP behaviour</li>
+            </ul>
+          </li>
 
-        <article class="node node--r2c3">
-          <header><span class="node__num">06</span><h2>Buying decision engine</h2></header>
-          <ul class="node__inputs">
-            <li>Target vs. current vs. forecast landed cost</li>
-            <li>Stock cover &amp; stock-out risk</li>
-            <li>Lead time, supplier reliability, origin risk</li>
-            <li>Quota exhaustion probability</li>
-          </ul>
-          <div class="node__actions">
-            <span class="plan-action plan-action--go">BUY NOW</span>
-            <span class="plan-action">WAIT</span>
-            <span class="plan-action">NEGOTIATE</span>
-            <span class="plan-action">SWITCH ORIGIN</span>
-            <span class="plan-action">RE-QUOTE</span>
-            <span class="plan-action">RESIZE ORDER</span>
-          </div>
-        </article>
+          <li class="pflow__stage pflow__stage--wide">
+            <header><span class="pflow__num">05</span><h3>True landed cost engine</h3><span class="plan-chip plan-chip--confirmed">Live</span></header>
+            <div class="pflow__eq">Supplier price + freight + insurance + terminal / customs + UK transport + duty + quota exposure + FX + CBAM + financing = <strong>true &pound;/tonne delivered</strong></div>
+          </li>
 
-        <article class="node node--r2c2 node--final">
-          <header><span class="node__num">07</span><h2>Final per-product output</h2></header>
-          <ul class="node__inputs node__inputs--grid">
-            <li>Supplier shortlist</li>
-            <li>Best source country</li>
-            <li>Current quote vs. target</li>
-            <li>True landed cost</li>
-            <li>30 / 60 / 90-day forecast</li>
-            <li>Stock &amp; cover</li>
-            <li>Quota exposure</li>
-            <li>Recommended qty &amp; date</li>
-            <li>Estimated saving</li>
-            <li>Evidence / confidence</li>
-          </ul>
-        </article>
+          <li class="pflow__stage pflow__stage--wide">
+            <header><span class="pflow__num">06</span><h3>Market forecast engine</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
+            <ul>
+              <li>Steel benchmark prices &middot; scrap &middot; iron ore</li>
+              <li>Energy &middot; currency &middot; shipping</li>
+              <li>Quota consumption &middot; market &amp; supplier intelligence</li>
+              <li>Manufacturing &amp; construction indicators</li>
+            </ul>
+          </li>
 
-        <!-- Empty cell to complete the S-shape grid -->
-        <div class="node__filler node__filler--r2c1" aria-hidden="true"></div>
+          <li class="pflow__stage">
+            <header><span class="pflow__num">07</span><h3>30 / 60 / 90-day forecast</h3><span class="plan-chip plan-chip--forecast">Forecast</span></header>
+            <ul>
+              <li>Expected replacement &pound;/t</li>
+              <li>Price &uarr; / &darr; probability</li>
+              <li>Quota exhaustion probability</li>
+              <li>Supplier availability risk</li>
+            </ul>
+          </li>
 
-        <!-- Flow arrows (drawn absolutely) -->
-        <svg class="deck__arrows" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L6,3 L0,6 Z" fill="#6190ae"></path>
-            </marker>
-          </defs>
-        </svg>
+          <li class="pflow__stage">
+            <header><span class="pflow__num">08</span><h3>Buying decision</h3><span class="plan-chip plan-chip--confirmed">Action</span></header>
+            <div class="pflow__actions">
+              <span class="plan-action plan-action--go">BUY NOW</span>
+              <span class="plan-action">WAIT</span>
+              <span class="plan-action">NEGOTIATE</span>
+              <span class="plan-action">SWITCH SUPPLIER</span>
+              <span class="plan-action">SWITCH COUNTRY</span>
+              <span class="plan-action">BUY MORE / LESS</span>
+              <span class="plan-action">ACCELERATE</span>
+            </div>
+          </li>
+
+          <li class="pflow__stage">
+            <header><span class="pflow__num">09</span><h3>Final output</h3><span class="plan-chip plan-chip--forecast">Deliverable</span></header>
+            <ul class="pflow__grid">
+              <li>Best supplier / trader</li>
+              <li>Best origin</li>
+              <li>Target &pound;/t</li>
+              <li>Expected landed &pound;/t</li>
+              <li>Recommended quantity</li>
+              <li>Recommended timing</li>
+              <li>Expected saving</li>
+              <li>Confidence</li>
+            </ul>
+          </li>
+        </ol>
       </section>
 
-      <footer class="deck__foot">
-        <div class="deck__pilot">
-          <p class="eyebrow">Pilot products</p>
+      <section class="plan2__section" id="databases">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 2</p>
+          <h2>Databases &amp; datasets required</h2>
+          <p>Fifteen data stores feed the pipeline. Some already exist (HMRC feeds); the rest need to be built or subscribed to.</p>
+        </header>
+
+        <div class="db-grid">
+
+          <article class="db db--internal">
+            <header><span class="db__code">A</span><h3>Internal company</h3><span class="plan-chip plan-chip--internal">Own data</span></header>
+            <ul>
+              <li><strong>products</strong> &mdash; id, commodity code, quota category, target price, consumption, stock, safety stock, MOQ.</li>
+              <li><strong>supplier_quotes</strong> &mdash; every quote received: date, product, supplier, mill, country, price, currency, Incoterm, DDP flag, freight/duty inclusion, validity, lead time, MOQ.</li>
+              <li><strong>purchase_history</strong> &mdash; supplier, trader, mill, tonnes, price, dates, landed cost, quota outcome.</li>
+              <li><strong>stock_history</strong> &mdash; monthly snapshots for stock, open POs, consumption, cover.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">B</span><h3>UK trade &mdash; HMRC</h3><span class="plan-chip plan-chip--confirmed">Have</span></header>
+            <ul>
+              <li><strong>HMRC imports 2024&ndash;2026</strong> &mdash; commodity, origin, dispatch, transport, tonnes, value.</li>
+              <li><strong>HMRC control files</strong> &mdash; commodity code &rarr; product description.</li>
+              <li><strong>HMRC importer details</strong> &mdash; UK importer, address, postcode, commodity codes, active 2024/25/26, first &amp; last seen.</li>
+            </ul>
+          </article>
+
+          <article class="db db--inferred">
+            <header><span class="db__code">C</span><h3>Foreign supplier network</h3><span class="plan-chip plan-chip--inferred">Build</span></header>
+            <ul>
+              <li><strong>market_participants</strong> &mdash; company, type (mill / trader / stockholder / producer), country, products, supplying mills, UK buyers, DDP availability, routes, evidence, active status.</li>
+              <li>Seeded with the Hollow Section and Merchant Bar relationships in section&nbsp;3 below.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">D</span><h3>Foreign country export data</h3><span class="plan-chip plan-chip--confirmed">Public</span></header>
+            <ul>
+              <li>France customs export statistics</li>
+              <li>German Destatis trade data</li>
+              <li>Eurostat</li>
+              <li>Turkish, Indian and South Korean export statistics</li>
+              <li>Fields: commodity, destination=UK, month, tonnes, value.</li>
+            </ul>
+          </article>
+
+          <article class="db db--inferred">
+            <header><span class="db__code">E</span><h3>Shipment &amp; supplier discovery</h3><span class="plan-chip plan-chip--inferred">Third-party</span></header>
+            <ul>
+              <li>Volza, Trademo, free bill-of-lading datasets where available.</li>
+              <li>Supplier websites, product catalogues, annual reports, mill certificates.</li>
+              <li>Distributor listings, Kallanish, supplier-network intelligence.</li>
+              <li>Every link tagged: Confirmed / Strongly evidenced / Probable / Possible / Unknown.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">F</span><h3>Quota database</h3><span class="plan-chip plan-chip--confirmed">Live</span></header>
+            <ul>
+              <li><strong>steel_quotas</strong> &mdash; category, order number, origin, quarter, initial, used, remaining, utilisation %, days remaining, exhaustion forecast.</li>
+              <li>Category 12B (Merchant Bar): EU <code>058622</code> &middot; Turkey <code>058623</code> &middot; Others <code>058624</code>.</li>
+            </ul>
+          </article>
+
+          <article class="db db--inferred">
+            <header><span class="db__code">G</span><h3>Transport cost database</h3><span class="plan-chip plan-chip--inferred">Curated</span></header>
+            <ul>
+              <li><strong>transport_costs</strong> &mdash; origin, mill, mode, foreign port, UK port, depot, &pound;/t, insurance, terminal, customs, validity.</li>
+              <li>EU Merchant Bar: <strong>&pound;65&ndash;75/t</strong> depending on depot.</li>
+              <li>Turkish Hollow Section: sea <strong>&pound;80&ndash;90/t</strong> &middot; insurance <strong>&pound;5&ndash;10/t</strong> &middot; terminal/customs <strong>&pound;20/t</strong> &middot; docks &rarr; depot <strong>&pound;20/t</strong>.</li>
+            </ul>
+          </article>
+
+          <article class="db">
+            <header><span class="db__code">H</span><h3>Route database</h3><span class="plan-chip plan-chip--confirmed">Supporting</span></header>
+            <ul>
+              <li>RORO0901, PORT0203, PORT0204, PORT0205, customs declaration location data.</li>
+              <li>Used only to validate plausible route / port / mode. <strong>Not</strong> the primary supplier-identification method.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">I</span><h3>Steel price benchmarks (MEPS)</h3><span class="plan-chip plan-chip--confirmed">Subscribe</span></header>
+            <ul>
+              <li>Product, region, date, benchmark &pound;/t, monthly movement, forecast.</li>
+              <li>Powers the &ldquo;quote vs benchmark&rdquo; negotiation intelligence, e.g. quote &pound;720/t vs MEPS &pound;680/t = <strong>&pound;40/t premium</strong>.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">J</span><h3>Raw materials</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
+            <ul>
+              <li>Scrap, iron ore, coking coal, ferroalloys where relevant.</li>
+              <li>Predicts mill cost pressure &mdash; falling scrap + falling energy = downward price pressure = <em>WAIT / NEGOTIATE</em>.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">K</span><h3>Energy</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
+            <ul>
+              <li>European electricity, natural gas, Turkish energy indicators, other mill-country energy costs.</li>
+              <li>Feeds production-cost direction.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">L</span><h3>Currency</h3><span class="plan-chip plan-chip--confirmed">Live</span></header>
+            <ul>
+              <li>Daily GBP/EUR and GBP/USD.</li>
+              <li>EU offers may be EUR; Turkish mills often price against USD even where the trader invoices in GBP.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">M</span><h3>Shipping</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
+            <ul>
+              <li>Sea freight indices, Turkey&nbsp;&rarr;&nbsp;UK freight indications, port congestion, vessel availability, fuel/bunker movements.</li>
+              <li>Estimates future logistics cost.</li>
+            </ul>
+          </article>
+
+          <article class="db db--inferred">
+            <header><span class="db__code">N</span><h3>Market intelligence</h3><span class="plan-chip plan-chip--inferred">Curate</span></header>
+            <ul>
+              <li><strong>Kallanish</strong> &mdash; mill price changes, outages, cuts, new capacity, tariffs, demand, announcements.</li>
+              <li><strong>Supplier network</strong> &mdash; quotes, rumours, lead-time changes, availability, sentiment.</li>
+              <li><strong>NSA &amp; industry</strong> &mdash; regulatory changes, demand developments.</li>
+              <li>Convert news to structured records: date &middot; company &middot; product &middot; event &middot; expected price &amp; supply impact &middot; confidence.</li>
+            </ul>
+          </article>
+
+          <article class="db db--confirmed">
+            <header><span class="db__code">O</span><h3>Demand indicators</h3><span class="plan-chip plan-chip--confirmed">External</span></header>
+            <ul>
+              <li>Manufacturing: PMI, industrial production, automotive output, machinery, fabricated metals.</li>
+              <li>Construction: PMI, infrastructure activity, construction output, new orders.</li>
+              <li>Estimates whether steel consumption is likely to rise or fall.</li>
+            </ul>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="plan2__section" id="pilot">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Reference</p>
+          <h2>Pilot products</h2>
+          <p>The five SKUs the system will be proven against end-to-end.</p>
+        </header>
+        <div class="plan2__table-wrap">
+          <table class="plan2__table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Commodity code</th>
+                <th class="num">Monthly use</th>
+                <th class="num">Current stock</th>
+                <th class="num">Target &pound;/t</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>40&times;40&times;3 Angle</td><td class="mono">7216210000</td><td class="num">10 t</td><td class="num">35 t</td><td class="num">&pound;680</td></tr>
+              <tr><td>50&times;40&times;5 Angle</td><td class="mono">7216210000</td><td class="num">30 t</td><td class="num">100 t</td><td class="num">&pound;800</td></tr>
+              <tr><td>40&times;10 Flat</td><td class="mono">7214911090</td><td class="num">14 t</td><td class="num">46 t</td><td class="num">&pound;670</td></tr>
+              <tr><td>100&times;50 Flat</td><td class="mono">7214911090</td><td class="num">2 t</td><td class="num">5 t</td><td class="num">&pound;740</td></tr>
+              <tr><td>25 mm Round</td><td class="mono">7214993900</td><td class="num">3 t</td><td class="num">8 t</td><td class="num">&pound;690</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="plan2__section" id="network">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 3</p>
+          <h2>Supply-network seed data</h2>
+          <p>Starting relationships for the Hollow Section and Merchant Bar markets. Each edge should carry an evidence score and confidence rating in the participant database.</p>
+        </header>
+
+        <div class="net-grid">
+          <article class="net">
+            <header><h3>Hollow Section &mdash; Turkey</h3></header>
+            <ul>
+              <li><strong>Noksel</strong> &larr; Kama Steel Trading, Kocaer, Duferco, Almet, Ronly.</li>
+              <li><strong>Toscelik / Tosyali group</strong> &larr; All Steels, Salzgitter, OPR; Barretts &amp; All Steels also buy direct.</li>
+              <li><strong>Cinar Boru</strong> &larr; Kama Steel Trading.</li>
+              <li><strong>Basatli</strong> &larr; Salzgitter.</li>
+              <li><strong>Yucel Boru</strong> &larr; ThyssenKrupp.</li>
+              <li><strong>Ozdemir</strong> &larr; Almet.</li>
+              <li><strong>Mescier</strong> &larr; Ronly.</li>
+            </ul>
+          </article>
+
+          <article class="net">
+            <header><h3>Hollow Section &mdash; EU &amp; other</h3></header>
+            <ul>
+              <li><strong>EU mills</strong>: Padana, Ferpinta, Marcegaglia, Aratubo, Tumesa, Tata Netherlands, Voest Alpine, Welser, Arvedi.</li>
+              <li><strong>UTP UAE</strong> &larr; Brisko.</li>
+              <li><strong>Garg Tube (India)</strong> &mdash; direct.</li>
+            </ul>
+          </article>
+
+          <article class="net">
+            <header><h3>Merchant Bar &mdash; EU</h3></header>
+            <ul>
+              <li><strong>LME / Beltrame</strong>, <strong>Megasa</strong>, <strong>Olifer</strong>, <strong>Venete</strong>.</li>
+              <li><strong>Kromat</strong> &mdash; trader for a German mill.</li>
+            </ul>
+          </article>
+
+          <article class="net">
+            <header><h3>Merchant Bar &mdash; Turkey &amp; other</h3></header>
+            <ul>
+              <li><strong>Kocaer</strong> &mdash; own mill.</li>
+              <li><strong>Ozkan</strong> &larr; All Steels.</li>
+              <li><strong>Lamoa (Algeria)</strong> &larr; OPR.</li>
+            </ul>
+          </article>
+
+          <article class="net net--wide">
+            <header><h3>UK Merchant Bar &mdash; producer / importer</h3></header>
+            <p>
+              <strong>7 Steel</strong> is a major UK producer <em>and</em> imports Merchant Bar sizes
+              outside its own production range from <strong>Megasa (Spain)</strong>. Some of these sizes
+              remain inside the relevant quota category despite being unavailable from UK manufacture &mdash;
+              worth flagging as a specific quota-competition risk in the Buying Decision engine.
+            </p>
+          </article>
+        </div>
+
+        <div class="net-scores">
+          <p class="eyebrow">Analyse the network to produce</p>
           <ul>
-            <li><strong>40&times;40&times;3 Angle</strong> 10&thinsp;t/mo &middot; 35&thinsp;t stock &middot; &pound;680/t</li>
-            <li><strong>50&times;40&times;5 Angle</strong> 30&thinsp;t/mo &middot; 100&thinsp;t stock &middot; &pound;800/t</li>
-            <li><strong>40&times;10 Flat</strong> 14&thinsp;t/mo &middot; 46&thinsp;t stock &middot; &pound;670/t</li>
-            <li><strong>100&times;50 Flat</strong> 2&thinsp;t/mo &middot; 5&thinsp;t stock &middot; &pound;740/t</li>
-            <li><strong>25&thinsp;mm Round</strong> 3&thinsp;t/mo &middot; 8&thinsp;t stock &middot; &pound;690/t</li>
+            <li>Mills that supply the greatest number of traders &mdash; concentration on the supply side.</li>
+            <li>Traders highly dependent on one mill &mdash; supplier concentration risk.</li>
+            <li>Traders with diversified sourcing &mdash; safer counterparties in a squeeze.</li>
+            <li>Different-looking quotes that ultimately depend on the same mill.</li>
+            <li>Direct-mill opportunities where a trader adds no value beyond markup.</li>
+            <li>Where a trader adds real value: logistics, credit, aggregation, quota management, risk transfer.</li>
+            <li>Participants competing for the same tariff-rate quotas.</li>
+            <li>Alternative mills / origins if quota, price or availability deteriorates.</li>
+            <li>Concentration risk by product &middot; supplier substitution options.</li>
           </ul>
+          <p class="eyebrow eyebrow--offset">Scores emitted per participant</p>
+          <div class="net-scores__row">
+            <span class="net-score">Supplier concentration</span>
+            <span class="net-score">Trader dependency</span>
+            <span class="net-score">Sourcing diversification</span>
+            <span class="net-score">Alternative-source count</span>
+            <span class="net-score">Quota exposure</span>
+            <span class="net-score">Evidence confidence</span>
+          </div>
         </div>
-        <div class="deck__objective">
-          <p class="eyebrow">Objective</p>
-          <p>Minimise procurement &amp; landed cost while maintaining sufficient stock and avoiding unnecessary quota, duty, FX, freight and supplier risk.</p>
+      </section>
+
+      <section class="plan2__section" id="ddp">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 4</p>
+          <h2>DDP / import-liability analysis</h2>
+          <p>Storing Incoterms against every quote and comparing DDP vs. non-DDP offers on a risk-adjusted basis. The system continues tracking the underlying import and quota even where the quoted commercial term is DDP.</p>
+        </header>
+        <div class="ddp-grid">
+          <article class="ddp-card">
+            <h3>Every quote records</h3>
+            <ul>
+              <li>Supplier / trader</li>
+              <li>Underlying mill where known</li>
+              <li>Product &middot; origin</li>
+              <li>Price &pound;/t &middot; Incoterm</li>
+              <li>Transport included &middot; duty included</li>
+              <li>Tariff-cap arrangement</li>
+              <li>Quota category</li>
+              <li>Lead time &middot; MOQ &middot; validity</li>
+            </ul>
+          </article>
+          <article class="ddp-card ddp-card--calc">
+            <h3>Risk-adjusted comparison</h3>
+            <div class="pflow__eq">
+DDP offer expected landed cost
+vs.
+Non-DDP supplier price + logistics + insurance + customs + expected quota/duty cost + financing
+= <strong>risk-adjusted landed cost</strong>
+            </div>
+            <p class="ddp-card__note">Do not assume the lowest headline supplier price is the cheapest option. Some DDP prices may include a tariff cap; buyer pays the lower net price if the tariff is avoided.</p>
+          </article>
         </div>
-      </footer>
+      </section>
+
+      <section class="plan2__section" id="connects">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 5</p>
+          <h2>How everything connects</h2>
+          <p>Where each database feeds &mdash; internal product data drives the ask; HMRC and foreign trade data narrow the supplier universe; participant + shipment intel produces the shortlist; live market signals compose landed cost and forecast; internal stock &amp; PO position closes the loop into the buying engine.</p>
+        </header>
+        <div class="connect">
+          <div class="connect__col">
+            <span class="connect__label">Feeds &darr;</span>
+            <ol class="connect__list">
+              <li><strong>Internal product data</strong> &rarr; What do we need?</li>
+              <li><strong>HMRC + foreign export</strong> &rarr; UK steel market picture.</li>
+              <li><strong>Supplier research + participants + shipment data</strong> &rarr; Supplier universe.</li>
+              <li>&rarr; Supplier shortlist.</li>
+              <li><strong>Quotes + transport + quota + FX + CBAM</strong> &rarr; True landed cost.</li>
+              <li><strong>MEPS + scrap + energy + FX + shipping + Kallanish + network + PMI</strong> &rarr; 30 / 60 / 90-day forecast.</li>
+              <li><strong>Stock + consumption + POs + lead time + MOQ</strong> &rarr; Buying engine.</li>
+              <li>&rarr; <strong>Decision</strong>.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="plan2__section" id="priority">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 6</p>
+          <h2>Database priority &mdash; four phases</h2>
+          <p>Sequencing the build so the system delivers value at each phase, not only at the end.</p>
+        </header>
+        <div class="phases">
+          <article class="phase">
+            <header><span class="phase__num">Phase 1</span><h3>Immediate / already available</h3></header>
+            <ol>
+              <li>HMRC Imports</li>
+              <li>HMRC Control Files</li>
+              <li>HMRC Importer Details</li>
+              <li>Internal products</li>
+              <li>Current stock</li>
+              <li>Monthly consumption</li>
+              <li>Target buy prices</li>
+              <li>Supplier / trader database</li>
+              <li>Mill relationships</li>
+              <li>Current supplier quotes</li>
+            </ol>
+          </article>
+          <article class="phase">
+            <header><span class="phase__num">Phase 2</span><h3>Procurement cost intelligence</h3></header>
+            <ol start="11">
+              <li>UK quota database</li>
+              <li>Transport-cost database</li>
+              <li>Historic purchase prices</li>
+              <li>Incoterms / DDP database</li>
+              <li>Lead times</li>
+              <li>Outstanding POs</li>
+              <li>Supplier performance</li>
+            </ol>
+          </article>
+          <article class="phase">
+            <header><span class="phase__num">Phase 3</span><h3>Forward-price intelligence</h3></header>
+            <ol start="18">
+              <li>MEPS</li>
+              <li>Scrap prices</li>
+              <li>Energy</li>
+              <li>Currency</li>
+              <li>Freight / shipping</li>
+              <li>Kallanish</li>
+              <li>Supplier-network updates</li>
+            </ol>
+          </article>
+          <article class="phase">
+            <header><span class="phase__num">Phase 4</span><h3>Advanced market intelligence</h3></header>
+            <ol start="25">
+              <li>Foreign-country export statistics</li>
+              <li>Shipment / trade databases</li>
+              <li>Manufacturing indicators</li>
+              <li>Construction indicators</li>
+              <li>Route / port datasets</li>
+              <li>Competitor / importer behaviour model</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section class="plan2__section plan2__section--dark" id="objective">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Final objective</p>
+          <h2>The one sentence the system has to be able to write.</h2>
+        </header>
+        <blockquote class="objective-quote">
+          For <strong>50&times;40&times;5 Angle</strong>, we currently have <strong>100 tonnes</strong> in stock and consume approximately <strong>30 tonnes per month</strong>. Supplier A is offering <strong>&pound;X/t DDP</strong> from Mill Y, while Supplier B is offering <strong>&pound;Y/t non-DDP</strong> from Mill Z. Based on current quota utilisation, freight, FX, steel benchmarks, raw-material trends, market-participant behaviour and expected stock depletion, the recommended action is to purchase <strong>X tonnes from Supplier Y by DATE</strong> at a target price of <strong>&pound;Z/t</strong>. Waiting is expected to <strong>increase / decrease</strong> procurement cost by approximately <strong>&pound;X</strong>. <em>Confidence: X%.</em>
+        </blockquote>
+      </section>
     </main>
     <script src="nav-menu.js"></script>
   </body>

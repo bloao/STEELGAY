@@ -1038,6 +1038,698 @@ tbody tr:hover td {
   }
 }
 
+/* ---------- The plan (v3 — multi-section) ---------- */
+
+.plan2 {
+  width: min(1440px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 32px 0 72px;
+  display: grid;
+  gap: 32px;
+}
+
+.plan2__hero {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(32px, 4vw, 48px);
+}
+
+.plan2__hero h1 {
+  margin: 6px 0 16px;
+  font-size: clamp(2rem, 3.4vw, 2.6rem);
+  line-height: 1.05;
+  max-width: 22ch;
+}
+
+.plan2__lede {
+  color: var(--ink-soft);
+  font-size: 1.06rem;
+  line-height: 1.6;
+  max-width: 78ch;
+  margin: 0 0 24px;
+}
+
+.plan2__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.plan2__section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(28px, 4vw, 44px);
+}
+
+.plan2__section-head {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.plan2__section-head h2 {
+  margin: 6px 0 8px;
+}
+
+.plan2__section-head p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  max-width: 82ch;
+}
+
+/* ---- Flow (9 stages) ---- */
+
+.pflow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.pflow__stage {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  position: relative;
+}
+
+.pflow__stage--wide {
+  grid-column: span 3;
+  background: rgba(97, 144, 174, 0.06);
+  border-color: rgba(97, 144, 174, 0.28);
+}
+
+.pflow__stage header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pflow__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.pflow__stage h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: var(--deep);
+  flex: 1;
+}
+
+.pflow__stage .plan-chip {
+  padding: 2px 8px;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  margin-left: auto;
+}
+
+.pflow__stage ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.pflow__stage ul li {
+  padding-left: 14px;
+  position: relative;
+}
+
+.pflow__stage ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.pflow__grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px !important;
+}
+
+.pflow__eq {
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--deep);
+  white-space: pre-wrap;
+}
+
+.pflow__eq strong {
+  color: var(--accent);
+}
+
+.pflow__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.pflow__actions .plan-action {
+  padding: 4px 8px;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Databases grid ---- */
+
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.db {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.db header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.db__code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--deep);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.db--internal .db__code { background: #5a2a80; }
+.db--confirmed .db__code { background: #14603f; }
+.db--inferred .db__code { background: #1b4a86; }
+
+.db h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+  color: var(--deep);
+  flex: 1;
+}
+
+.db .plan-chip {
+  padding: 2px 8px;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+}
+
+.db ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.db ul li {
+  padding-left: 12px;
+  position: relative;
+}
+
+.db ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.db strong,
+.db code {
+  color: var(--deep);
+  font-weight: 700;
+}
+
+.db code {
+  font-family: var(--font-mono);
+  background: rgba(97, 144, 174, 0.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+/* ---- Pilot products table (v2) ---- */
+
+.plan2__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.plan2__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+}
+
+.plan2__table th,
+.plan2__table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.plan2__table thead th {
+  background: var(--surface-alt);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.plan2__table td.num,
+.plan2__table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.plan2__table td.mono {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+}
+
+.plan2__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---- Network cards ---- */
+
+.net-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.net {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+
+.net--wide {
+  grid-column: 1 / -1;
+  background: rgba(97, 144, 174, 0.06);
+  border-color: rgba(97, 144, 174, 0.28);
+}
+
+.net h3 {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: var(--deep);
+}
+
+.net ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.net ul li {
+  padding-left: 12px;
+  position: relative;
+}
+
+.net ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.net p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.net-scores {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.net-scores .eyebrow {
+  margin-bottom: 8px;
+}
+
+.net-scores .eyebrow--offset {
+  margin-top: 16px;
+}
+
+.net-scores ul {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.net-scores ul li {
+  padding-left: 14px;
+  position: relative;
+}
+
+.net-scores ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.net-scores__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.net-score {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  color: var(--deep);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ---- DDP block ---- */
+
+.ddp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 14px;
+}
+
+.ddp-card {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+
+.ddp-card h3 {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--deep);
+}
+
+.ddp-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.ddp-card ul li {
+  padding-left: 12px;
+  position: relative;
+}
+
+.ddp-card ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.ddp-card--calc {
+  background: rgba(97, 144, 174, 0.06);
+  border-color: rgba(97, 144, 174, 0.28);
+}
+
+.ddp-card__note {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ---- Connect ---- */
+
+.connect {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px 22px;
+}
+
+.connect__label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.connect__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: connect;
+  display: grid;
+  gap: 8px;
+}
+
+.connect__list li {
+  counter-increment: connect;
+  padding-left: 36px;
+  position: relative;
+  color: var(--ink);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.connect__list li::before {
+  content: counter(connect, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Phases ---- */
+
+.phases {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.phase {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 18px 20px;
+}
+
+.phase header {
+  margin-bottom: 12px;
+}
+
+.phase__num {
+  display: block;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.phase h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--deep);
+}
+
+.phase ol {
+  margin: 0;
+  padding-left: 24px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.phase ol li {
+  margin-bottom: 4px;
+}
+
+/* ---- Dark section (objective) ---- */
+
+.plan2__section--dark {
+  background: var(--deep);
+  color: #ffffff;
+  border-color: var(--deep);
+}
+
+.plan2__section--dark .plan2__section-head {
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+.plan2__section--dark .eyebrow {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.plan2__section--dark h2 {
+  color: #ffffff;
+}
+
+.objective-quote {
+  margin: 0;
+  padding: 0;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  max-width: 88ch;
+}
+
+.objective-quote strong {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.objective-quote em {
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 900px) {
+  .pflow {
+    grid-template-columns: 1fr;
+  }
+  .pflow__stage--wide {
+    grid-column: 1;
+  }
+  .ddp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- The plan (single-page deck) ---------- */
 
 body.plan-page {
