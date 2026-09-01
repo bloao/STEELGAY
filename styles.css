@@ -1296,9 +1296,22 @@ tbody tr:hover td {
 
 .pflow__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 6px 14px !important;
   font-size: 0.88rem !important;
+  min-width: 0;
+}
+
+.pflow__grid > li {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* Stage 10 has longer bullet text than the others — single column so
+   nothing extends beyond the card border. */
+.pflow__stage:nth-of-type(10) .pflow__grid {
+  grid-template-columns: 1fr;
 }
 
 .pflow__stage header {
