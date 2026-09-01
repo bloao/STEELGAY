@@ -709,6 +709,52 @@ async function serveStatic(requestUrl, response) {
   }
 }
 
+// Site-wide HTTP Basic Auth. When SITE_PASSWORD is set in the environment
+// every request must present matching credentials; when it is unset the site
+// stays open, so `node server.mjs` still works for local development.
+const AUTH_USER = process.env.SITE_USER || "team";
+const AUTH_PASS = process.env.SITE_PASSWORD || "";
+const AUTH_REALM = process.env.SITE_REALM || "Datafab AGX";
+
+function timingSafeEqualStr(a, b) {
+  const ab = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ab.length !== bb.length) return false;
+  // Node's timingSafeEqual requires equal length; use it when available.
+  try {
+    // eslint-disable-next-line global-require
+    return require("node:crypto").timingSafeEqual(ab, bb);
+  } catch {
+    // Fallback: constant-time-ish comparison
+    let mismatch = 0;
+    for (let i = 0; i < ab.length; i++) mismatch |= ab[i] ^ bb[i];
+    return mismatch === 0;
+  }
+}
+
+function requireAuth(request, response) {
+  if (!AUTH_PASS) return true;
+  const header = request.headers.authorization || "";
+  const [scheme, encoded] = header.split(" ");
+  if (scheme === "Basic" && encoded) {
+    const decoded = Buffer.from(encoded, "base64").toString("utf-8");
+    const idx = decoded.indexOf(":");
+    if (idx >= 0) {
+      const user = decoded.slice(0, idx);
+      const pass = decoded.slice(idx + 1);
+      if (timingSafeEqualStr(user, AUTH_USER) && timingSafeEqualStr(pass, AUTH_PASS)) {
+        return true;
+      }
+    }
+  }
+  response.writeHead(401, {
+    "WWW-Authenticate": `Basic realm="${AUTH_REALM.replace(/"/g, "'")}", charset="UTF-8"`,
+    "content-type": "text/plain; charset=utf-8",
+  });
+  response.end("Authentication required");
+  return false;
+}
+
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
 
@@ -717,11 +763,13 @@ const server = createServer(async (request, response) => {
       response.writeHead(204, {
         "access-control-allow-origin": "*",
         "access-control-allow-methods": "GET, OPTIONS",
-        "access-control-allow-headers": "content-type",
+        "access-control-allow-headers": "content-type, authorization",
       });
       response.end();
       return;
     }
+
+    if (!requireAuth(request, response)) return;
 
     if (url.pathname === "/api/steel-commodities") {
       sendJson(response, 200, await getSteelCommodities());
