@@ -49,9 +49,11 @@
         <p class="eyebrow">System design</p>
         <h1>UK steel procurement intelligence system.</h1>
         <p class="plan2__lede">
-          A nine-stage engine, a set of feeding databases, and a live supplier network. It answers,
+          A ten-stage engine, a set of feeding databases, and a live supplier network. It answers,
           for every product on the pilot list: who&rsquo;s selling it, who&rsquo;s making it, what the
-          true landed cost is now, where the market is heading, and whether to buy today or wait.
+          true landed cost is on a cash-adjusted basis, where the market is heading, and whether to buy
+          today or wait &mdash; and how much of the requirement should sit with the UK domestic mill
+          versus imports.
         </p>
         <div class="plan2__legend">
           <span class="plan-chip plan-chip--internal">Internal</span>
@@ -65,7 +67,7 @@
         <header class="plan2__section-head">
           <p class="eyebrow">Section 1</p>
           <h2>Overall flow</h2>
-          <p>Nine stages, feeding one another top to bottom. Each stage lists the inputs it needs and the outputs it hands to the next.</p>
+          <p>Ten stages, feeding one another left to right in an S-flow. Each stage lists the inputs it needs and the outputs it hands to the next. The new stage 06 sits after the true landed cost is calculated and before the market forecast, so every option is compared on cash-adjusted total economic cost, not just headline &pound;/tonne.</p>
         </header>
 
         <ol class="pflow">
@@ -122,7 +124,17 @@
           </li>
 
           <li class="pflow__stage">
-            <header><span class="pflow__num">06</span><h3>Market forecast engine</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
+            <header><span class="pflow__num">06</span><h3>Domestic vs import &amp; working capital</h3><span class="plan-chip plan-chip--confirmed">Cash-adjusted</span></header>
+            <ul>
+              <li>Tata Steel UK vs EU / Turkey / other</li>
+              <li>Payment terms &middot; funding days</li>
+              <li>Financing cost &middot; inventory holding</li>
+              <li>Total economic procurement cost</li>
+            </ul>
+          </li>
+
+          <li class="pflow__stage">
+            <header><span class="pflow__num">07</span><h3>Market forecast engine</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
             <ul>
               <li>Steel benchmarks &middot; scrap &middot; iron ore</li>
               <li>Energy &middot; currency &middot; shipping</li>
@@ -132,7 +144,7 @@
           </li>
 
           <li class="pflow__stage">
-            <header><span class="pflow__num">07</span><h3>30 / 60 / 90-day forecast</h3><span class="plan-chip plan-chip--forecast">Forecast</span></header>
+            <header><span class="pflow__num">08</span><h3>30 / 60 / 90-day forecast</h3><span class="plan-chip plan-chip--forecast">Forecast</span></header>
             <ul>
               <li>Expected replacement &pound;/t</li>
               <li>Price &uarr; / &darr; probability</li>
@@ -142,7 +154,7 @@
           </li>
 
           <li class="pflow__stage">
-            <header><span class="pflow__num">08</span><h3>Buying decision</h3><span class="plan-chip plan-chip--confirmed">Action</span></header>
+            <header><span class="pflow__num">09</span><h3>Buying decision</h3><span class="plan-chip plan-chip--confirmed">Action</span></header>
             <div class="pflow__actions">
               <span class="plan-action plan-action--go">BUY NOW</span>
               <span class="plan-action">WAIT</span>
@@ -155,16 +167,14 @@
           </li>
 
           <li class="pflow__stage">
-            <header><span class="pflow__num">09</span><h3>Final output</h3><span class="plan-chip plan-chip--forecast">Deliverable</span></header>
+            <header><span class="pflow__num">10</span><h3>Final output</h3><span class="plan-chip plan-chip--forecast">Deliverable</span></header>
             <ul class="pflow__grid">
               <li>Best supplier / trader</li>
-              <li>Best origin</li>
-              <li>Target &pound;/t</li>
-              <li>Expected landed &pound;/t</li>
-              <li>Recommended quantity</li>
-              <li>Recommended timing</li>
-              <li>Expected saving</li>
-              <li>Confidence</li>
+              <li>Best origin &amp; sourcing mix</li>
+              <li>Target &pound;/t &middot; expected landed &pound;/t</li>
+              <li>Recommended quantity &amp; date</li>
+              <li>Peak cash requirement</li>
+              <li>Expected saving &middot; confidence</li>
             </ul>
           </li>
         </ol>
@@ -429,6 +439,7 @@
         <header class="plan2__section-head">
           <p class="eyebrow">Section 4</p>
           <h2>DDP / import-liability analysis</h2>
+          <p>Complements the domestic-vs-import comparison in section 5 &mdash; especially where an import price is quoted DDP and includes some or all of the tariff exposure.</p>
           <p>Storing Incoterms against every quote and comparing DDP vs. non-DDP offers on a risk-adjusted basis. The system continues tracking the underlying import and quota even where the quoted commercial term is DDP.</p>
         </header>
         <div class="ddp-grid">
@@ -458,9 +469,345 @@ Non-DDP supplier price + logistics + insurance + customs + expected quota/duty c
         </div>
       </section>
 
+      <section class="plan2__section" id="working-capital">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 5 &middot; Stage 06 in depth</p>
+          <h2>Domestic vs import sourcing &amp; working-capital analysis</h2>
+          <p>Comparing Tata Steel UK against EU, Turkish and other imports on <strong>total economic procurement cost</strong> &mdash; price plus cash plus inventory plus risk plus time &mdash; not on headline &pound;/tonne alone.</p>
+        </header>
+
+        <div class="wc-key">
+          <span>Compare on:</span>
+          <ul>
+            <li>Purchase price</li>
+            <li>Delivered landed cost</li>
+            <li>Payment terms</li>
+            <li>Cash-flow impact</li>
+            <li>Inventory requirement</li>
+            <li>Lead time</li>
+            <li>Quota exposure</li>
+            <li>Duty &amp; CBAM</li>
+            <li>FX exposure</li>
+            <li>Logistics risk</li>
+            <li>Supplier reliability</li>
+          </ul>
+        </div>
+
+        <div class="wc-options">
+          <article class="wc-option wc-option--dom">
+            <header>
+              <span class="wc-option__tag">Domestic</span>
+              <h3>Tata Steel UK</h3>
+            </header>
+            <ul class="wc-option__attrs">
+              <li><strong>Payment terms</strong> 30 days (strict)</li>
+              <li><strong>Import quota exposure</strong> None</li>
+              <li><strong>CBAM exposure</strong> None</li>
+              <li><strong>International freight</strong> None / substantially reduced</li>
+              <li><strong>FX exposure</strong> Low or none</li>
+              <li><strong>Customs / ports</strong> None</li>
+              <li><strong>Lead time &amp; MOQ</strong> Use actual company data</li>
+              <li><strong>Delivery frequency</strong> Use actual company data</li>
+            </ul>
+            <p class="wc-option__pro"><strong>Main disadvantage:</strong> the strict 30-day payment term creates working-capital pressure that must be priced in.</p>
+          </article>
+
+          <article class="wc-option wc-option--imp">
+            <header>
+              <span class="wc-option__tag">Import</span>
+              <h3>EU / Turkey / other</h3>
+            </header>
+            <ul class="wc-option__attrs">
+              <li><strong>Headline price</strong> Potentially lower</li>
+              <li><strong>Payment terms</strong> Often longer (60 / 90 days)</li>
+              <li><strong>Quota exposure</strong> Yes &mdash; may attract the 50% out-of-quota tariff</li>
+              <li><strong>CBAM</strong> Yes, on covered inputs</li>
+              <li><strong>Freight, insurance, customs, terminal</strong> Yes, all layered on</li>
+              <li><strong>Lead time</strong> Longer, drives higher safety stock</li>
+              <li><strong>Disruption risk</strong> Ports, weather, geopolitics</li>
+              <li><strong>FX exposure</strong> EUR / USD depending on origin</li>
+            </ul>
+            <p class="wc-option__pro"><strong>Main advantage:</strong> lower mill price and longer payment terms can offset the extra landed-cost lines &mdash; but only after quota, inventory and financing cost are priced in.</p>
+          </article>
+        </div>
+
+        <div class="wc-flow">
+          <article class="wc-card">
+            <h3>Total economic procurement cost</h3>
+            <div class="pflow__eq">
+Supplier price
++ international transport, insurance, terminal handling, customs
++ UK inland transport
++ duty
++ expected quota cost
++ CBAM
++ FX impact
++ supplier financing cost
++ inventory holding cost
++ expected disruption cost
+= <strong>total economic procurement cost</strong>
+            </div>
+          </article>
+
+          <article class="wc-card">
+            <h3>Cash-flow &amp; financing cost</h3>
+            <div class="pflow__eq">
+funding days = customer cash-in date &minus; supplier payment date
+financing cost = purchase value &times; annual cost of capital &times; funding days &divide; 365
+per tonne = financing cost &divide; tonnes purchased
+            </div>
+            <p class="wc-card__note">Illustrative: 500 t &times; &pound;700 &times; 10% &times; 75/365 &asymp; &pound;7,192 &asymp; <strong>&pound;14.38/t</strong>. Tata&rsquo;s economic cost becomes &pound;714/t, not &pound;700/t. Cost-of-capital and payment schedules come from the business, not assumptions.</p>
+          </article>
+        </div>
+
+        <div class="wc-comp">
+          <h3>Head-to-head, cash-adjusted</h3>
+          <div class="plan2__table-wrap">
+            <table class="plan2__table wc-table">
+              <thead>
+                <tr>
+                  <th>Option</th>
+                  <th class="num">Headline &pound;/t</th>
+                  <th>Payment</th>
+                  <th class="num">Funding days</th>
+                  <th class="num">Working-capital &pound;/t</th>
+                  <th class="num">Cash-adjusted &pound;/t</th>
+                  <th>Quota &amp; CBAM</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Tata Steel UK</strong></td>
+                  <td class="num">&pound;700</td>
+                  <td>30 days</td>
+                  <td class="num">75</td>
+                  <td class="num">+ &pound;14</td>
+                  <td class="num">&pound;714</td>
+                  <td>None</td>
+                </tr>
+                <tr>
+                  <td><strong>EU supplier</strong></td>
+                  <td class="num">&pound;710 landed</td>
+                  <td>90 days</td>
+                  <td class="num">15</td>
+                  <td class="num">+ &pound;3</td>
+                  <td class="num">&pound;713</td>
+                  <td>Quota + CBAM apply</td>
+                </tr>
+                <tr>
+                  <td><strong>Turkey supplier</strong></td>
+                  <td class="num">&pound;690 landed</td>
+                  <td>60 days</td>
+                  <td class="num">45</td>
+                  <td class="num">+ &pound;8</td>
+                  <td class="num">&pound;698</td>
+                  <td>Quota exposure high</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="wc-comp__note">Headline &pound;/t alone would pick Tata. On cash-adjusted total economic cost the picture inverts once quota and CBAM risk on the imports are also priced in on a probability-weighted basis.</p>
+        </div>
+
+        <div class="wc-inventory">
+          <article class="wc-card">
+            <h3>Inventory requirement &amp; holding cost</h3>
+            <p>Domestic supply can justify a lower stock cover because of shorter lead times, more frequent deliveries, no customs delays and lower disruption risk.</p>
+            <ul>
+              <li><strong>Imported source</strong> &mdash; 3 months cover &middot; 300 t &middot; capital tied up <strong>&pound;210,000</strong>.</li>
+              <li><strong>Tata</strong> &mdash; 1.5 months cover &middot; 150 t &middot; capital tied up <strong>&pound;105,000</strong>.</li>
+              <li>Potential working-capital release from switching to Tata: <strong>&pound;105,000</strong>.</li>
+            </ul>
+            <p class="wc-card__note">Holding cost per tonne includes financing, warehousing, insurance, deterioration risk, slow-moving stock and opportunity cost.</p>
+          </article>
+
+          <article class="wc-card">
+            <h3>Order size &amp; frequency</h3>
+            <p>Tata&rsquo;s 30-day term can also be managed by ordering smaller quantities more often. Compare:</p>
+            <ul>
+              <li>500 tonnes every 2 months</li>
+              <li>125 tonnes every 2 weeks</li>
+            </ul>
+            <p>The model optimises order quantity &times; frequency against payment terms, freight, MOQ, stock, lead time and available cash. Outputs: <strong>recommended order quantity</strong>, <strong>delivery frequency</strong>, <strong>peak cash requirement</strong>.</p>
+          </article>
+        </div>
+
+        <div class="wc-tata">
+          <article class="wc-list wc-list--pro">
+            <h3>Tata &mdash; value to give economic credit for</h3>
+            <ul>
+              <li>No import quota exposure</li>
+              <li>No 50% out-of-quota tariff risk</li>
+              <li>No CBAM</li>
+              <li>Reduced FX exposure</li>
+              <li>Shorter supply chain</li>
+              <li>Potentially shorter lead time</li>
+              <li>More frequent deliveries</li>
+              <li>Lower safety-stock requirement</li>
+              <li>Reduced customs / admin burden</li>
+              <li>Higher supply certainty</li>
+            </ul>
+            <p class="wc-list__note">Quantified where possible &mdash; do not assume these automatically make Tata cheaper.</p>
+          </article>
+          <article class="wc-list wc-list--con">
+            <h3>Tata &mdash; disadvantages to model</h3>
+            <ul>
+              <li>30-day payment term</li>
+              <li>Potentially higher headline &pound;/t</li>
+              <li>Reduced cash-flow flexibility</li>
+              <li>Credit-limit constraints where relevant</li>
+              <li>Product / size availability limitations</li>
+            </ul>
+          </article>
+          <article class="wc-list wc-list--pro">
+            <h3>Imports &mdash; potential advantages</h3>
+            <ul>
+              <li>Lower mill price</li>
+              <li>Longer supplier payment terms</li>
+              <li>More sourcing competition</li>
+              <li>Wider product availability</li>
+              <li>Favourable market opportunities</li>
+              <li>Bulk buying at attractive pricing</li>
+            </ul>
+          </article>
+          <article class="wc-list wc-list--con">
+            <h3>Imports &mdash; potential disadvantages</h3>
+            <ul>
+              <li>Quota exposure &middot; 50% out-of-quota tariff risk</li>
+              <li>CBAM</li>
+              <li>FX exposure</li>
+              <li>Freight, insurance, customs, ports</li>
+              <li>Longer lead times</li>
+              <li>Higher safety stock</li>
+              <li>Disruption risk &middot; landed-cost uncertainty</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="wc-mix">
+          <h3>Recommend a sourcing mix &mdash; not a single supplier</h3>
+          <p>The engine is allowed to split the requirement across sources. Percentages are calculated from actual data, not fixed.</p>
+          <div class="wc-mix__grid">
+            <div class="wc-mix__cell wc-mix__cell--dom">
+              <span class="wc-mix__pct">60%</span>
+              <strong>Tata Steel UK</strong>
+              <p>Base requirement &mdash; short lead time, regular replenishment, lower quota &amp; logistics risk, lower safety stock.</p>
+            </div>
+            <div class="wc-mix__cell">
+              <span class="wc-mix__pct">30%</span>
+              <strong>EU import</strong>
+              <p>Bulk / opportunistic &mdash; lower landed cost, quota available, good supplier terms.</p>
+            </div>
+            <div class="wc-mix__cell">
+              <span class="wc-mix__pct">10%</span>
+              <strong>Turkey</strong>
+              <p>Opportunistic &mdash; when market conditions and quota headroom favour it.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="wc-neg">
+          <article class="wc-card">
+            <h3>Negotiation opportunities beyond &pound;/t</h3>
+            <ul>
+              <li>Longer payment terms &middot; higher credit limit</li>
+              <li>Smaller MOQ &middot; more frequent / scheduled deliveries</li>
+              <li>Call-off agreements &middot; consignment stock</li>
+              <li>Price locks &middot; volume rebates</li>
+              <li>Vendor-managed inventory</li>
+            </ul>
+            <p class="wc-card__note">If Tata&rsquo;s 30-day term itself cannot change, higher delivery frequency or smaller order sizes may reduce the working-capital impact.</p>
+          </article>
+          <article class="wc-card">
+            <h3>External financing &mdash; is it worth it?</h3>
+            <div class="pflow__eq">
+Tata procurement advantage before finance:  &pound;25/t
+Financing cost caused by payment terms:    &pound;12/t
+Net advantage:                              &pound;13/t &rarr; <strong>Tata still attractive</strong>
+
+Tata advantage:                             &pound;8/t
+Financing cost:                             &pound;12/t
+Net:                                       &minus;&pound;4/t &rarr; <strong>Payment terms eliminate the edge</strong>
+            </div>
+          </article>
+        </div>
+
+        <div class="wc-cash">
+          <h3>Working-capital constraint &amp; cash forecast</h3>
+          <p>The buying engine must consider available cash &mdash; not just headline price. Inputs it must respect:</p>
+          <ul class="wc-cash__inputs">
+            <li>Available procurement cash</li>
+            <li>Working-capital facility</li>
+            <li>Supplier credit limits</li>
+            <li>Outstanding supplier liabilities</li>
+            <li>Expected customer receipts</li>
+            <li>Existing inventory value</li>
+          </ul>
+          <p>Every recommended decision emits a 30 / 60 / 90-day cash impact, funding duration and estimated financing cost. A purchase is not recommended just because the &pound;/t is attractive if it creates an unacceptable cash-flow position.</p>
+        </div>
+
+        <div class="wc-example">
+          <h3>Example output &mdash; per product</h3>
+          <div class="plan2__table-wrap">
+            <table class="plan2__table wc-table">
+              <thead>
+                <tr>
+                  <th>40&times;40&times;3 Angle</th>
+                  <th>Delivered &pound;/t</th>
+                  <th>Payment</th>
+                  <th>Lead time</th>
+                  <th>Required cover</th>
+                  <th>Working-capital &pound;/t</th>
+                  <th>Quota / CBAM</th>
+                  <th class="num">Total economic &pound;/t</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Option 1 &mdash; Tata</strong></td>
+                  <td>&pound;X</td>
+                  <td>30 d</td>
+                  <td>X d</td>
+                  <td>X mo</td>
+                  <td>&pound;X</td>
+                  <td>None</td>
+                  <td class="num">&pound;X</td>
+                </tr>
+                <tr>
+                  <td><strong>Option 2 &mdash; EU import</strong></td>
+                  <td>&pound;X</td>
+                  <td>X d</td>
+                  <td>X d</td>
+                  <td>X mo</td>
+                  <td>&pound;X</td>
+                  <td>Medium &middot; &pound;X</td>
+                  <td class="num">&pound;X</td>
+                </tr>
+                <tr>
+                  <td><strong>Option 3 &mdash; Turkey</strong></td>
+                  <td>&pound;X</td>
+                  <td>X d</td>
+                  <td>X d</td>
+                  <td>X mo</td>
+                  <td>&pound;X</td>
+                  <td>Higher &middot; &pound;X</td>
+                  <td class="num">&pound;X</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="wc-example__reco"><strong>Recommendation:</strong> preferred supplier, sourcing mix (e.g. 60% Tata / 30% EU / 10% Turkey), recommended order quantity and purchase date, expected procurement cost &pound;/t, expected saving vs alternative, peak cash requirement, funding period, main reason, confidence %.</p>
+        </div>
+
+        <div class="wc-principle">
+          <p class="eyebrow">Key principle</p>
+          <p>Do not choose between Tata and imports using headline steel price alone. Compare <strong>price + cash + inventory + risk + time</strong>. The domestic option may justify a higher &pound;/t if it reduces inventory, quota risk, CBAM, logistics, lead time and supply-chain uncertainty. Imports may still win where the landed price is sufficiently lower, quota risk is low, payment terms are better and market conditions favour them.</p>
+        </div>
+      </section>
+
       <section class="plan2__section" id="connects">
         <header class="plan2__section-head">
-          <p class="eyebrow">Section 5</p>
+          <p class="eyebrow">Section 6</p>
           <h2>How everything connects</h2>
           <p>Where each database feeds &mdash; internal product data drives the ask; HMRC and foreign trade data narrow the supplier universe; participant + shipment intel produces the shortlist; live market signals compose landed cost and forecast; internal stock &amp; PO position closes the loop into the buying engine.</p>
         </header>
@@ -483,7 +830,7 @@ Non-DDP supplier price + logistics + insurance + customs + expected quota/duty c
 
       <section class="plan2__section" id="priority">
         <header class="plan2__section-head">
-          <p class="eyebrow">Section 6</p>
+          <p class="eyebrow">Section 7</p>
           <h2>Database priority &mdash; four phases</h2>
           <p>Sequencing the build so the system delivers value at each phase, not only at the end.</p>
         </header>
