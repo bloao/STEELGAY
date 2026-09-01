@@ -49,7 +49,7 @@
         <div class="plan2__hero-head">
           <div>
             <p class="eyebrow">System design</p>
-            <h1>UK steel procurement intelligence system.</h1>
+            <h1>UK steel procurement intelligence system</h1>
           </div>
           <button type="button" class="button button-primary plan2__download" data-download-pdf>
             <span aria-hidden="true">&#8681;</span>
@@ -57,11 +57,11 @@
           </button>
         </div>
         <p class="plan2__lede">
-          A ten-stage engine, a set of feeding databases, and a live supplier network. It answers,
-          for every product on the pilot list: who&rsquo;s selling it, who&rsquo;s making it, what the
-          true landed cost is on a cash-adjusted basis, where the market is heading, and whether to buy
-          today or wait &mdash; and how much of the requirement should sit with the UK domestic mill
-          versus imports.
+          A ten-stage engine, a set of feeding databases and a live supplier network. For every
+          product on the pilot list it answers six questions: who&rsquo;s selling it, who&rsquo;s
+          making it, what the true landed cost is on a cash-adjusted basis, where the market is
+          heading, whether to buy today or wait, and how much of the requirement should sit with the
+          UK domestic mill versus imports.
         </p>
         <div class="plan2__legend">
           <span class="plan-chip plan-chip--internal">Internal</span>
@@ -74,13 +74,13 @@
       <section class="plan2__section" id="flow">
         <header class="plan2__section-head">
           <p class="eyebrow">Section 1 &middot; The engine</p>
-          <h2>Overall flow.</h2>
-          <p class="plan2__section-lede">Ten stages. Read left to right along the top row, drop to stage&nbsp;06, then continue right to left along the bottom.</p>
+          <h2>Overall flow</h2>
+          <p class="plan2__section-lede">Read left to right along the top row, drop to stage&nbsp;06, then continue right to left along the bottom.</p>
           <ul class="section-meta">
-            <li><span>Direction</span><strong>S-flow, 5&nbsp;&times;&nbsp;2 grid</strong></li>
+            <li><span>Shape</span><strong>S-flow, 5&nbsp;&times;&nbsp;2 grid</strong></li>
             <li><span>Each cell</span><strong>Inputs above, output below</strong></li>
-            <li><span>Pivot</span><strong>Stage&nbsp;06 &mdash; cash-adjusted comparison</strong></li>
-            <li><span>Ends at</span><strong>Stage&nbsp;10 &mdash; per-product recommendation</strong></li>
+            <li><span>Pivot stage</span><strong>06 &mdash; cash-adjusted comparison</strong></li>
+            <li><span>Final stage</span><strong>10 &mdash; per-product recommendation</strong></li>
           </ul>
         </header>
 
@@ -99,20 +99,20 @@
           <li class="pflow__stage">
             <header><span class="pflow__num">02</span><h3>UK market mapping</h3><span class="plan-chip plan-chip--confirmed">HMRC</span></header>
             <ul>
-              <li>What steel enters the UK &middot; from where</li>
-              <li>Which UK companies import</li>
-              <li>How much / what value</li>
-              <li>Which transport mode</li>
+              <li>Products entering the UK</li>
+              <li>Origin and dispatch countries</li>
+              <li>Import volume and statistical value</li>
+              <li>Transport mode and UK importer</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
             <header><span class="pflow__num">03</span><h3>Supplier discovery</h3><span class="plan-chip plan-chip--inferred">Inferred</span></header>
             <ul>
-              <li>Which foreign mills make it</li>
-              <li>Which traders sell it</li>
-              <li>Who supplies UK market</li>
-              <li>Direct vs. trader sourcing</li>
+              <li>Foreign mills making each product</li>
+              <li>Traders selling into the UK</li>
+              <li>Supplier &rarr; UK-importer links</li>
+              <li>Direct-mill vs. trader sourcing</li>
             </ul>
           </li>
 
@@ -197,8 +197,8 @@
       <section class="plan2__section" id="databases">
         <header class="plan2__section-head">
           <p class="eyebrow">Section 2</p>
-          <h2>Databases &amp; datasets required</h2>
-          <p>Fifteen data stores feed the pipeline. Some already exist (HMRC feeds); the rest need to be built or subscribed to.</p>
+          <h2>Databases and datasets required</h2>
+          <p>Fifteen data stores feed the pipeline. The HMRC feeds already exist; the rest need to be built or subscribed to.</p>
         </header>
 
         <div class="db-grid">
@@ -342,7 +342,7 @@
         <header class="plan2__section-head">
           <p class="eyebrow">Reference</p>
           <h2>Pilot products</h2>
-          <p>The five SKUs the system will be proven against end-to-end.</p>
+          <p>The five SKUs the system will be proven against end to end.</p>
         </header>
         <div class="plan2__table-wrap">
           <table class="plan2__table">
@@ -370,7 +370,7 @@
         <header class="plan2__section-head">
           <p class="eyebrow">Section 3</p>
           <h2>Supply-network seed data</h2>
-          <p>Starting relationships for the Hollow Section and Merchant Bar markets. Each edge should carry an evidence score and confidence rating in the participant database.</p>
+          <p>Starting mill-and-trader relationships for the Hollow Section and Merchant Bar markets. Every link stored in the participant database also carries an evidence source and a confidence rating.</p>
         </header>
 
         <div class="net-grid">
@@ -452,9 +452,8 @@
       <section class="plan2__section" id="ddp">
         <header class="plan2__section-head">
           <p class="eyebrow">Section 4</p>
-          <h2>DDP / import-liability analysis</h2>
-          <p>Complements the domestic-vs-import comparison in section 5 &mdash; especially where an import price is quoted DDP and includes some or all of the tariff exposure.</p>
-          <p>Storing Incoterms against every quote and comparing DDP vs. non-DDP offers on a risk-adjusted basis. The system continues tracking the underlying import and quota even where the quoted commercial term is DDP.</p>
+          <h2>DDP and import-liability analysis</h2>
+          <p>Every quote is stored with its Incoterm and compared DDP vs. non-DDP on a risk-adjusted basis. The engine keeps tracking the underlying import and quota exposure even when a supplier quotes DDP &mdash; especially where the DDP price includes some or all of the potential tariff.</p>
         </header>
         <div class="ddp-grid">
           <article class="ddp-card">
@@ -486,8 +485,8 @@ Non-DDP supplier price + logistics + insurance + customs + expected quota/duty c
       <section class="plan2__section" id="working-capital">
         <header class="plan2__section-head">
           <p class="eyebrow">Section 5 &middot; Stage 06 in depth</p>
-          <h2>Domestic vs import sourcing &amp; working-capital analysis</h2>
-          <p>Comparing Tata Steel UK against EU, Turkish and other imports on <strong>total economic procurement cost</strong> &mdash; price plus cash plus inventory plus risk plus time &mdash; not on headline &pound;/tonne alone.</p>
+          <h2>Domestic vs. import sourcing and working capital</h2>
+          <p>Compares Tata Steel UK against EU, Turkish and other imports on <strong>total economic procurement cost</strong> &mdash; price plus cash plus inventory plus risk plus time &mdash; not on headline &pound;/tonne alone.</p>
         </header>
 
         <div class="wc-key">
@@ -620,7 +619,7 @@ per tonne = financing cost &divide; tonnes purchased
               </tbody>
             </table>
           </div>
-          <p class="wc-comp__note">Headline &pound;/t alone would pick Tata. On cash-adjusted total economic cost the picture inverts once quota and CBAM risk on the imports are also priced in on a probability-weighted basis.</p>
+          <p class="wc-comp__note">Headline &pound;/t alone picks Tata. On cash-adjusted total economic cost the picture flips once the quota and CBAM risk on the imports is priced in on a probability-weighted basis.</p>
         </div>
 
         <div class="wc-inventory">
@@ -699,8 +698,8 @@ per tonne = financing cost &divide; tonnes purchased
         </div>
 
         <div class="wc-mix">
-          <h3>Recommend a sourcing mix &mdash; not a single supplier</h3>
-          <p>The engine is allowed to split the requirement across sources. Percentages are calculated from actual data, not fixed.</p>
+          <h3>Recommend a sourcing mix, not a single supplier</h3>
+          <p>The engine can split a requirement across sources. Percentages are calculated from live data, not fixed.</p>
           <div class="wc-mix__grid">
             <div class="wc-mix__cell wc-mix__cell--dom">
               <span class="wc-mix__pct">60%</span>
@@ -810,7 +809,7 @@ Net:                                       &minus;&pound;4/t &rarr; <strong>Paym
               </tbody>
             </table>
           </div>
-          <p class="wc-example__reco"><strong>Recommendation:</strong> preferred supplier, sourcing mix (e.g. 60% Tata / 30% EU / 10% Turkey), recommended order quantity and purchase date, expected procurement cost &pound;/t, expected saving vs alternative, peak cash requirement, funding period, main reason, confidence %.</p>
+          <p class="wc-example__reco"><strong>Recommendation covers:</strong> preferred supplier &middot; sourcing mix (e.g. 60% Tata / 30% EU / 10% Turkey) &middot; order quantity &middot; purchase date &middot; expected procurement cost &pound;/t &middot; expected saving vs. alternative &middot; peak cash requirement &middot; funding period &middot; main reason &middot; confidence %.</p>
         </div>
 
         <div class="wc-principle">
@@ -823,20 +822,20 @@ Net:                                       &minus;&pound;4/t &rarr; <strong>Paym
         <header class="plan2__section-head">
           <p class="eyebrow">Section 6</p>
           <h2>How everything connects</h2>
-          <p>Where each database feeds &mdash; internal product data drives the ask; HMRC and foreign trade data narrow the supplier universe; participant + shipment intel produces the shortlist; live market signals compose landed cost and forecast; internal stock &amp; PO position closes the loop into the buying engine.</p>
+          <p>Which inputs feed which stage, in order.</p>
         </header>
         <div class="connect">
           <div class="connect__col">
-            <span class="connect__label">Feeds &darr;</span>
+            <span class="connect__label">Data flow</span>
             <ol class="connect__list">
-              <li><strong>Internal product data</strong> &rarr; What do we need?</li>
-              <li><strong>HMRC + foreign export</strong> &rarr; UK steel market picture.</li>
-              <li><strong>Supplier research + participants + shipment data</strong> &rarr; Supplier universe.</li>
-              <li>&rarr; Supplier shortlist.</li>
-              <li><strong>Quotes + transport + quota + FX + CBAM</strong> &rarr; True landed cost.</li>
-              <li><strong>MEPS + scrap + energy + FX + shipping + Kallanish + network + PMI</strong> &rarr; 30 / 60 / 90-day forecast.</li>
-              <li><strong>Stock + consumption + POs + lead time + MOQ</strong> &rarr; Buying engine.</li>
-              <li>&rarr; <strong>Decision</strong>.</li>
+              <li><strong>Internal product data</strong> &rarr; the ask &mdash; what do we need, how much, by when.</li>
+              <li><strong>HMRC + foreign export data</strong> &rarr; UK market picture &mdash; who imports what, from where.</li>
+              <li><strong>Supplier research + participant network + shipment data</strong> &rarr; supplier universe &rarr; shortlist.</li>
+              <li><strong>Quotes + transport + quota + FX + CBAM</strong> &rarr; true landed cost per option.</li>
+              <li><strong>Payment terms + inventory + cost of capital</strong> &rarr; cash-adjusted total economic cost.</li>
+              <li><strong>MEPS + scrap + energy + FX + shipping + Kallanish + network + PMIs</strong> &rarr; 30 / 60 / 90-day forecast.</li>
+              <li><strong>Stock + consumption + open POs + lead time + MOQ</strong> &rarr; buying engine.</li>
+              <li>&rarr; <strong>Decision</strong>: supplier, mix, quantity, timing, expected saving, confidence.</li>
             </ol>
           </div>
         </div>
@@ -846,7 +845,7 @@ Net:                                       &minus;&pound;4/t &rarr; <strong>Paym
         <header class="plan2__section-head">
           <p class="eyebrow">Section 7</p>
           <h2>Database priority &mdash; four phases</h2>
-          <p>Sequencing the build so the system delivers value at each phase, not only at the end.</p>
+          <p>Sequenced so the system delivers value at every phase, not just at the end.</p>
         </header>
         <div class="phases">
           <article class="phase">
@@ -905,7 +904,7 @@ Net:                                       &minus;&pound;4/t &rarr; <strong>Paym
       <section class="plan2__section plan2__section--dark" id="objective">
         <header class="plan2__section-head">
           <p class="eyebrow">Final objective</p>
-          <h2>The one sentence the system has to be able to write.</h2>
+          <h2>The one sentence the system has to be able to write</h2>
         </header>
         <blockquote class="objective-quote">
           For <strong>50&times;40&times;5 Angle</strong>, we currently have <strong>100 tonnes</strong> in stock and consume approximately <strong>30 tonnes per month</strong>. Supplier A is offering <strong>&pound;X/t DDP</strong> from Mill Y, while Supplier B is offering <strong>&pound;Y/t non-DDP</strong> from Mill Z. Based on current quota utilisation, freight, FX, steel benchmarks, raw-material trends, market-participant behaviour and expected stock depletion, the recommended action is to purchase <strong>X tonnes from Supplier Y by DATE</strong> at a target price of <strong>&pound;Z/t</strong>. Waiting is expected to <strong>increase / decrease</strong> procurement cost by approximately <strong>&pound;X</strong>. <em>Confidence: X%.</em>
