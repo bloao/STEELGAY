@@ -436,9 +436,20 @@
         );
       }).join("");
 
+      // Open by default when the user has narrowed things down (search, category,
+      // country or a specific status), so a focused view stays expanded; keep
+      // collapsed for the default "browse everything" state so the DOM stays
+      // small and the page renders instantly.
+      var narrowed = !!(
+        (searchInput && searchInput.value) ||
+        (categorySelect && categorySelect.value !== "all") ||
+        (countrySelect && countrySelect.value !== "all") ||
+        (statusSelect && statusSelect.value !== "all")
+      );
+      var openAttr = narrowed ? " open" : "";
       return (
-        '<article class="tracker-cat tracker-cat--' + aggStatus + '">' +
-          '<header class="tracker-cat__head">' +
+        '<details class="tracker-cat tracker-cat--' + aggStatus + '"' + openAttr + '>' +
+          '<summary class="tracker-cat__head">' +
             '<div class="tracker-cat__ident">' +
               '<span class="tracker-cat__code">Cat ' + escapeHtml(cat) + '</span>' +
               '<h3 class="tracker-cat__name">' + escapeHtml(name.replace(/&amp;/g, "&")) + '</h3>' +
@@ -447,10 +458,11 @@
             '<div class="tracker-cat__meta">' +
               '<span class="tracker-cat__pct">' + pctFormat.format(aggFillPct) + '%</span>' +
               '<em>used across all lines</em>' +
+              '<span class="tracker-cat__chev" aria-hidden="true"></span>' +
             '</div>' +
-          '</header>' +
+          '</summary>' +
           '<div class="tracker-cat__lines">' + linesHtml + '</div>' +
-        '</article>'
+        '</details>'
       );
     }).join("");
     body.innerHTML = html;
@@ -500,7 +512,12 @@
     render();
   }
 
-  if (searchInput) searchInput.addEventListener("input", render);
+  var searchTimer = 0;
+  function debouncedRender() {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(render, 180);
+  }
+  if (searchInput) searchInput.addEventListener("input", debouncedRender);
   if (statusSelect) statusSelect.addEventListener("change", render);
   if (categorySelect) categorySelect.addEventListener("change", render);
   if (countrySelect) countrySelect.addEventListener("change", render);
