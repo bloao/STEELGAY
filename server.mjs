@@ -1,6 +1,11 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
+import { tmpdir } from "node:os";
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import vm from "node:vm";
 
 const port = Number(process.env.PORT || 3000);
@@ -29,15 +34,40 @@ const caches = {
   tradeMeasure: null,
 };
 
+// Compressible mime types — text-based payloads that gzip well.
+const GZIP_RE = /^(?:text\/|application\/(?:json|javascript|xml|xhtml\+xml|rss\+xml)|image\/svg\+xml)/;
+
+function acceptsGzip(response) {
+  const enc = (response.req && response.req.headers && response.req.headers["accept-encoding"]) || "";
+  return /\bgzip\b/i.test(enc);
+}
+
+function writeBody(response, statusCode, headers, body) {
+  const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  const contentType = headers["content-type"] || "application/octet-stream";
+  if (buf.length > 1024 && GZIP_RE.test(contentType) && acceptsGzip(response)) {
+    const gz = gzipSync(buf);
+    response.writeHead(statusCode, {
+      ...headers,
+      "content-encoding": "gzip",
+      "content-length": gz.length,
+      vary: "Accept-Encoding",
+    });
+    response.end(gz);
+  } else {
+    response.writeHead(statusCode, { ...headers, "content-length": buf.length });
+    response.end(buf);
+  }
+}
+
 function sendJson(response, statusCode, payload) {
-  response.writeHead(statusCode, {
+  writeBody(response, statusCode, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, OPTIONS",
     "access-control-allow-headers": "content-type",
-  });
-  response.end(JSON.stringify(payload));
+  }, JSON.stringify(payload));
 }
 
 function sendError(response, statusCode, message) {
@@ -700,10 +730,12 @@ async function serveStatic(requestUrl, response) {
 
   try {
     const body = await readFile(filePath);
-    response.writeHead(200, {
-      "content-type": mimeTypes[extname(filePath)] || "application/octet-stream",
-    });
-    response.end(body);
+    const contentType = mimeTypes[extname(filePath)] || "application/octet-stream";
+    // Static assets can be cached briefly by the browser — dev-friendly TTL.
+    writeBody(response, 200, {
+      "content-type": contentType,
+      "cache-control": "public, max-age=60",
+    }, body);
   } catch {
     sendError(response, 404, "Not found");
   }
@@ -732,8 +764,50 @@ function timingSafeEqualStr(a, b) {
   }
 }
 
+// Short-lived, single-use tokens issued to headless Chrome so the PDF
+// renderer can fetch auth-protected pages without embedding credentials
+// in URLs. Tokens expire quickly and are consumed on first use.
+const pdfTokens = new Map();
+function issuePdfToken() {
+  const token = randomBytes(24).toString("hex");
+  pdfTokens.set(token, Date.now() + 30_000);
+  return token;
+}
+function tokenValid(token) {
+  if (!token) return false;
+  const expiry = pdfTokens.get(token);
+  if (!expiry || expiry < Date.now()) {
+    pdfTokens.delete(token);
+    return false;
+  }
+  return true;
+}
+
+function extractCookie(header, name) {
+  if (!header) return null;
+  const parts = header.split(/;\s*/);
+  for (const part of parts) {
+    const idx = part.indexOf("=");
+    if (idx < 0) continue;
+    if (part.slice(0, idx) === name) return part.slice(idx + 1);
+  }
+  return null;
+}
+
 function requireAuth(request, response) {
   if (!AUTH_PASS) return true;
+  try {
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    const urlToken = url.searchParams.get("pdf_token");
+    const cookieToken = extractCookie(request.headers.cookie, "pdf_token");
+    if (tokenValid(urlToken)) {
+      // Plant the token as a cookie so Chrome sends it with every
+      // subresource fetch (styles.css, JS, favicon) during PDF render.
+      response.setHeader("Set-Cookie", `pdf_token=${urlToken}; Path=/; HttpOnly; Max-Age=30; SameSite=Lax`);
+      return true;
+    }
+    if (tokenValid(cookieToken)) return true;
+  } catch { /* fall through */ }
   const header = request.headers.authorization || "";
   const [scheme, encoded] = header.split(" ");
   if (scheme === "Basic" && encoded) {
@@ -753,6 +827,106 @@ function requireAuth(request, response) {
   });
   response.end("Authentication required");
   return false;
+}
+
+// Locate a headless-Chrome binary. Prefers the standard macOS install; falls
+// back to `chrome` / `chromium` on PATH so the endpoint also works on Linux
+// hosts that have chromium installed system-wide.
+function resolveChromePath() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const candidates = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+async function renderPlanPdf(request, response) {
+  const chrome = resolveChromePath();
+  if (!chrome) {
+    sendError(response, 500, "No Chrome/Chromium binary found. Set CHROME_PATH.");
+    return;
+  }
+
+  const path = (new URL(request.url, `http://${request.headers.host}`).searchParams.get("path")) || "/the-plan.html";
+  if (!/^\/[a-z0-9._\-\/]*$/i.test(path)) {
+    sendError(response, 400, "Invalid path");
+    return;
+  }
+
+  const token = AUTH_PASS ? issuePdfToken() : null;
+  const query = token ? `?pdf_token=${token}&print=1` : `?print=1`;
+  const target = `http://127.0.0.1:${port}${path}${query}`;
+
+  const workDir = await mkdtemp(join(tmpdir(), "plan-pdf-"));
+  const pdfPath = join(workDir, "out.pdf");
+
+  // Classic --headless (not =new) prints reliably on macOS Chrome; the new
+  // headless mode hangs indefinitely with --print-to-pdf on this install.
+  const args = [
+    "--headless",
+    "--disable-gpu",
+    "--no-sandbox",
+    "--hide-scrollbars",
+    `--user-data-dir=${workDir}/profile`,
+    "--virtual-time-budget=5000",
+    "--no-pdf-header-footer",
+    `--print-to-pdf=${pdfPath}`,
+    target,
+  ];
+
+  // stdio "ignore" on stdout: Chrome can otherwise fill the unread pipe and
+  // block on write. We keep stderr piped so we can surface render errors.
+  const child = spawn(chrome, args, { stdio: ["ignore", "ignore", "pipe"] });
+  let stderr = "";
+  child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+  child.on("error", () => {});
+
+  // Headless Chrome writes the PDF and then keeps running on macOS; poll for
+  // the output file and kill Chrome as soon as it appears, rather than waiting
+  // for a graceful exit that never comes.
+  const deadline = Date.now() + 25_000;
+  let ready = false;
+  while (Date.now() < deadline) {
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, 250));
+    if (existsSync(pdfPath)) {
+      // Wait one more tick so Chrome finishes flushing before we read.
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 300));
+      ready = true;
+      break;
+    }
+    if (child.exitCode !== null) break;
+  }
+  try { child.kill("SIGKILL"); } catch {}
+  if (token) pdfTokens.delete(token);
+
+  if (!ready) {
+    console.error("Chrome print failed to produce PDF within 25s:", stderr.slice(0, 400));
+    await rm(workDir, { recursive: true, force: true });
+    sendError(response, 500, "PDF render failed");
+    return;
+  }
+
+  try {
+    const pdf = await readFile(pdfPath);
+    response.writeHead(200, {
+      "content-type": "application/pdf",
+      "content-length": pdf.length,
+      "content-disposition": 'inline; filename="datafab-agx-plan.pdf"',
+      "cache-control": "no-store",
+    });
+    response.end(pdf);
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
 }
 
 const server = createServer(async (request, response) => {
@@ -784,6 +958,11 @@ const server = createServer(async (request, response) => {
     if (url.pathname === "/api/quota-check") {
       const result = await quotaCheck(url);
       sendJson(response, result.statusCode, result.payload);
+      return;
+    }
+
+    if (url.pathname === "/api/plan.pdf") {
+      await renderPlanPdf(request, response);
       return;
     }
 

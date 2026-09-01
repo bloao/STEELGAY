@@ -75,7 +75,7 @@
         <header class="plan2__section-head">
           <p class="eyebrow">Section 1 &middot; The engine</p>
           <h2>Overall flow</h2>
-          <p class="plan2__section-lede">Read left to right along the top row, drop to stage&nbsp;06, then continue right to left along the bottom.</p>
+          <p class="plan2__section-lede">Ten stages, always left to right &mdash; top row 01&ndash;05, then bottom row 06&ndash;10.</p>
           <ul class="section-meta">
             <li><span>Shape</span><strong>S-flow, 5&nbsp;&times;&nbsp;2 grid</strong></li>
             <li><span>Each cell</span><strong>Inputs above, output below</strong></li>
@@ -198,144 +198,608 @@
         <header class="plan2__section-head">
           <p class="eyebrow">Section 2</p>
           <h2>Databases and datasets required</h2>
-          <p>Fifteen data stores feed the pipeline. The HMRC feeds already exist; the rest need to be built or subscribed to.</p>
+          <p>Fifteen data stores feed the pipeline. HMRC feeds already exist; the rest need to be built or subscribed to. Each card lists purpose, the datasets it holds, and how it&rsquo;s used.</p>
         </header>
 
-        <div class="db-grid">
+        <ol class="db2-list">
 
-          <article class="db db--internal">
-            <header><span class="db__code">A</span><h3>Internal company</h3><span class="plan-chip plan-chip--internal">Own data</span></header>
-            <ul>
-              <li><strong>products</strong> &mdash; id, commodity code, quota category, target price, consumption, stock, safety stock, MOQ.</li>
-              <li><strong>supplier_quotes</strong> &mdash; every quote received: date, product, supplier, mill, country, price, currency, Incoterm, DDP flag, freight/duty inclusion, validity, lead time, MOQ.</li>
-              <li><strong>purchase_history</strong> &mdash; supplier, trader, mill, tonnes, price, dates, landed cost, quota outcome.</li>
-              <li><strong>stock_history</strong> &mdash; monthly snapshots for stock, open POs, consumption, cover.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2" open>
+              <summary class="db2__head">
+                <span class="db2__letter">A</span>
+                <div>
+                  <h3>Internal company database</h3>
+                  <p>Products, stock, consumption, quotes, purchase history and supplier commercial terms.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Operational data on what we buy, how quickly we use it, what&rsquo;s in stock, what&rsquo;s on order and on what terms. Without it, external intel can&rsquo;t become a buying decision.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">A1 &middot; products<br><small>SKU master</small></th>
+                      <td>Reorder decisions &middot; target-price checks &middot; stock-cover analysis</td>
+                      <td>Commodity code &middot; product category &middot; target price &middot; monthly consumption &middot; current stock &middot; cover &middot; MOQ &middot; lead time</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">A2 &middot; supplier_quotes<br><small>Every quote received</small></th>
+                      <td>Supplier comparison &middot; benchmarking &middot; negotiation history</td>
+                      <td>Supplier &middot; underlying mill &middot; price &middot; Incoterm &middot; duties &middot; validity date</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">A3 &middot; purchase_history<br><small>All completed POs</small></th>
+                      <td>Landed-cost analysis &middot; supplier scoring &middot; historic price tracking</td>
+                      <td>Supplier &middot; product &middot; landed cost breakdown &middot; delivery date &middot; supplier performance</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">A4 &middot; stock_history<br><small>Inventory snapshots</small></th>
+                      <td>Cover forecasting &middot; safety-stock sizing &middot; stock-out warnings</td>
+                      <td>Free stock &middot; allocated stock &middot; expected incoming &middot; rolling cover</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">A5 &middot; supplier_commercial_terms<br><small>Terms per supplier</small></th>
+                      <td>Working-capital modelling &middot; supplier onboarding &middot; DDP planning</td>
+                      <td>Payment terms &middot; credit limit &middot; currency &middot; DDP availability &middot; MOQ &middot; reliability rating</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; inventory analysis, reorder quantity, supplier comparison, working-capital modelling.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">B</span><h3>UK trade &mdash; HMRC</h3><span class="plan-chip plan-chip--confirmed">Have</span></header>
-            <ul>
-              <li><strong>HMRC imports 2024&ndash;2026</strong> &mdash; commodity, origin, dispatch, transport, tonnes, value.</li>
-              <li><strong>HMRC control files</strong> &mdash; commodity code &rarr; product description.</li>
-              <li><strong>HMRC importer details</strong> &mdash; UK importer, address, postcode, commodity codes, active 2024/25/26, first &amp; last seen.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">B</span>
+                <div>
+                  <h3>UK trade database &mdash; HMRC</h3>
+                  <p>What steel enters the UK, from where, by whom.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Base layer for product flows, origin countries, dispatch, tonnages, transport modes and active UK importers.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">B1 &middot; HMRC Imports 2024&ndash;2026<br><small>UK import statistics</small></th>
+                      <td>UK market mapping &middot; origin trend analysis &middot; supplier discovery input</td>
+                      <td>Reporting month &middot; commodity code &middot; origin country &middot; dispatch country &middot; transport mode &middot; value &middot; net mass</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">B2 &middot; HMRC Control Files<br><small>Commodity dictionary</small></th>
+                      <td>Translating codes to real products &middot; unit conversion</td>
+                      <td>Commodity code &middot; product description &middot; supplementary unit &middot; measurement unit</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">B3 &middot; HMRC Importer Details<br><small>Named importers</small></th>
+                      <td>Identifying market participants &middot; competitor mapping &middot; scouting distribution channels</td>
+                      <td>Importer name &middot; address &middot; postcode &middot; commodities imported &middot; first / last seen &middot; active months</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; UK market mapping, importer identification, origin trend analysis, supplier discovery input.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--inferred">
-            <header><span class="db__code">C</span><h3>Foreign supplier network</h3><span class="plan-chip plan-chip--inferred">Build</span></header>
-            <ul>
-              <li><strong>market_participants</strong> &mdash; company, type (mill / trader / stockholder / producer), country, products, supplying mills, UK buyers, DDP availability, routes, evidence, active status.</li>
-              <li>Seeded with the Hollow Section and Merchant Bar relationships in section&nbsp;3 below.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">C</span>
+                <div>
+                  <h3>Foreign supplier network</h3>
+                  <p>Mills, traders, stockholders and their known relationships.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">A structured map of who supplies whom &mdash; capabilities, dependencies, alternatives.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">C1 &middot; market_participants<br><small>Structured company map</small></th>
+                      <td>Supplier discovery &middot; sourcing alternatives &middot; capability search</td>
+                      <td>Company name &middot; type (mill / trader / stockholder) &middot; country &middot; products &middot; DDP availability &middot; confidence</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">C2 &middot; participant_relationships<br><small>Directed supplier &rarr; buyer links</small></th>
+                      <td>Spotting trader concentration on the same mill &middot; risk of hidden single-source dependence</td>
+                      <td>Company_from &middot; relationship type &middot; company_to &middot; product &middot; evidence source &middot; confidence</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">C3 &middot; supplier_capabilities<br><small>What each mill can make</small></th>
+                      <td>Product qualification &middot; alternative-mill search &middot; grade matching</td>
+                      <td>Mill &middot; product family &middot; dimensions &middot; grades &middot; certifications &middot; UK export capability</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; supplier discovery, spotting trader concentration on the same mill, sourcing alternatives.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">D</span><h3>Foreign country export data</h3><span class="plan-chip plan-chip--confirmed">Public</span></header>
-            <ul>
-              <li>France customs export statistics</li>
-              <li>German Destatis trade data</li>
-              <li>Eurostat</li>
-              <li>Turkish, Indian and South Korean export statistics</li>
-              <li>Fields: commodity, destination=UK, month, tonnes, value.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">D</span>
+                <div>
+                  <h3>Foreign country exports</h3>
+                  <p>Exporting-country trade statistics for cross-validation.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Second-source data to validate UK import flows and narrow the possible foreign supplier universe.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">D1&ndash;D3 &middot; EU sources<br><small>France customs / German Destatis / Eurostat</small></th>
+                      <td>Cross-validating HMRC flows &middot; EU export-share analysis</td>
+                      <td>Reporting country &middot; partner country &middot; commodity &middot; month &middot; tonnes &middot; value</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">D4&ndash;D6 &middot; Non-EU sources<br><small>Turkey / India / South Korea exports</small></th>
+                      <td>Second-source validation for non-EU origins &middot; narrowing possible foreign suppliers</td>
+                      <td>Commodity &middot; destination UK &middot; month &middot; tonnes &middot; value</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; cross-validation of HMRC flows, discrepancy / trans-shipment detection, market-share analysis.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--inferred">
-            <header><span class="db__code">E</span><h3>Shipment &amp; supplier discovery</h3><span class="plan-chip plan-chip--inferred">Third-party</span></header>
-            <ul>
-              <li>Volza, Trademo, free bill-of-lading datasets where available.</li>
-              <li>Supplier websites, product catalogues, annual reports, mill certificates.</li>
-              <li>Distributor listings, Kallanish, supplier-network intelligence.</li>
-              <li>Every link tagged: Confirmed / Strongly evidenced / Probable / Possible / Unknown.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">E</span>
+                <div>
+                  <h3>Shipment &amp; supplier discovery</h3>
+                  <p>Evidence linking foreign mill &rarr; trader &rarr; UK importer.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Collect evidence that connects foreign mill &rarr; trader &rarr; UK importer, and grade it Confirmed / Strongly evidenced / Probable / Possible / Unknown.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">E1&ndash;E3 &middot; Shipment feeds<br><small>Volza / Trademo / bill-of-lading data</small></th>
+                      <td>Evidencing mill &rarr; trader &rarr; UK importer links &middot; discovering hidden supply relationships</td>
+                      <td>Shipper &middot; consignee &middot; commodity &middot; origin port &middot; destination port &middot; shipment date &middot; quantity</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">E4&ndash;E5 &middot; Supplier documentation<br><small>Websites &amp; product catalogues</small></th>
+                      <td>Mill discovery &middot; product qualification &middot; export-market verification</td>
+                      <td>Products offered &middot; mill locations &middot; distributors &middot; export markets &middot; certificates</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">E6&ndash;E7 &middot; Corporate &amp; certificates<br><small>Annual reports &amp; mill certificates</small></th>
+                      <td>Verifying capacity &amp; market focus &middot; confirming origin of specific shipments</td>
+                      <td>Production capacity &middot; key markets &middot; strategic customers &middot; manufacturer &middot; mill &middot; product standard &middot; origin</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; upgrading &ldquo;likely supplier&rdquo; guesses into evidenced ones and feeding the supplier confidence model.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">F</span><h3>Quota database</h3><span class="plan-chip plan-chip--confirmed">Live</span></header>
-            <ul>
-              <li><strong>steel_quotas</strong> &mdash; category, order number, origin, quarter, initial, used, remaining, utilisation %, days remaining, exhaustion forecast.</li>
-              <li>Category 12B (Merchant Bar): EU <code>058622</code> &middot; Turkey <code>058623</code> &middot; Others <code>058624</code>.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">F</span>
+                <div>
+                  <h3>Steel quotas</h3>
+                  <p>Live tariff-rate quota balances and exhaustion risk.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Track available TRQ and estimate the probability an import will clear within quota. Example &mdash; Merchant Bar Cat 12B: EU <code>058622</code>, Turkey <code>058623</code>, Others <code>058624</code>.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">F1 &middot; steel_quotas<br><small>Live TRQ balances</small></th>
+                      <td>Quota exhaustion forecast &middot; shipment risk &middot; duty-exposure estimation &middot; timing decisions</td>
+                      <td>Category &middot; order number &middot; origin &middot; period &middot; allocation &middot; used &middot; remaining &middot; utilisation % &middot; exhaustion status</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">F2 &middot; quota_history<br><small>Daily balance snapshots</small></th>
+                      <td>Burn-rate modelling &middot; recent-acceleration detection &middot; exhaustion-date projection</td>
+                      <td>Date &middot; quota number &middot; initial balance &middot; remaining balance &middot; daily change &middot; utilisation</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; quota exhaustion forecast, shipment risk, expected duty exposure, buy-earlier / switch-origin timing.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--inferred">
-            <header><span class="db__code">G</span><h3>Transport cost database</h3><span class="plan-chip plan-chip--inferred">Curated</span></header>
-            <ul>
-              <li><strong>transport_costs</strong> &mdash; origin, mill, mode, foreign port, UK port, depot, &pound;/t, insurance, terminal, customs, validity.</li>
-              <li>EU Merchant Bar: <strong>&pound;65&ndash;75/t</strong> depending on depot.</li>
-              <li>Turkish Hollow Section: sea <strong>&pound;80&ndash;90/t</strong> &middot; insurance <strong>&pound;5&ndash;10/t</strong> &middot; terminal/customs <strong>&pound;20/t</strong> &middot; docks &rarr; depot <strong>&pound;20/t</strong>.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">G</span>
+                <div>
+                  <h3>Transport costs</h3>
+                  <p>Standardises logistics into &pound;/tonne delivered to depot.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Convert every EX-WORKS / FOB / CIF quote into &pound;/t delivered to H&amp;P depot. EU Merchant Bar &pound;65&ndash;75/t; Turkish Hollow Section sea &pound;80&ndash;90/t + insurance + terminal + inland.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">G1 &middot; transport_costs<br><small>Standardised logistics costs</small></th>
+                      <td>Converting EX-WORKS / FOB / CIF quotes to &pound;/t delivered &middot; direct-mill vs trader comparison &middot; freight-trend analysis</td>
+                      <td>Origin &middot; mill &middot; foreign port &middot; UK port &middot; mode &middot; freight &pound;/t &middot; insurance &middot; terminal &middot; customs/admin &middot; inland &middot; validity &middot; source</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; supplier comparison on a like-for-like basis, direct-mill vs trader comparison, freight-trend analysis.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db">
-            <header><span class="db__code">H</span><h3>Route database</h3><span class="plan-chip plan-chip--confirmed">Supporting</span></header>
-            <ul>
-              <li>RORO0901, PORT0203, PORT0204, PORT0205, customs declaration location data.</li>
-              <li>Used only to validate plausible route / port / mode. <strong>Not</strong> the primary supplier-identification method.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">H</span>
+                <div>
+                  <h3>Route database</h3>
+                  <p>Sanity-checks whether an assumed supply route is plausible.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Supporting dataset only &mdash; validates physical routes, not the primary supplier-identification method.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">H1&ndash;H4 &middot; DfT port stats<br><small>RORO0901 / PORT0203 / 0204 / 0205</small></th>
+                      <td>Validating physical route plausibility &middot; identifying likely UK entry ports &middot; sanity-checking freight assumptions</td>
+                      <td>UK port &middot; foreign port &middot; route &middot; cargo type &middot; direction &middot; traffic &middot; period</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">H5 &middot; Customs location data<br><small>Declaration locations</small></th>
+                      <td>Confirming entry-point context &middot; matching an import to a plausible route</td>
+                      <td>Declaration location &middot; transport mode &middot; entry point</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; validating route plausibility, identifying likely UK ports, sanity-checking freight assumptions.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">I</span><h3>Steel price benchmarks (MEPS)</h3><span class="plan-chip plan-chip--confirmed">Subscribe</span></header>
-            <ul>
-              <li>Product, region, date, benchmark &pound;/t, monthly movement, forecast.</li>
-              <li>Powers the &ldquo;quote vs benchmark&rdquo; negotiation intelligence, e.g. quote &pound;720/t vs MEPS &pound;680/t = <strong>&pound;40/t premium</strong>.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">I</span>
+                <div>
+                  <h3>Steel price benchmarks &mdash; MEPS</h3>
+                  <p>Independent benchmark for quotes and forecasts.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Independent benchmark to judge supplier quotes and drive the finished-steel forward view.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">I1 &middot; MEPS price series<br><small>Independent finished-steel benchmark</small></th>
+                      <td>Quote comparison (e.g. &pound;720/t quote vs &pound;680/t MEPS = &pound;40/t premium) &middot; negotiation intel &middot; 30 / 60 / 90-day forecast</td>
+                      <td>Date &middot; product &middot; region &middot; benchmark price &middot; monthly / quarterly movement &middot; historical high / low &middot; forecast</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; quote comparison (e.g. quote &pound;720/t vs MEPS &pound;680/t = &pound;40/t premium), negotiation intel, 30/60/90-day forecast.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">J</span><h3>Raw materials</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
-            <ul>
-              <li>Scrap, iron ore, coking coal, ferroalloys where relevant.</li>
-              <li>Predicts mill cost pressure &mdash; falling scrap + falling energy = downward price pressure = <em>WAIT / NEGOTIATE</em>.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">J</span>
+                <div>
+                  <h3>Raw materials</h3>
+                  <p>Upstream cost pressure on steel mills.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Monitor upstream production-cost pressures affecting steel mill pricing.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">J1&ndash;J4<br><small>Scrap / iron ore / coking coal / ferroalloys</small></th>
+                      <td>Direction of mill cost pressure &middot; feeds market forecast engine &middot; timing decisions</td>
+                      <td>Material grade / region &middot; price &middot; currency &middot; monthly change &middot; % movement</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; direction of mill cost pressure; feeds the market forecast engine.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">K</span><h3>Energy</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
-            <ul>
-              <li>European electricity, natural gas, Turkish energy indicators, other mill-country energy costs.</li>
-              <li>Feeds production-cost direction.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">K</span>
+                <div>
+                  <h3>Energy</h3>
+                  <p>Energy-cost pressure on steel production.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Monitor electricity, gas and industrial energy costs in producing regions.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">K1&ndash;K4<br><small>EU electricity / natural gas / Turkish energy / other mill-country energy</small></th>
+                      <td>Regional competitiveness view &middot; combines with raw materials &rarr; mill cost pressure &rarr; forward steel price</td>
+                      <td>Country / region &middot; benchmark &middot; price &middot; unit &middot; monthly movement</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; regional competitiveness view; combines with raw materials into mill cost pressure &rarr; forward steel price.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">L</span><h3>Currency</h3><span class="plan-chip plan-chip--confirmed">Live</span></header>
-            <ul>
-              <li>Daily GBP/EUR and GBP/USD.</li>
-              <li>EU offers may be EUR; Turkish mills often price against USD even where the trader invoices in GBP.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">L</span>
+                <div>
+                  <h3>Currency</h3>
+                  <p>Direct and indirect FX exposure per supplier.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Direct FX (EUR quotes &rarr; GBP) and indirect FX (Turkish traders invoicing GBP over a USD-linked underlying cost).</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">L1&ndash;L3<br><small>GBP/EUR, GBP/USD, daily FX history</small></th>
+                      <td>Direct FX (EUR quotes &rarr; GBP) &middot; indirect FX (GBP-invoiced but USD-linked underlying) &middot; landed-cost &amp; forecast inputs</td>
+                      <td>Currency pair &middot; date &middot; open / high / low / close &middot; % movement</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; current landed cost, 30/60/90-day forecast, supplier comparison.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">M</span><h3>Shipping</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
-            <ul>
-              <li>Sea freight indices, Turkey&nbsp;&rarr;&nbsp;UK freight indications, port congestion, vessel availability, fuel/bunker movements.</li>
-              <li>Estimates future logistics cost.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">M</span>
+                <div>
+                  <h3>Shipping</h3>
+                  <p>Logistics cost and disruption signals.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Freight cost, capacity, delay and fuel signals into the landed-cost and forecast engines.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">M1&ndash;M5<br><small>Sea freight indices / Turkey&rarr;UK freight / port congestion / vessel availability / bunker fuel</small></th>
+                      <td>Expected freight cost &middot; lead-time risk &middot; delivery-date forecast &middot; future landed cost</td>
+                      <td>Route &middot; port pair &middot; index / &pound;/t &middot; congestion level &middot; expected delay &middot; capacity indication &middot; bunker price</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; expected freight, lead-time risk, delivery-date forecast, future landed cost.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--inferred">
-            <header><span class="db__code">N</span><h3>Market intelligence</h3><span class="plan-chip plan-chip--inferred">Curate</span></header>
-            <ul>
-              <li><strong>Kallanish</strong> &mdash; mill price changes, outages, cuts, new capacity, tariffs, demand, announcements.</li>
-              <li><strong>Supplier network</strong> &mdash; quotes, rumours, lead-time changes, availability, sentiment.</li>
-              <li><strong>NSA &amp; industry</strong> &mdash; regulatory changes, demand developments.</li>
-              <li>Convert news to structured records: date &middot; company &middot; product &middot; event &middot; expected price &amp; supply impact &middot; confidence.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">N</span>
+                <div>
+                  <h3>Market intelligence</h3>
+                  <p>Unstructured market news, converted into structured signals.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Turn news &amp; commentary into structured market-event records (date, product, country, event type, price / supply / demand impact, horizon, source, confidence).</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">N1 &middot; Kallanish<br><small>Steel news &amp; price service</small></th>
+                      <td>Market forecasting &middot; timing decisions &middot; supply-disruption alerts &middot; policy watch</td>
+                      <td>Mill price announcements &middot; production outages &middot; production cuts &middot; new capacity &middot; tariff / quota policy news &middot; regional demand commentary</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">N2 &middot; Supplier network<br><small>Direct supplier feedback</small></th>
+                      <td>Quote validation &middot; negotiation &middot; availability planning &middot; sourcing decisions</td>
+                      <td>Live quotes &middot; expected price movements &middot; product availability &middot; lead times &middot; anecdotal market sentiment (where legitimate)</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">N3 &middot; NSA / industry<br><small>UK steel industry bodies</small></th>
+                      <td>Regulatory tracking &middot; demand forecasting &middot; long-term strategy</td>
+                      <td>Regulation &amp; policy updates &middot; industry demand commentary &middot; production data commentary &middot; market outlook publications</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; supply/demand signals that combine with the quantitative datasets; never used alone.</p>
+              </div>
+            </details>
+          </li>
 
-          <article class="db db--confirmed">
-            <header><span class="db__code">O</span><h3>Demand indicators</h3><span class="plan-chip plan-chip--confirmed">External</span></header>
-            <ul>
-              <li>Manufacturing: PMI, industrial production, automotive output, machinery, fabricated metals.</li>
-              <li>Construction: PMI, infrastructure activity, construction output, new orders.</li>
-              <li>Estimates whether steel consumption is likely to rise or fall.</li>
-            </ul>
-          </article>
+          <li>
+            <details class="db2">
+              <summary class="db2__head">
+                <span class="db2__letter">O</span>
+                <div>
+                  <h3>Demand indicators</h3>
+                  <p>Future steel demand, so forecasts aren&rsquo;t supply-side only.</p>
+                </div>
+                <span class="db2__chev" aria-hidden="true"></span>
+              </summary>
+              <div class="db2__body">
+                <p class="db2__purpose">Estimate future steel demand from manufacturing and construction leading indicators.</p>
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Source</th>
+                      <th scope="col">When it&rsquo;s used</th>
+                      <th scope="col">Individual datapoints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">O1&ndash;O5 &middot; Manufacturing<br><small>PMI, industrial production, automotive, machinery, fabricated metals</small></th>
+                      <td>Demand direction &middot; supplier vs buyer pricing power &middot; 30 / 60 / 90-day forecast</td>
+                      <td>Month &middot; headline &middot; new orders &middot; output &middot; employment &middot; direction</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">O6&ndash;O9 &middot; Construction<br><small>PMI, output, infrastructure activity, new orders</small></th>
+                      <td>Construction demand read &middot; steel demand for structural products &middot; long-cycle forecast</td>
+                      <td>Month / quarter &middot; index &middot; activity &middot; new orders &middot; value &middot; % movement</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="db2__use"><strong>Used for</strong> &mdash; demand direction &rarr; supplier vs buyer pricing power &rarr; 30/60/90-day forecast.</p>
+              </div>
+            </details>
+          </li>
+        </ol>
 
-        </div>
+        <aside class="db2-summary">
+          <h3>How the fifteen fit together</h3>
+          <ol class="db2-summary__flow">
+            <li><strong>A</strong> tells us what we need.</li>
+            <li><strong>B&nbsp;+&nbsp;D</strong> map the UK market and flows.</li>
+            <li><strong>C&nbsp;+&nbsp;E&nbsp;+&nbsp;H</strong> identify who can supply it.</li>
+            <li><strong>F&nbsp;+&nbsp;G&nbsp;+&nbsp;L&nbsp;+&nbsp;A5</strong> give the true landed cost.</li>
+            <li><strong>I&nbsp;+&nbsp;J&nbsp;+&nbsp;K&nbsp;+&nbsp;L&nbsp;+&nbsp;M&nbsp;+&nbsp;N&nbsp;+&nbsp;O</strong> forecast the market 30/60/90 days out.</li>
+            <li>All of the above &rarr; the procurement engine picks a decision.</li>
+          </ol>
+          <div class="db2-summary__actions">
+            <span class="plan-action plan-action--go">BUY NOW</span>
+            <span class="plan-action">WAIT</span>
+            <span class="plan-action">NEGOTIATE</span>
+            <span class="plan-action">SWITCH SUPPLIER</span>
+            <span class="plan-action">SWITCH ORIGIN</span>
+            <span class="plan-action">DOMESTIC + IMPORT MIX</span>
+            <span class="plan-action">ACCELERATE DELIVERY</span>
+          </div>
+          <p class="db2-summary__note">The goal isn&rsquo;t the cheapest quote &mdash; it&rsquo;s the lowest <strong>risk-adjusted, cash-adjusted</strong> total procurement cost while keeping stock intact.</p>
+        </aside>
       </section>
 
       <section class="plan2__section" id="pilot">
@@ -915,10 +1379,71 @@ Net:                                       &minus;&pound;4/t &rarr; <strong>Paym
     <script>
       (function () {
         var btn = document.querySelector("[data-download-pdf]");
-        if (!btn) return;
-        btn.addEventListener("click", function () {
-          window.print();
-        });
+        if (btn) {
+          btn.addEventListener("click", function () {
+            var original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "Preparing PDF…";
+            fetch("/api/plan.pdf", { credentials: "include" })
+              .then(function (r) {
+                if (!r.ok) throw new Error("Server render failed");
+                return r.blob();
+              })
+              .then(function (blob) {
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement("a");
+                a.href = url;
+                a.download = "datafab-agx-plan.pdf";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+              })
+              .catch(function () {
+                // Fall back to the browser print dialog if the server route
+                // isn't available (e.g. running against an older build).
+                window.print();
+              })
+              .finally(function () {
+                btn.disabled = false;
+                btn.textContent = original;
+              });
+          });
+        }
+
+        // When the page is loaded by the server-side PDF renderer we get
+        // ?print=1 — open every collapsible immediately so headless Chrome
+        // captures the expanded content (its --print-to-pdf mode does not
+        // fire the beforeprint event that would otherwise expand them).
+        if (/(?:^|[?&])print=1(?:&|$)/.test(location.search)) {
+          document.querySelectorAll("details").forEach(function (d) { d.open = true; });
+        }
+
+        var savedOpenState = null;
+        function openAll() {
+          var all = document.querySelectorAll("details");
+          savedOpenState = [];
+          all.forEach(function (d) {
+            savedOpenState.push(d.open);
+            d.open = true;
+          });
+        }
+        function restore() {
+          if (!savedOpenState) return;
+          var all = document.querySelectorAll("details");
+          all.forEach(function (d, i) { d.open = savedOpenState[i]; });
+          savedOpenState = null;
+        }
+        window.addEventListener("beforeprint", openAll);
+        window.addEventListener("afterprint", restore);
+        if (window.matchMedia) {
+          var mql = window.matchMedia("print");
+          if (mql && mql.addEventListener) {
+            mql.addEventListener("change", function (e) {
+              if (e.matches) openAll(); else restore();
+            });
+          }
+        }
       })();
     </script>
   </body>

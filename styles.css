@@ -1195,23 +1195,27 @@ tbody tr:hover td {
   min-height: 250px;
 }
 
-/* S-flow grid placement for 10 stages: row1 01→02→03→04→05, row2 10←09←08←07←06 */
+/* Left-to-right flow for 10 stages: row1 01→02→03→04→05, row2 06→07→08→09→10 */
 .pflow__stage:nth-of-type(1)  { grid-area: 1 / 1; }
 .pflow__stage:nth-of-type(2)  { grid-area: 1 / 2; }
 .pflow__stage:nth-of-type(3)  { grid-area: 1 / 3; }
 .pflow__stage:nth-of-type(4)  { grid-area: 1 / 4; }
 .pflow__stage:nth-of-type(5)  { grid-area: 1 / 5; }
-.pflow__stage:nth-of-type(6)  { grid-area: 2 / 5; }
-.pflow__stage:nth-of-type(7)  { grid-area: 2 / 4; }
+.pflow__stage:nth-of-type(6)  { grid-area: 2 / 1; }
+.pflow__stage:nth-of-type(7)  { grid-area: 2 / 2; }
 .pflow__stage:nth-of-type(8)  { grid-area: 2 / 3; }
-.pflow__stage:nth-of-type(9)  { grid-area: 2 / 2; }
-.pflow__stage:nth-of-type(10) { grid-area: 2 / 1; }
+.pflow__stage:nth-of-type(9)  { grid-area: 2 / 4; }
+.pflow__stage:nth-of-type(10) { grid-area: 2 / 5; }
 
-/* Right arrows: 01→02, 02→03, 03→04, 04→05 (top row) */
+/* Right arrows on both rows, between every neighbouring pair */
 .pflow__stage:nth-of-type(1)::after,
 .pflow__stage:nth-of-type(2)::after,
 .pflow__stage:nth-of-type(3)::after,
-.pflow__stage:nth-of-type(4)::after {
+.pflow__stage:nth-of-type(4)::after,
+.pflow__stage:nth-of-type(6)::after,
+.pflow__stage:nth-of-type(7)::after,
+.pflow__stage:nth-of-type(8)::after,
+.pflow__stage:nth-of-type(9)::after {
   content: "";
   position: absolute;
   right: -26px;
@@ -1224,45 +1228,32 @@ tbody tr:hover td {
   z-index: 2;
 }
 
-/* Left arrows: 06→07, 07→08, 08→09, 09→10 (bottom row, right-to-left) */
-.pflow__stage:nth-of-type(7)::before,
-.pflow__stage:nth-of-type(8)::before,
-.pflow__stage:nth-of-type(9)::before,
-.pflow__stage:nth-of-type(10)::before {
+/* Wrap arrow: 05 (end of row 1) drops and points left, down and right to 06 */
+.pflow__stage:nth-of-type(5)::before {
   content: "";
   position: absolute;
   right: -26px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 12px;
-  background: var(--accent);
-  clip-path: polygon(0 50%, 40% 0, 40% 30%, 100% 30%, 100% 70%, 40% 70%, 40% 100%);
+  bottom: -22px;
+  width: 26px;
+  height: 22px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
   z-index: 2;
 }
-
-/* Down arrow: 05 → 06 (pivot) */
-.pflow__stage:nth-of-type(5)::after {
+.pflow__stage:nth-of-type(6)::before {
   content: "";
   position: absolute;
-  bottom: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14px;
+  left: -26px;
+  top: -22px;
+  width: 26px;
   height: 22px;
-  background: var(--accent);
-  clip-path: polygon(30% 0, 70% 0, 70% 60%, 100% 60%, 50% 100%, 0 60%, 30% 60%);
+  border-left: 2px solid var(--accent);
+  border-top: 2px solid var(--accent);
   z-index: 2;
 }
 
-/* Highlight the pivot stage that turns the flow */
-.pflow__stage:nth-of-type(5) {
-  border-color: rgba(97, 144, 174, 0.5);
-  box-shadow: 0 2px 10px rgba(97, 144, 174, 0.12);
-}
-
-/* Give stage 06 (Domestic vs import & working capital — the new stage) a slight
-   emphasis so it reads as the "cash-adjusted" pivot */
+/* Emphasise the pivot stages */
+.pflow__stage:nth-of-type(5),
 .pflow__stage:nth-of-type(6) {
   border-color: rgba(97, 144, 174, 0.5);
   box-shadow: 0 2px 10px rgba(97, 144, 174, 0.12);
@@ -1507,6 +1498,367 @@ tbody tr:hover td {
   padding: 1px 6px;
   border-radius: 3px;
   font-size: 0.85em;
+}
+
+/* ---- Databases (v2 — simplified) ---- */
+
+.db2-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.db2 {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.db2[open] {
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px rgba(97, 144, 174, 0.12);
+  background: #ffffff;
+}
+
+.db2__head {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 36px 1fr 18px;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+}
+
+.db2__head::-webkit-details-marker { display: none; }
+.db2__head:hover { background: rgba(97, 144, 174, 0.05); }
+
+.db2__letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--deep);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.db2[open] .db2__letter { background: var(--accent); }
+
+.db2__head > div h3 {
+  margin: 0 0 2px 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.96rem;
+  letter-spacing: -0.01em;
+  color: var(--deep);
+}
+
+.db2__head > div p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--ink-soft, var(--ink));
+}
+
+.db2__chev {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+  justify-self: end;
+  margin-right: 4px;
+}
+
+.db2[open] .db2__chev { transform: rotate(-135deg); }
+
+.db2__body {
+  padding: 4px 18px 16px 18px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+}
+
+.db2__purpose {
+  margin: 8px 0 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.db2__purpose code,
+.db2__datasets code {
+  font-family: var(--font-mono);
+  background: rgba(97, 144, 174, 0.12);
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  color: var(--deep);
+}
+
+.db2__datasets {
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(97, 144, 174, 0.05);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.db2__datasets > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) 1fr;
+  gap: 12px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.db2__datasets dt {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--deep);
+  font-size: 0.8rem;
+}
+
+.db2__datasets dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* Full dataset table — header row once, one dataset per body row */
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  table-layout: fixed;
+}
+
+.ds-table thead th {
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--deep);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  vertical-align: middle;
+}
+.ds-table thead th:last-child { border-right: none; }
+.ds-table thead th:first-child { width: 28%; }
+.ds-table thead th:nth-child(2) { width: 30%; }
+.ds-table thead th:nth-child(3) { width: 42%; }
+
+.ds-table tbody th,
+.ds-table tbody td {
+  padding: 12px 14px;
+  vertical-align: top;
+  border-right: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  overflow-wrap: break-word;
+  hyphens: auto;
+  white-space: normal;
+}
+.ds-table thead th { white-space: normal; }
+.ds-table tbody th:last-child,
+.ds-table tbody td:last-child { border-right: none; }
+
+.ds-table tbody th {
+  text-align: left;
+  background: rgba(97, 144, 174, 0.06);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--deep);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.ds-table tbody th small {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--ink-soft, var(--ink));
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ds-table tbody td {
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+/* Horizontal scroll safety on narrow screens so long content never overlaps */
+.db2__body .ds-table { display: table; }
+@media (max-width: 720px) {
+  .db2__body {
+    overflow-x: auto;
+  }
+  .ds-table {
+    min-width: 640px;
+  }
+}
+
+/* Compact two-column table inside a dataset row */
+.ds-mini {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  table-layout: fixed;
+}
+
+.ds-mini thead th {
+  text-align: left;
+  padding: 6px 10px;
+  background: var(--deep);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  width: 50%;
+}
+.ds-mini thead th:last-child { border-right: none; }
+
+.ds-mini tbody td {
+  padding: 8px 10px;
+  vertical-align: top;
+  color: var(--ink);
+  border-right: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+.ds-mini thead th { white-space: normal; }
+.ds-mini tbody td:last-child { border-right: none; }
+.ds-mini tbody tr:first-child td { border-top: none; }
+
+.db2__use {
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--deep);
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.db2__use strong {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Databases summary block ---- */
+
+.db2-summary {
+  margin-top: 22px;
+  padding: 20px 22px;
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.db2-summary h3 {
+  margin: 0 0 8px 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: var(--deep);
+}
+
+.db2-summary__flow {
+  margin: 0 0 14px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: flow;
+  display: grid;
+  gap: 6px;
+}
+
+.db2-summary__flow li {
+  counter-increment: flow;
+  padding: 8px 12px 8px 40px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ink);
+  position: relative;
+}
+
+.db2-summary__flow li::before {
+  content: counter(flow);
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.74rem;
+}
+
+.db2-summary__flow strong {
+  color: var(--deep);
+  font-weight: 700;
+}
+
+.db2-summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px 0;
+}
+
+.db2-summary__note {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.db2-summary__note strong {
+  color: var(--deep);
+  font-weight: 800;
 }
 
 /* ---- Pilot products table (v2) ---- */
@@ -3426,146 +3778,90 @@ tbody tr:hover td {
 /* ---------- Print (Download as PDF from the plan page) ---------- */
 
 @media print {
+  /* Compact print rules — let content pack as densely as it does on-screen.
+     Only very small blocks (a single dataset row, a blockquote) protect
+     themselves against breaks; everything else flows freely so no paper
+     is wasted. */
+
   @page {
     size: A4 landscape;
-    margin: 12mm 14mm;
+    margin: 8mm 10mm;
+  }
+
+  /* Preserve on-screen colours in the PDF */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   html, body {
     background: #ffffff !important;
-    color: #0c0e12 !important;
-    font-size: 10.5pt;
   }
 
-  /* Hide chrome that shouldn't appear in the PDF */
+  /* Hide UI chrome that shouldn't appear in the PDF */
   .site-nav,
   .plan2__download,
   .primer-toolbar,
   .primer-notes,
   .primer-popover,
   .primer-toast,
-  script,
-  nav {
+  nav,
+  script {
     display: none !important;
   }
 
+  /* Let the plan use the full paper width */
   .plan2 {
     width: 100% !important;
     max-width: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    gap: 12pt !important;
+    gap: 6pt !important;
   }
 
+  /* Force every <details> open (belt-and-braces alongside the JS handler) */
+  details:not([open]) > *:not(summary) { display: revert !important; }
+  details > summary {
+    list-style: none !important;
+    cursor: default !important;
+  }
+  details > summary::-webkit-details-marker { display: none !important; }
+  .db2__chev,
+  .tracker-cat__chev { display: none !important; }
+
+  /* Big sections & the S-flow are allowed to split naturally — they're big
+     enough that trying to keep them whole wastes paper. */
   .plan2__section,
-  .plan2__hero {
-    background: #ffffff !important;
-    border: 1px solid #d7dbe0 !important;
-    box-shadow: none !important;
-    padding: 14pt !important;
-    page-break-inside: avoid;
-    break-inside: avoid;
+  .plan2__hero,
+  .pflow,
+  .db-grid,
+  .ds-grid,
+  .app-grid {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
-  .plan2__hero h1 {
-    font-size: 20pt !important;
-    max-width: none !important;
-  }
-
-  .plan2__lede,
-  .plan2__section-head p {
-    font-size: 10.5pt !important;
-  }
-
-  .plan2__section-head h2,
-  .plan2__section-head p,
-  .plan2__hero-head,
-  .plan2__hero p {
-    color: #0c0e12 !important;
-  }
-
-  /* Overall flow keeps its S-shape 5x2 grid on landscape A4 */
-  .pflow {
-    gap: 10pt 24pt !important;
-  }
-
-  .pflow__stage {
-    background: #ffffff !important;
-    box-shadow: none !important;
-    padding: 8pt !important;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  .pflow__stage h3 {
-    font-size: 10pt !important;
-  }
-
-  .pflow__stage ul {
-    font-size: 8.5pt !important;
-  }
-
-  /* Push each big section onto its own page(s) */
-  #databases,
-  #pilot,
-  #network,
-  #ddp,
-  #working-capital,
-  #connects,
-  #priority,
-  #objective {
-    page-break-before: always;
-    break-before: page;
-  }
-
-  /* Avoid breaks inside individual cards */
-  .db, .net, .wc-card, .wc-option, .phase, .pflow__stage {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  /* Dark blocks: switch to light so ink cost is sane */
-  .plan2__section--dark,
-  .wc-principle {
-    background: #ffffff !important;
-    color: #0c0e12 !important;
-    border: 1px solid #cfd4da !important;
-  }
-
-  .plan2__section--dark .eyebrow,
-  .plan2__section--dark h2,
-  .plan2__section--dark strong,
-  .plan2__section--dark p,
-  .wc-principle p,
-  .wc-principle strong {
-    color: #0c0e12 !important;
-  }
-
-  .objective-quote {
-    color: #0c0e12 !important;
-  }
-
-  .objective-quote em {
-    color: #33434f !important;
-  }
-
-  /* Tables render tight in print */
-  .plan2__table {
-    font-size: 9pt !important;
-  }
-  .plan2__table th,
-  .plan2__table td {
-    padding: 6pt 8pt !important;
-  }
-
-  /* Keep flow arrows visible in print */
-  .pflow__stage::after,
-  .pflow__stage::before {
-    display: block !important;
+  /* Keep individual cards / stages / rows intact so nothing is sliced through */
+  .pflow__stage,
+  .db2,
+  .db2-summary,
+  .net,
+  .wc-card,
+  .wc-option,
+  .phase,
+  .final,
+  .engine,
+  .db2__datasets > div,
+  .db2__head,
+  .ds-table tr,
+  .ds-mini tr,
+  blockquote {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   a {
-    color: #0c0e12 !important;
+    color: inherit !important;
     text-decoration: none !important;
   }
 }
