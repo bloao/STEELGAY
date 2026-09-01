@@ -1185,13 +1185,14 @@ tbody tr:hover td {
 .pflow__stage {
   background: var(--surface-alt);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 16px 18px;
+  border-radius: 10px;
+  padding: 20px 20px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
   position: relative;
+  min-height: 250px;
 }
 
 /* S-flow grid placement for 10 stages: row1 01→02→03→04→05, row2 10←09←08←07←06 */
@@ -1268,13 +1269,14 @@ tbody tr:hover td {
 }
 
 .pflow__stack {
-  gap: 4px !important;
+  gap: 6px !important;
 }
 
 .pflow__stack li {
   padding-left: 0 !important;
   font-family: var(--font-mono);
-  font-size: 0.82rem !important;
+  font-size: 0.86rem !important;
+  color: var(--ink);
 }
 
 .pflow__stack li::before {
@@ -1282,51 +1284,83 @@ tbody tr:hover td {
 }
 
 .pflow__stack-total {
-  margin-top: 6px !important;
-  padding-top: 6px !important;
+  margin-top: 8px !important;
+  padding-top: 8px !important;
   border-top: 1px dashed var(--line);
   color: var(--accent) !important;
+  font-weight: 700;
+}
+
+.pflow__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pflow__actions .plan-action {
+  padding: 5px 10px;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+}
+
+.pflow__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px !important;
+  font-size: 0.88rem !important;
 }
 
 .pflow__stage header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 6px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
+  align-items: center;
 }
 
 .pflow__num {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
   background: var(--accent);
   color: #ffffff;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   letter-spacing: 0.06em;
   flex-shrink: 0;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: start;
+  margin-top: 2px;
 }
 
 .pflow__stage h3 {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: -0.01em;
+  font-size: 1.05rem;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
   color: var(--deep);
-  flex: 1;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .pflow__stage .plan-chip {
-  padding: 2px 8px;
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  margin-left: auto;
+  padding: 3px 9px;
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  justify-self: start;
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
 }
 
 .pflow__stage ul {
@@ -1334,14 +1368,14 @@ tbody tr:hover td {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 6px;
-  font-size: 0.9rem;
-  line-height: 1.4;
+  gap: 8px;
+  font-size: 0.94rem;
+  line-height: 1.45;
   color: var(--ink);
 }
 
 .pflow__stage ul li {
-  padding-left: 14px;
+  padding-left: 16px;
   position: relative;
 }
 
@@ -1349,16 +1383,11 @@ tbody tr:hover td {
   content: "";
   position: absolute;
   left: 0;
-  top: 8px;
-  width: 5px;
-  height: 5px;
+  top: 9px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
   background: var(--accent);
-}
-
-.pflow__grid {
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 12px !important;
 }
 
 .pflow__eq {
@@ -1376,19 +1405,6 @@ tbody tr:hover td {
 
 .pflow__eq strong {
   color: var(--accent);
-}
-
-.pflow__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: auto;
-}
-
-.pflow__actions .plan-action {
-  padding: 4px 8px;
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
 }
 
 /* ---- Databases grid ---- */
