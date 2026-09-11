@@ -973,6 +973,9 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Steel ARB live app running at http://127.0.0.1:${port}`);
+// Bind to 0.0.0.0 in production (Render/Fly/etc need external reachability);
+// keep local dev on 127.0.0.1 to avoid announcing the dev server on the LAN.
+const bindHost = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
+server.listen(port, bindHost, () => {
+  console.log(`Steel ARB live app running at http://${bindHost}:${port}`);
 });
