@@ -1,0 +1,29 @@
+# Datafab AGX plan site on Fly.io
+# Change `app` to whatever name `fly launch` picks or you prefer.
+
+app = "datafab-agx-plan"
+primary_region = "lhr"   # London — closest to UK-based users
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"    # scale to zero when idle → free tier friendly
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"    # bumped from 256 so headless Chromium has room
