@@ -719,7 +719,7 @@ async function quotaCheck(url) {
 }
 
 async function serveStatic(requestUrl, response) {
-  const pathname = requestUrl.pathname === "/" ? "/index.html" : requestUrl.pathname;
+  const pathname = requestUrl.pathname === "/" ? "/the-plan.html" : requestUrl.pathname;
   const safePath = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
   const filePath = join(root, safePath);
 
