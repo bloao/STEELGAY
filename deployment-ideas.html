@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <title>Deployment ideas · Datafab AGX</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="index.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link is-active" href="deployment-ideas.html" aria-current="page">Deployment ideas</a>
+        <a class="site-nav__link" href="order-tool.html">Order tool</a>
+      </div></nav>
+
+    <main class="plan2">
+      <header class="plan2__hero">
+        <div class="plan2__hero-head">
+          <div>
+            <p class="eyebrow">Appendix &middot; structural framing</p>
+            <h1>Ideas when deploying</h1>
+          </div>
+        </div>
+        <p class="plan2__lede">
+          Two structural ideas to have in mind when the system is actually rolled out: how it grows in
+          maturity, and how it thinks about mitigating import risk. Kept separate from the plan so the
+          plan itself stays focused on the engine and the data.
+        </p>
+      </header>
+
+<section class="plan2__section" id="priority">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Deployment idea 1</p>
+          <h2>Two parts, three stages of maturity</h2>
+          <p class="plan2__section-lede">The ten stages split into two layers, and the whole system grows in maturity over time. Get the foundation right first &mdash; the forecast layer and the shift to real-time both depend on it.</p>
+        </header>
+
+        <div class="parts-intro">
+          <article class="parts-intro__card parts-intro__card--foundation">
+            <p class="parts-intro__label">Part 1 &middot; Stages 01&ndash;05</p>
+            <h3>Foundation &mdash; the definitive variables</h3>
+            <p>The fixed set of numbers that describe what we need, who can supply it, and what it truly costs delivered. These variables don&rsquo;t forecast anything &mdash; they define reality as it stands today.</p>
+          </article>
+          <article class="parts-intro__card parts-intro__card--forecast">
+            <p class="parts-intro__label">Part 2 &middot; Stages 06&ndash;10</p>
+            <h3>Forecast &mdash; time and influence added on top</h3>
+            <p>Everything in Part&nbsp;2 is layered on the numbers Part&nbsp;1 gives us. It takes the definitive variables and adds <strong>time</strong> plus anything that could <strong>change those variables</strong> &mdash; scrap, energy, FX, PMIs, quota burn &mdash; and turns that into a forward view and a decision.</p>
+          </article>
+        </div>
+
+        <figure class="parts-diagram">
+          <svg viewBox="0 0 1440 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Castle with a moat around it: Part 1 foundation is the stone castle in the middle, Part 2 forecast layer is the water moat surrounding it on all sides">
+            <defs>
+              <marker id="threat-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+                <path d="M0 0 L10 5 L0 10 Z" fill="#c85a3c"/>
+              </marker>
+              <!-- Water fill with subtle horizontal ripple pattern -->
+              <pattern id="waterpat" x="0" y="0" width="80" height="40" patternUnits="userSpaceOnUse">
+                <rect width="80" height="40" fill="#a8c7dd"/>
+                <path d="M 0 14 q 20 -8 40 0 t 40 0" fill="none" stroke="#6b95b3" stroke-width="1.2" opacity="0.6"/>
+                <path d="M 0 28 q 20 -8 40 0 t 40 0" fill="none" stroke="#6b95b3" stroke-width="1.2" opacity="0.45"/>
+              </pattern>
+              <!-- Stone fill for the castle -->
+              <pattern id="stonepat" x="0" y="0" width="90" height="42" patternUnits="userSpaceOnUse">
+                <rect width="90" height="42" fill="#cdb98a"/>
+                <line x1="0" y1="21" x2="90" y2="21" stroke="#a68f5c" stroke-width="1"/>
+                <line x1="0" y1="0" x2="0" y2="21" stroke="#a68f5c" stroke-width="1"/>
+                <line x1="45" y1="21" x2="45" y2="42" stroke="#a68f5c" stroke-width="1"/>
+                <line x1="90" y1="21" x2="90" y2="42" stroke="#a68f5c" stroke-width="1"/>
+              </pattern>
+              <pattern id="woodpat" x="0" y="0" width="60" height="16" patternUnits="userSpaceOnUse">
+                <rect width="60" height="16" fill="#8b6b3f"/>
+                <line x1="0" y1="15" x2="60" y2="15" stroke="#5c4526" stroke-width="1.5"/>
+              </pattern>
+            </defs>
+
+            <!-- Threats above the moat, arrows pointing down into water -->
+            <g font-family="Manrope,system-ui" font-size="12" font-weight="800" letter-spacing="0.14em" fill="#c85a3c">
+              <text x="240"  y="26" text-anchor="middle">PRICE SPIKE</text>
+              <line x1="240"  y1="34" x2="240"  y2="66" stroke="#c85a3c" stroke-width="2" marker-end="url(#threat-arrow)"/>
+              <text x="720"  y="26" text-anchor="middle">QUOTA EXHAUSTION</text>
+              <line x1="720"  y1="34" x2="720"  y2="66" stroke="#c85a3c" stroke-width="2" marker-end="url(#threat-arrow)"/>
+              <text x="1200" y="26" text-anchor="middle">FX / FREIGHT MOVE</text>
+              <line x1="1200" y1="34" x2="1200" y2="66" stroke="#c85a3c" stroke-width="2" marker-end="url(#threat-arrow)"/>
+            </g>
+
+            <!-- MOAT · outer water body, filled with a live ripple pattern -->
+            <rect x="40" y="70" width="1360" height="600" rx="26" fill="url(#waterpat)" stroke="#4a7ca0" stroke-width="3"/>
+
+            <!-- Moat top labels -->
+            <text x="72" y="106" font-family="Manrope,system-ui" font-size="12" font-weight="800" fill="#0c2740" letter-spacing="0.16em">MOAT &middot; PART 2 &#8212; FORECAST LAYER</text>
+            <text x="72" y="134" font-family="Manrope,system-ui" font-size="20" font-weight="800" fill="#0c2740">Watches for market threats before they reach the foundation</text>
+
+            <!-- Part 2 stages arranged around the castle (3 above, 2 below) as boats on the water -->
+            <g font-family="Manrope,system-ui" font-size="12" font-weight="700">
+              <!-- Top row (above castle) -->
+              <g>
+                <rect x="120"  y="170" width="240" height="46" rx="10" fill="#0c2740" stroke="#8fbedd" stroke-width="1.5"/>
+                <text x="240"  y="199" text-anchor="middle" fill="#ffffff">06 &middot; Risk envelope</text>
+              </g>
+              <g>
+                <rect x="600"  y="170" width="240" height="46" rx="10" fill="#0c2740" stroke="#8fbedd" stroke-width="1.5"/>
+                <text x="720"  y="199" text-anchor="middle" fill="#ffffff">07 &middot; Market forecast</text>
+              </g>
+              <g>
+                <rect x="1080" y="170" width="240" height="46" rx="10" fill="#0c2740" stroke="#8fbedd" stroke-width="1.5"/>
+                <text x="1200" y="199" text-anchor="middle" fill="#ffffff">08 &middot; 30 / 60 / 90-day view</text>
+              </g>
+              <!-- Bottom row (below castle) -->
+              <g>
+                <rect x="320"  y="606" width="240" height="46" rx="10" fill="#0c2740" stroke="#8fbedd" stroke-width="1.5"/>
+                <text x="440"  y="635" text-anchor="middle" fill="#ffffff">09 &middot; Buying decision</text>
+              </g>
+              <g>
+                <rect x="880"  y="606" width="240" height="46" rx="10" fill="#0c2740" stroke="#8fbedd" stroke-width="1.5"/>
+                <text x="1000" y="635" text-anchor="middle" fill="#ffffff">10 &middot; Final output</text>
+              </g>
+            </g>
+
+            <!-- Extra water ripples on the sides of the castle for visual reinforcement -->
+            <g stroke="#3f6d92" stroke-width="1.2" fill="none" opacity="0.55">
+              <!-- left of castle -->
+              <path d="M 70 340 q 22 -6 44 0 t 44 0 t 44 0"/>
+              <path d="M 70 400 q 22 -6 44 0 t 44 0 t 44 0"/>
+              <path d="M 70 460 q 22 -6 44 0 t 44 0 t 44 0"/>
+              <path d="M 70 520 q 22 -6 44 0 t 44 0 t 44 0"/>
+              <!-- right of castle -->
+              <path d="M 1240 340 q 22 -6 44 0 t 44 0 t 44 0"/>
+              <path d="M 1240 400 q 22 -6 44 0 t 44 0 t 44 0"/>
+              <path d="M 1240 460 q 22 -6 44 0 t 44 0 t 44 0"/>
+              <path d="M 1240 520 q 22 -6 44 0 t 44 0 t 44 0"/>
+            </g>
+
+            <!-- DRAWBRIDGE · wooden planks crossing the moat from the gate down to the outer bank -->
+            <rect x="680" y="520" width="80" height="140" fill="url(#woodpat)" stroke="#4a2f18" stroke-width="1.5"/>
+            <!-- Rope lines from castle up to bridge top for style -->
+            <line x1="670" y1="510" x2="680" y2="525" stroke="#4a2f18" stroke-width="1.5"/>
+            <line x1="770" y1="510" x2="760" y2="525" stroke="#4a2f18" stroke-width="1.5"/>
+
+            <!-- CASTLE · corner turrets (taller than the wall) -->
+            <g>
+              <rect x="240"  y="290" width="70" height="270" rx="4" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="1130" y="290" width="70" height="270" rx="4" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <!-- Turret battlements (3 teeth each) -->
+              <rect x="240"  y="264" width="20" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="265"  y="264" width="20" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="290"  y="264" width="20" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="1130" y="264" width="20" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="1155" y="264" width="20" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="1180" y="264" width="20" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <!-- Little flags on the tallest teeth -->
+              <line x1="275" y1="264" x2="275" y2="240" stroke="#7d6a4a" stroke-width="1.5"/>
+              <path d="M 275 244 L 295 250 L 275 256 Z" fill="#c85a3c"/>
+              <line x1="1165" y1="264" x2="1165" y2="240" stroke="#7d6a4a" stroke-width="1.5"/>
+              <path d="M 1165 244 L 1185 250 L 1165 256 Z" fill="#c85a3c"/>
+            </g>
+
+            <!-- Castle main body wall -->
+            <rect x="310" y="316" width="820" height="244" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+
+            <!-- Castle body battlements (teeth on top) -->
+            <g>
+              <rect x="320"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="386"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="452"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="518"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="584"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="650"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="716"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="782"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="848"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="914"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="980"  y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+              <rect x="1046" y="290" width="46" height="26" fill="url(#stonepat)" stroke="#7d6a4a" stroke-width="2"/>
+            </g>
+
+            <!-- Gate arch on the front wall -->
+            <path d="M 680 560 L 680 500 Q 720 470 760 500 L 760 560 Z" fill="#4a2f18" stroke="#2a1a10" stroke-width="2"/>
+            <path d="M 720 500 L 720 560" stroke="#2a1a10" stroke-width="1" opacity="0.5"/>
+
+            <!-- Castle interior labels -->
+            <text x="720" y="356" text-anchor="middle" font-family="Manrope,system-ui" font-size="12" font-weight="800" fill="#5a4a30" letter-spacing="0.16em">CASTLE &middot; PART 1 &#8212; FOUNDATION</text>
+            <text x="720" y="384" text-anchor="middle" font-family="Manrope,system-ui" font-size="20" font-weight="800" fill="#2b2010">The definitive variables &mdash; margin lives here</text>
+            <text x="720" y="406" text-anchor="middle" font-family="Inter,system-ui" font-size="12" fill="#3d2f18" opacity="0.85">Refine these before the moat is dug around them.</text>
+
+            <!-- Castle interior stage pills (Part 1: 01–05) -->
+            <g font-family="Manrope,system-ui" font-size="12" font-weight="700">
+              <g><rect x="330" y="430" width="150" height="42" rx="8" fill="#ffffff" stroke="#7d6a4a" stroke-width="1.5"/><text x="405"  y="457" text-anchor="middle" fill="#0c2740">01 &middot; Baseline</text></g>
+              <g><rect x="490" y="430" width="150" height="42" rx="8" fill="#ffffff" stroke="#7d6a4a" stroke-width="1.5"/><text x="565"  y="457" text-anchor="middle" fill="#0c2740">02 &middot; UK market</text></g>
+              <g><rect x="650" y="430" width="150" height="42" rx="8" fill="#ffffff" stroke="#7d6a4a" stroke-width="1.5"/><text x="725"  y="457" text-anchor="middle" fill="#0c2740">03 &middot; Suppliers</text></g>
+              <g><rect x="810" y="430" width="150" height="42" rx="8" fill="#ffffff" stroke="#7d6a4a" stroke-width="1.5"/><text x="885"  y="457" text-anchor="middle" fill="#0c2740">04 &middot; Participants</text></g>
+              <g><rect x="970" y="430" width="150" height="42" rx="8" fill="#ffffff" stroke="#7d6a4a" stroke-width="1.5"/><text x="1045" y="457" text-anchor="middle" fill="#0c2740">05 &middot; Landed cost</text></g>
+            </g>
+
+            <!-- Bottom caption inside moat (below Part 2 bottom row) -->
+            <text x="720" y="696" text-anchor="middle" font-family="Inter,system-ui" font-size="13" fill="#0c2740" font-weight="600" font-style="italic">Volatility hits the moat first &mdash; the castle stays intact.</text>
+          </svg>
+        </figure>
+
+        <div class="maturity">
+          <p class="maturity__eyebrow">Three stages of maturity</p>
+          <h3>How the system grows from a review cadence into real-time decisions</h3>
+          <p class="maturity__lede">The two-part structure holds at every level of maturity. What changes is the <strong>cadence</strong> at which the numbers flow in and the <strong>trigger</strong> for a decision.</p>
+
+          <ol class="maturity__steps">
+            <li class="maturity__step">
+              <div class="maturity__num">01</div>
+              <div>
+                <p class="maturity__tag">Now</p>
+                <h4>Refine the current process</h4>
+                <p>Formalise what today is done ad-hoc: monthly / quarterly reviews of stock, consumption, supplier quotes and landed cost. Standardise the equations, source every variable from a named field, retire spreadsheets that don&rsquo;t map to Part&nbsp;1&rsquo;s schemas. Delivers a much better version of what already exists.</p>
+              </div>
+            </li>
+            <li class="maturity__step">
+              <div class="maturity__num">02</div>
+              <div>
+                <p class="maturity__tag">Next</p>
+                <h4>Move to a live data feed</h4>
+                <p>Instead of pulling numbers into the equations on review day, the Part&nbsp;1 databases update continuously &mdash; HMRC quotas, MEPS, FX, supplier quotes, stock. The equations resolve on demand. The forecast layer (Part&nbsp;2) now has fresh inputs whenever it&rsquo;s asked to run.</p>
+              </div>
+            </li>
+            <li class="maturity__step">
+              <div class="maturity__num">03</div>
+              <div>
+                <p class="maturity__tag">End state</p>
+                <h4>Real-time flagged decision-making</h4>
+                <p>The system watches its own outputs. When a variable moves past a defined threshold &mdash; quota burn accelerates, FX shifts, a supplier quote lands outside benchmark, stock cover drops &mdash; it <strong>flags a decision</strong> automatically, with the exemplar sentence already drafted. Humans approve or override. No more waiting for the next review.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+<section class="plan2__section" id="ddp">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Deployment idea 2</p>
+          <h2>Mitigating import risk &mdash; DDP is one option among several</h2>
+          <p class="plan2__section-lede">The real goal isn&rsquo;t to buy DDP. It&rsquo;s to <strong>protect the margin under uncertainty</strong>. Every import quote carries hidden variance &mdash; quota might exhaust mid-shipment, tariff might change, freight might spike, FX might move &mdash; and if we buy on headline price alone and one of those hits, the margin evaporates. DDP is one way to shift that risk off our balance sheet. There are others. The engine&rsquo;s job is to compare them on a risk-adjusted, <strong>expected-value</strong> basis and find the arbitrage.</p>
+        </header>
+
+        <div class="mitigation-lens">
+          <article class="mitigation-lens__card">
+            <p class="mitigation-lens__eyebrow">The lens</p>
+            <h3>Expected value, not headline price</h3>
+            <p>Every buying strategy has an <strong>expected cost per tonne</strong>, computed as a probability-weighted sum across scenarios: what we pay if quota holds, if it exhausts, if FX moves, if freight spikes. That number &mdash; not the quote &mdash; is what we compare.</p>
+            <p class="mitigation-lens__eq"><code>E[cost] = &Sigma; P(scenario) &times; cost(scenario)</code></p>
+          </article>
+          <article class="mitigation-lens__card mitigation-lens__card--dark">
+            <p class="mitigation-lens__eyebrow">Where the arbitrage is</p>
+            <h3>When a protected strategy costs less than an exposed one</h3>
+            <p>Sometimes the &ldquo;safer&rdquo; option (DDP, domestic, front-loaded) has a <strong>lower expected cost</strong> than the cheapest headline non-DDP price once quota, duty and FX risk are priced in. That gap is the arbitrage. Sometimes it goes the other way &mdash; and the engine says take the exposure and pocket the difference.</p>
+          </article>
+        </div>
+
+        <div class="mitigation-table-wrap">
+          <p class="mitigation-table__title">The mitigation options the engine compares side by side</p>
+          <table class="mitigation-table">
+            <thead>
+              <tr>
+                <th scope="col">Strategy</th>
+                <th scope="col">Who carries the risk</th>
+                <th scope="col">Best when</th>
+                <th scope="col">Hidden cost / trade-off</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">DDP purchase</th>
+                <td>Supplier / trader</td>
+                <td>Tariff or quota exposure high; supplier better placed to hedge or absorb</td>
+                <td>DDP price often includes a tariff-cap premium &mdash; buyer effectively pays for the insurance</td>
+              </tr>
+              <tr>
+                <th scope="row">Non-DDP + hedge</th>
+                <td>Buyer, offset by FX / freight instruments</td>
+                <td>FX and freight are the dominant risks; quota is safe</td>
+                <td>Hedge premium eats a slice of margin; adds operational complexity</td>
+              </tr>
+              <tr>
+                <th scope="row">Domestic (Tata Steel UK)</th>
+                <td>No import risk at all</td>
+                <td>Quota exhausted or exhausting; short lead time critical</td>
+                <td>Higher unit price; 30-day payment terms strain working capital</td>
+              </tr>
+              <tr>
+                <th scope="row">Front-load (buy earlier)</th>
+                <td>Buyer, but ahead of the risk event</td>
+                <td>Quota burn accelerating; MEPS trending up; supplier prices soft today</td>
+                <td>Extra working capital tied up in stock; storage; obsolescence risk</td>
+              </tr>
+              <tr>
+                <th scope="row">Origin swap</th>
+                <td>New supplier chain</td>
+                <td>Original origin&rsquo;s quota nearly exhausted; alternative origin has headroom</td>
+                <td>Onboarding time; supplier discovery cost; quality re-qualification</td>
+              </tr>
+              <tr>
+                <th scope="row">Mixed sourcing</th>
+                <td>Split between routes</td>
+                <td>Concentration risk unacceptable; want optionality across quotas / suppliers</td>
+                <td>More paperwork; smaller volumes lose per-tonne leverage</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="mitigation-fields">
+          <summary>What we capture on every quote to make this comparison possible</summary>
+          <ul>
+            <li>Supplier / trader &middot; underlying mill (where known)</li>
+            <li>Product &middot; origin &middot; commodity code</li>
+            <li>Price &pound;/t &middot; Incoterm &middot; DDP y/n</li>
+            <li>Transport included &middot; duty included &middot; tariff-cap arrangement</li>
+            <li>Quota category &middot; expected quota status at shipment date</li>
+            <li>Lead time &middot; MOQ &middot; validity date &middot; payment terms</li>
+          </ul>
+          <p>These fields feed the expected-value calculation directly &mdash; without them, DDP vs non-DDP is a headline-price comparison instead of a risk-adjusted one.</p>
+        </details>
+      </section>
+    </main>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>
