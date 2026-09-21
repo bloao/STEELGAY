@@ -77,13 +77,13 @@
         <div class="chain-intro">
           <article class="chain-intro__card">
             <p class="chain-intro__num">1</p>
-            <h3>Section&nbsp;1 &mdash; the engine</h3>
-            <p>Ten stages, each performing a specific calculation for one product. Every stage is a <strong>supply-chain equation</strong> with a fixed set of variables &mdash; freight, duty, quota exposure, FX, expected demand, and so on. It runs on the Section&nbsp;2 numbers.</p>
+            <h3>Section&nbsp;1 &mdash; the foundation</h3>
+            <p>The foundation of the whole system: ten stages, each performing a specific calculation for one product. Every stage is a <strong>supply-chain equation</strong> with a fixed set of variables &mdash; freight, duty, quota exposure, FX, expected demand, and so on. It runs on the Section&nbsp;2 numbers.</p>
           </article>
           <article class="chain-intro__card">
             <p class="chain-intro__num">2</p>
-            <h3>Section&nbsp;2 &mdash; the foundation</h3>
-            <p>Fifteen data sources (A through O) hold the numbers the engine reads. Each exposes a <strong>schema</strong>: named tables, named fields, typed values. Every field can be addressed and read like a query. This is the ground truth &mdash; without it, no calculation.</p>
+            <h3>Section&nbsp;2 &mdash; the data that feeds it</h3>
+            <p>Fifteen data sources (A through O) hold the numbers the foundation reads. Each exposes a <strong>schema</strong>: named tables, named fields, typed values. Every field can be addressed and read like a query. Without it, no calculation.</p>
           </article>
           <article class="chain-intro__card">
             <p class="chain-intro__num">3</p>
@@ -93,134 +93,130 @@
         </div>
 
         <figure class="chain-diagram">
-          <figcaption class="chain-diagram__title">Stage&nbsp;05 in three steps &mdash; the equation, its variables, and the data points inside the data sources</figcaption>
-          <svg viewBox="0 0 1440 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-step decomposition: step 1 is the equation, step 2 lists its variables, step 3 shows each data point nested inside its data source">
+          <figcaption class="chain-diagram__title">Read top-down &mdash; data sources feed the variables that resolve the foundation equation</figcaption>
+          <svg viewBox="0 0 1440 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-step decomposition, top down: step 1 shows the data sources with data points inside, step 2 the variables in the middle, step 3 the foundation equation at the bottom">
             <defs>
               <marker id="td-arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
                 <path d="M0 0 L10 5 L0 10 Z" fill="#6190ae"/>
               </marker>
             </defs>
 
-            <!-- STEP 1 · THE EQUATION -->
-            <text x="720" y="26" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">STEP 1 &middot; THE EQUATION</text>
-            <rect x="200" y="40" width="1040" height="86" rx="12" fill="#0c2740"/>
-            <text x="720" y="72" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#8fbedd" letter-spacing="0.06em">STAGE 05 &middot; true landed cost</text>
-            <text x="720" y="106" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="15" font-weight="700" fill="#ffffff">landed_cost = supplier_price + freight + insurance + duty + quota_uplift + fx</text>
-
-            <!-- Connector from equation down to variables (fan to 6 columns) -->
-            <line x1="195"  y1="126" x2="195"  y2="180" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="405"  y1="126" x2="405"  y2="180" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="615"  y1="126" x2="615"  y2="180" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="825"  y1="126" x2="825"  y2="180" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="1035" y1="126" x2="1035" y2="180" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="1245" y1="126" x2="1245" y2="180" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-
-            <!-- STEP 2 · VARIABLES -->
-            <text x="720" y="170" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">STEP 2 &middot; VARIABLES</text>
-            <g font-family="Menlo,ui-monospace" font-size="13" font-weight="700" fill="#0c2740">
-              <rect x="105"  y="190" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="195"  y="221" text-anchor="middle">supplier_price</text>
-              <rect x="315"  y="190" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="405"  y="221" text-anchor="middle">freight</text>
-              <rect x="525"  y="190" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="615"  y="221" text-anchor="middle">insurance</text>
-              <rect x="735"  y="190" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="825"  y="221" text-anchor="middle">duty</text>
-              <rect x="945"  y="190" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1035" y="221" text-anchor="middle">quota_uplift</text>
-              <rect x="1155" y="190" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1245" y="221" text-anchor="middle">fx</text>
-            </g>
-
-            <!-- Connectors from variables down to data points inside data sources -->
-            <line x1="195"  y1="238" x2="195"  y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="405"  y1="238" x2="405"  y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="615"  y1="238" x2="615"  y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="825"  y1="238" x2="825"  y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="1035" y1="238" x2="1035" y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="1245" y1="238" x2="1245" y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-
-            <!-- STEP 3 · DATA POINTS INSIDE DATA SOURCES -->
-            <text x="720" y="288" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">STEP 3 &middot; DATA POINTS &mdash; NESTED INSIDE THEIR DATA SOURCES</text>
+            <!-- STEP 1 · DATA SOURCES (top) — data points nested inside their containers -->
+            <text x="720" y="20" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">SECTION 2 &middot; DATA SOURCES &mdash; DATA POINTS NESTED INSIDE</text>
 
             <!-- Container A · Internal -->
             <g>
-              <rect x="100" y="310" width="190" height="260" rx="12" fill="#0c2740"/>
-              <rect x="112" y="366" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="122" cy="336" r="14" fill="#6190ae"/>
-              <text x="122" y="341" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">A</text>
-              <text x="148" y="341" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Internal</text>
-              <text x="148" y="356" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">company data</text>
-              <rect x="122" y="426" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
-              <text x="195" y="450" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">A2.supplier_quotes</text>
-              <text x="195" y="470" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.price_gbp_per_t</text>
-              <text x="195" y="516" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">&pound; 850</text>
-              <text x="195" y="534" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
+              <rect x="100" y="30" width="190" height="260" rx="12" fill="#0c2740"/>
+              <rect x="112" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
+              <circle cx="122" cy="56" r="14" fill="#6190ae"/>
+              <text x="122" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">A</text>
+              <text x="148" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Internal</text>
+              <text x="148" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">company data</text>
+              <rect x="122" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
+              <text x="195" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">A2.supplier_quotes</text>
+              <text x="195" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.price_gbp_per_t</text>
+              <text x="195" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">&pound; 850</text>
+              <text x="195" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
             </g>
 
             <!-- Container G · Transport (wider, holds 2 data points) -->
             <g>
-              <rect x="310" y="310" width="400" height="260" rx="12" fill="#0c2740"/>
-              <rect x="322" y="366" width="376" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="332" cy="336" r="14" fill="#6190ae"/>
-              <text x="332" y="341" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">G</text>
-              <text x="358" y="341" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Transport costs</text>
-              <text x="358" y="356" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">freight, insurance, terminals</text>
+              <rect x="310" y="30" width="400" height="260" rx="12" fill="#0c2740"/>
+              <rect x="322" y="86" width="376" height="192" rx="6" fill="#ffffff"/>
+              <circle cx="332" cy="56" r="14" fill="#6190ae"/>
+              <text x="332" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">G</text>
+              <text x="358" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Transport costs</text>
+              <text x="358" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">freight, insurance, terminals</text>
               <!-- Freight data point -->
-              <rect x="332" y="426" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
-              <text x="405" y="450" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">G1.transport_costs</text>
-              <text x="405" y="470" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.freight_gbp_per_t</text>
-              <text x="405" y="516" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 42</text>
-              <text x="405" y="534" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
+              <rect x="332" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
+              <text x="405" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">G1.transport_costs</text>
+              <text x="405" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.freight_gbp_per_t</text>
+              <text x="405" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 42</text>
+              <text x="405" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
               <!-- Insurance data point -->
-              <rect x="542" y="426" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
-              <text x="615" y="450" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">G1.transport_costs</text>
-              <text x="615" y="470" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.insurance_gbp_per_t</text>
-              <text x="615" y="516" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 6</text>
-              <text x="615" y="534" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
+              <rect x="542" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
+              <text x="615" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">G1.transport_costs</text>
+              <text x="615" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.insurance_gbp_per_t</text>
+              <text x="615" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 6</text>
+              <text x="615" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
             </g>
 
             <!-- Container B · HMRC UK trade -->
             <g>
-              <rect x="730" y="310" width="190" height="260" rx="12" fill="#0c2740"/>
-              <rect x="742" y="366" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="752" cy="336" r="14" fill="#6190ae"/>
-              <text x="752" y="341" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">B</text>
-              <text x="778" y="341" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">HMRC UK trade</text>
-              <text x="778" y="356" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">tariffs &amp; duty rates</text>
-              <rect x="752" y="426" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
-              <text x="825" y="450" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">B2.HMRC_control</text>
-              <text x="825" y="470" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.duty_rate</text>
-              <text x="825" y="516" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 0</text>
-              <text x="825" y="534" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">in-quota</text>
+              <rect x="730" y="30" width="190" height="260" rx="12" fill="#0c2740"/>
+              <rect x="742" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
+              <circle cx="752" cy="56" r="14" fill="#6190ae"/>
+              <text x="752" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">B</text>
+              <text x="778" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">HMRC UK trade</text>
+              <text x="778" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">tariffs &amp; duty rates</text>
+              <rect x="752" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
+              <text x="825" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">B2.HMRC_control</text>
+              <text x="825" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.duty_rate</text>
+              <text x="825" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 0</text>
+              <text x="825" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">in-quota</text>
             </g>
 
             <!-- Container F · Steel quotas -->
             <g>
-              <rect x="940" y="310" width="190" height="260" rx="12" fill="#0c2740"/>
-              <rect x="952" y="366" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="962" cy="336" r="14" fill="#6190ae"/>
-              <text x="962" y="341" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">F</text>
-              <text x="988" y="341" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Steel quotas</text>
-              <text x="988" y="356" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">TRQ balances</text>
-              <rect x="962" y="426" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
-              <text x="1035" y="450" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">F1.steel_quotas</text>
-              <text x="1035" y="470" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.remaining_pct</text>
-              <text x="1035" y="516" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 18</text>
-              <text x="1035" y="534" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">30% exhaust risk</text>
+              <rect x="940" y="30" width="190" height="260" rx="12" fill="#0c2740"/>
+              <rect x="952" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
+              <circle cx="962" cy="56" r="14" fill="#6190ae"/>
+              <text x="962" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">F</text>
+              <text x="988" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Steel quotas</text>
+              <text x="988" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">TRQ balances</text>
+              <rect x="962" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
+              <text x="1035" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">F1.steel_quotas</text>
+              <text x="1035" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.remaining_pct</text>
+              <text x="1035" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 18</text>
+              <text x="1035" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">30% exhaust risk</text>
             </g>
 
             <!-- Container L · Currency -->
             <g>
-              <rect x="1150" y="310" width="190" height="260" rx="12" fill="#0c2740"/>
-              <rect x="1162" y="366" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="1172" cy="336" r="14" fill="#6190ae"/>
-              <text x="1172" y="341" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">L</text>
-              <text x="1198" y="341" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Currency</text>
-              <text x="1198" y="356" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">FX spot rates</text>
-              <rect x="1172" y="426" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
-              <text x="1245" y="450" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">L1.gbp_eur</text>
-              <text x="1245" y="470" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.close</text>
-              <text x="1245" y="516" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">&ndash; &pound; 3</text>
-              <text x="1245" y="534" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">GBP strengthened</text>
+              <rect x="1150" y="30" width="190" height="260" rx="12" fill="#0c2740"/>
+              <rect x="1162" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
+              <circle cx="1172" cy="56" r="14" fill="#6190ae"/>
+              <text x="1172" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">L</text>
+              <text x="1198" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Currency</text>
+              <text x="1198" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">FX spot rates</text>
+              <rect x="1172" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2"/>
+              <text x="1245" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">L1.gbp_eur</text>
+              <text x="1245" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.close</text>
+              <text x="1245" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">&ndash; &pound; 3</text>
+              <text x="1245" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">GBP strengthened</text>
             </g>
 
-            <!-- Bottom result strip -->
-            <text x="720" y="606" text-anchor="middle" font-family="Manrope,system-ui" font-size="12" font-weight="800" fill="#6190ae" letter-spacing="0.16em">SUM OF ALL DATA POINTS &nbsp;=&nbsp; &pound; 913 / tonne delivered</text>
+            <!-- Connectors: data sources → variables (top-down) -->
+            <line x1="195"  y1="290" x2="195"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="405"  y1="290" x2="405"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="615"  y1="290" x2="615"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="825"  y1="290" x2="825"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="1035" y1="290" x2="1035" y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="1245" y1="290" x2="1245" y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+
+            <!-- STEP 2 · VARIABLES (middle) -->
+            <text x="720" y="336" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">THE CHAIN &middot; VARIABLES</text>
+            <g font-family="Menlo,ui-monospace" font-size="13" font-weight="700" fill="#0c2740">
+              <rect x="105"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="195"  y="387" text-anchor="middle">supplier_price</text>
+              <rect x="315"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="405"  y="387" text-anchor="middle">freight</text>
+              <rect x="525"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="615"  y="387" text-anchor="middle">insurance</text>
+              <rect x="735"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="825"  y="387" text-anchor="middle">duty</text>
+              <rect x="945"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1035" y="387" text-anchor="middle">quota_uplift</text>
+              <rect x="1155" y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1245" y="387" text-anchor="middle">fx</text>
+            </g>
+
+            <!-- Connectors: variables → foundation (top-down) -->
+            <line x1="195"  y1="404" x2="195"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="405"  y1="404" x2="405"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="615"  y1="404" x2="615"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="825"  y1="404" x2="825"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="1035" y1="404" x2="1035" y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="1245" y1="404" x2="1245" y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+
+            <!-- STEP 3 · THE FOUNDATION (bottom) -->
+            <text x="720" y="436" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">SECTION 1 &middot; THE FOUNDATION</text>
+            <rect x="100" y="456" width="1240" height="80" rx="12" fill="#0c2740"/>
+            <text x="720" y="504" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="15" font-weight="700" fill="#ffffff">landed_cost = supplier_price + freight + insurance + duty + quota_uplift + fx</text>
           </svg>
         </figure>
 
