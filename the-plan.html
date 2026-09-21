@@ -78,7 +78,7 @@
           <article class="chain-intro__card">
             <p class="chain-intro__num">1</p>
             <h3>Section&nbsp;1 &mdash; the foundation</h3>
-            <p>The foundation of the whole system: ten stages, each performing a specific calculation for one product. Every stage is a <strong>supply-chain equation</strong> with a fixed set of variables &mdash; freight, duty, quota exposure, FX, expected demand, and so on. It runs on the Section&nbsp;2 numbers.</p>
+            <p>The foundation of the whole system is <strong>agreeing the core framework</strong>. For each product, we need to align on the stages of the supply chain, the assumptions behind each calculation, the variables that matter, and the decision points that affect cost, risk and margin. This includes freight, duty, quota exposure, FX, expected demand, payment terms and supplier reliability. Once these inputs are agreed, the Section&nbsp;2 numbers can be applied consistently across the model.</p>
           </article>
           <article class="chain-intro__card">
             <p class="chain-intro__num">2</p>
@@ -101,9 +101,7 @@
               </marker>
             </defs>
 
-            <!-- STEP 1 · DATA SOURCES (top) — data points nested inside their containers -->
-            <text x="720" y="20" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">SECTION 2 &middot; DATA SOURCES &mdash; DATA POINTS NESTED INSIDE</text>
-
+            <!-- Data sources (top) — data points nested inside their containers -->
             <!-- Container A · Internal -->
             <g>
               <rect x="100" y="30" width="190" height="260" rx="12" fill="#0c2740"/>
@@ -194,35 +192,33 @@
             <line x1="1035" y1="290" x2="1035" y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
             <line x1="1245" y1="290" x2="1245" y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
 
-            <!-- STEP 2 · VARIABLES (middle) -->
-            <text x="720" y="336" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">THE CHAIN &middot; VARIABLES</text>
+            <!-- MIDDLE · foundation (the equation) -->
+            <rect x="100" y="336" width="1240" height="80" rx="12" fill="#0c2740"/>
+            <text x="720" y="384" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="15" font-weight="700" fill="#ffffff">landed_cost = supplier_price + freight + insurance + duty + quota_uplift + fx</text>
+
+            <!-- Connectors: foundation → variables (top-down) -->
+            <line x1="195"  y1="416" x2="195"  y2="470" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="405"  y1="416" x2="405"  y2="470" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="615"  y1="416" x2="615"  y2="470" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="825"  y1="416" x2="825"  y2="470" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="1035" y1="416" x2="1035" y2="470" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+            <line x1="1245" y1="416" x2="1245" y2="470" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
+
+            <!-- BOTTOM · variables -->
             <g font-family="Menlo,ui-monospace" font-size="13" font-weight="700" fill="#0c2740">
-              <rect x="105"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="195"  y="387" text-anchor="middle">supplier_price</text>
-              <rect x="315"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="405"  y="387" text-anchor="middle">freight</text>
-              <rect x="525"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="615"  y="387" text-anchor="middle">insurance</text>
-              <rect x="735"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="825"  y="387" text-anchor="middle">duty</text>
-              <rect x="945"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1035" y="387" text-anchor="middle">quota_uplift</text>
-              <rect x="1155" y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1245" y="387" text-anchor="middle">fx</text>
+              <rect x="105"  y="470" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="195"  y="501" text-anchor="middle">supplier_price</text>
+              <rect x="315"  y="470" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="405"  y="501" text-anchor="middle">freight</text>
+              <rect x="525"  y="470" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="615"  y="501" text-anchor="middle">insurance</text>
+              <rect x="735"  y="470" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="825"  y="501" text-anchor="middle">duty</text>
+              <rect x="945"  y="470" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1035" y="501" text-anchor="middle">quota_uplift</text>
+              <rect x="1155" y="470" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1245" y="501" text-anchor="middle">fx</text>
             </g>
-
-            <!-- Connectors: variables → foundation (top-down) -->
-            <line x1="195"  y1="404" x2="195"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="405"  y1="404" x2="405"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="615"  y1="404" x2="615"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="825"  y1="404" x2="825"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="1035" y1="404" x2="1035" y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-            <line x1="1245" y1="404" x2="1245" y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
-
-            <!-- STEP 3 · THE FOUNDATION (bottom) -->
-            <text x="720" y="436" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">SECTION 1 &middot; THE FOUNDATION</text>
-            <rect x="100" y="456" width="1240" height="80" rx="12" fill="#0c2740"/>
-            <text x="720" y="504" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="15" font-weight="700" fill="#ffffff">landed_cost = supplier_price + freight + insurance + duty + quota_uplift + fx</text>
           </svg>
         </figure>
 
         <div class="chain-example">
           <p class="chain-example__eyebrow">The same chain, as a table</p>
-          <h3>Stage 05 &mdash; every variable, its data point, its schema field</h3>
+          <h3>Every variable, its data point, its schema field</h3>
           <div class="chain-table-wrap">
             <table class="chain-table">
               <thead>
