@@ -42,7 +42,7 @@
           The difference is <strong>speed and visibility</strong>. Instead of waiting for monthly or quarterly reviews, key information is refreshed as close to real time as each source allows, and in real time where it matters most.
         </p>
         <p class="plan2__lede">
-          Most procurement problems are not caused by a failure to act. They are caused by finding out too late that action was needed.
+          In many cases, procurement problems are not caused by a failure to act &mdash; they are caused by not knowing, in time, that action was needed.
         </p>
         <p class="plan2__lede">
           The first objective is therefore to remove that information lag, so decisions can be made while they still have an impact. Once that foundation is fast, reliable and trusted, a forecasting layer can be added on top to provide a forward-looking view of risk, cost and opportunity.
@@ -59,7 +59,7 @@
           <div class="plan2__hero-objective-head">
             <p class="eyebrow">Final objective</p>
             <h2>The one sentence the system has to be able to write</h2>
-            <p>This is what the whole engine is built to produce for every product on the pilot list. Everything that follows &mdash; the ten stages, the fifteen databases, the supplier network, the working-capital module &mdash; exists to make this sentence answerable with evidence.</p>
+            <p>This is what the whole engine is built to produce for every product on the pilot list. Everything that follows &mdash; the ten stages, the fifteen data sources, the supplier network, the working-capital module &mdash; exists to make this sentence answerable with evidence.</p>
           </div>
           <blockquote class="objective-quote">
             For <strong>50&times;40&times;5 Angle</strong>, we currently have <strong>100 tonnes</strong> in stock and consume approximately <strong>30 tonnes per month</strong>. Supplier A is offering <strong>&pound;X/t DDP</strong> from Mill Y, while Supplier B is offering <strong>&pound;Y/t non-DDP</strong> from Mill Z. Based on current quota utilisation, freight, FX, steel benchmarks, raw-material trends, market-participant behaviour and expected stock depletion, the recommended action is to purchase <strong>X tonnes from Supplier Y by DATE</strong> at a target price of <strong>&pound;Z/t</strong>. Waiting is expected to <strong>increase / decrease</strong> procurement cost by approximately <strong>&pound;X</strong>. <em>Confidence: X%.</em>
@@ -71,7 +71,7 @@
         <header class="plan2__section-head">
           <p class="eyebrow">Reading guide</p>
           <h2>Section&nbsp;1 and Section&nbsp;2, and how they fit together</h2>
-          <p class="plan2__section-lede">Section&nbsp;1 defines the calculations. Section&nbsp;2 stores the numbers those calculations need. Every stage in Section&nbsp;1 reaches down into specific fields in the Section&nbsp;2 databases &mdash; that&rsquo;s the chain shown here.</p>
+          <p class="plan2__section-lede">Section&nbsp;1 defines the calculations. Section&nbsp;2 stores the numbers those calculations need. Every stage in Section&nbsp;1 reaches down into specific fields in the Section&nbsp;2 data sources &mdash; that&rsquo;s the chain shown here.</p>
         </header>
 
         <div class="chain-intro">
@@ -83,7 +83,7 @@
           <article class="chain-intro__card">
             <p class="chain-intro__num">2</p>
             <h3>Section&nbsp;2 &mdash; the foundation</h3>
-            <p>Fifteen databases (A through O) hold the numbers the engine reads. Each exposes a <strong>schema</strong>: named tables, named fields, typed values. Every field can be addressed and read like a database query. This is the ground truth &mdash; without it, no calculation.</p>
+            <p>Fifteen data sources (A through O) hold the numbers the engine reads. Each exposes a <strong>schema</strong>: named tables, named fields, typed values. Every field can be addressed and read like a query. This is the ground truth &mdash; without it, no calculation.</p>
           </article>
           <article class="chain-intro__card">
             <p class="chain-intro__num">3</p>
@@ -93,8 +93,8 @@
         </div>
 
         <figure class="chain-diagram">
-          <figcaption class="chain-diagram__title">Stage&nbsp;05 in three steps &mdash; the equation, its variables, and the data points inside the databases</figcaption>
-          <svg viewBox="0 0 1440 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-step decomposition: step 1 is the equation, step 2 lists its variables, step 3 shows each data point nested inside its database">
+          <figcaption class="chain-diagram__title">Stage&nbsp;05 in three steps &mdash; the equation, its variables, and the data points inside the data sources</figcaption>
+          <svg viewBox="0 0 1440 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-step decomposition: step 1 is the equation, step 2 lists its variables, step 3 shows each data point nested inside its data source">
             <defs>
               <marker id="td-arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
                 <path d="M0 0 L10 5 L0 10 Z" fill="#6190ae"/>
@@ -126,7 +126,7 @@
               <rect x="1155" y="190" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5"/><text x="1245" y="221" text-anchor="middle">fx</text>
             </g>
 
-            <!-- Connectors from variables down to data points inside databases -->
+            <!-- Connectors from variables down to data points inside data sources -->
             <line x1="195"  y1="238" x2="195"  y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
             <line x1="405"  y1="238" x2="405"  y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
             <line x1="615"  y1="238" x2="615"  y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
@@ -134,8 +134,8 @@
             <line x1="1035" y1="238" x2="1035" y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
             <line x1="1245" y1="238" x2="1245" y2="426" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)"/>
 
-            <!-- STEP 3 · DATA POINTS INSIDE DATABASES -->
-            <text x="720" y="288" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">STEP 3 &middot; DATA POINTS &mdash; NESTED INSIDE THEIR DATABASES</text>
+            <!-- STEP 3 · DATA POINTS INSIDE DATA SOURCES -->
+            <text x="720" y="288" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">STEP 3 &middot; DATA POINTS &mdash; NESTED INSIDE THEIR DATA SOURCES</text>
 
             <!-- Container A · Internal -->
             <g>
@@ -270,7 +270,7 @@
               </tbody>
             </table>
           </div>
-          <p class="chain-example__foot">Every one of the ten stages resolves the same way. Read <a href="#flow">Section&nbsp;1</a> to see the stages. Read <a href="#databases">Section&nbsp;2</a> to see the schemas they reach into. The rest of the document assumes this chain.</p>
+          <p class="chain-example__foot">Every one of the ten stages resolves the same way. Read <a href="#flow">Section&nbsp;1</a> to see the stages. Read <a href="#data-sources">Section&nbsp;2</a> to see the schemas they reach into. The rest of the document assumes this chain.</p>
         </div>
       </section>
 
@@ -408,11 +408,11 @@
         </ol>
       </section>
 
-      <section class="plan2__section" id="databases">
+      <section class="plan2__section" id="data-sources">
         <header class="plan2__section-head">
           <p class="eyebrow">Section 2 <a class="xref" href="#chain">&harr; populates the Section 1 engine</a></p>
-          <h2>Databases and datasets required</h2>
-          <p>Fifteen data stores feed the pipeline. HMRC feeds already exist; the rest need to be built or subscribed to. Each card lists purpose, the datasets it holds, and how it&rsquo;s used. Every field named here is a candidate <em>data point</em> in the <a href="#chain">stage &rarr; equation &rarr; variable &rarr; data point &rarr; database chain</a>.</p>
+          <h2>Data sources and datasets required</h2>
+          <p>Fifteen data sources feed the pipeline. HMRC feeds already exist; the rest need to be built or subscribed to. Each card lists purpose, the datasets it holds, and how it&rsquo;s used. Every field named here is a candidate <em>data point</em> in the <a href="#chain">stage &rarr; equation &rarr; variable &rarr; data point &rarr; data source chain</a>.</p>
         </header>
 
         <aside class="db2-summary">
@@ -445,7 +445,7 @@
               <summary class="db2__head">
                 <span class="db2__letter">A</span>
                 <div>
-                  <h3>Internal company database</h3>
+                  <h3>Internal company data</h3>
                   <p>Products, stock, consumption, quotes, purchase history and supplier commercial terms.</p>
                 </div>
                 <span class="db2__chev" aria-hidden="true"></span>
@@ -498,7 +498,7 @@
               <summary class="db2__head">
                 <span class="db2__letter">B</span>
                 <div>
-                  <h3>UK trade database &mdash; HMRC</h3>
+                  <h3>UK trade data &mdash; HMRC</h3>
                   <p>What steel enters the UK, from where, by whom.</p>
                 </div>
                 <span class="db2__chev" aria-hidden="true"></span>
@@ -736,7 +736,7 @@
               <summary class="db2__head">
                 <span class="db2__letter">H</span>
                 <div>
-                  <h3>Route database</h3>
+                  <h3>Route data</h3>
                   <p>Sanity-checks whether an assumed supply route is plausible.</p>
                 </div>
                 <span class="db2__chev" aria-hidden="true"></span>
