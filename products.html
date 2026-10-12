@@ -27,14 +27,18 @@
     <div class="app-layout">
       <aside class="sidebar" data-active="products"></aside>
       <script src="app-sidebar.js"></script>
-    <main class="page">
+    <main class="page products-page">
       <div class="page-head">
         <div>
           <p class="eyebrow">Stage 01 · Product &amp; demand baseline</p>
           <h1>Products</h1>
-          <p class="muted" style="margin:6px 0 0;max-width:680px">What you stock, how fast it moves and what it cost — with stock cover, the date each line runs out, and the live steel-quota position for its category.</p>
+          <p class="muted lede">Stock on hand, how fast it moves and when to reorder.</p>
         </div>
         <div class="actions">
+          <button class="btn" type="button" id="import-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            Import
+          </button>
           <button class="btn btn-primary" type="button" id="add-btn">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
             Add product
@@ -42,69 +46,26 @@
         </div>
       </div>
 
-      <section class="kpis" aria-label="Summary">
-        <div class="kpi"><p>Products</p><strong id="kpi-count">–</strong></div>
-        <div class="kpi"><p>Stock value (at cost)</p><strong id="kpi-value">–</strong></div>
-        <div class="kpi is-warn"><p>Need ordering</p><strong id="kpi-order">–</strong></div>
-        <div class="kpi"><p>First stock-out</p><strong id="kpi-first" style="font-size:22px">–</strong></div>
+      <section class="stat-strip" aria-label="Summary">
+        <div class="stat"><span>Products</span><strong id="kpi-count">–</strong></div>
+        <div class="stat"><span>Stock on hand</span><strong id="kpi-stock">–</strong></div>
+        <div class="stat"><span>Stock value at cost</span><strong id="kpi-value">–</strong></div>
+        <div class="stat stat-alert"><span>Need ordering</span><strong id="kpi-order">–</strong></div>
       </section>
 
-      <section class="card" id="form-card" hidden>
-        <div class="card-head">
-          <h2 id="form-title">Add product</h2>
-          <button class="btn" type="button" id="form-cancel">Cancel</button>
-        </div>
-        <form id="product-form" novalidate>
-          <div class="grid-3">
-            <label class="field" data-field="name">Description
-              <input name="name" maxlength="120" placeholder="e.g. 50×40×5 Angle" required><span class="error"></span>
-            </label>
-            <label class="field" data-field="category">Product category
-              <input name="category" maxlength="80" list="category-list" placeholder="e.g. Merchant Bar"><span class="error"></span>
-            </label>
-            <datalist id="category-list"></datalist>
-            <label class="field" data-field="commodityCode">Commodity code
-              <input name="commodityCode" inputmode="numeric" placeholder="10 digits" required>
-              <span class="hint" id="code-hint"></span><span class="error"></span>
-            </label>
-            <label class="field" data-field="stockT">Current stock (t)
-              <input name="stockT" type="number" min="0" step="0.001" required><span class="error"></span>
-            </label>
-            <label class="field" data-field="monthlyUsageT">Monthly usage (t)
-              <input name="monthlyUsageT" type="number" min="0" step="0.001" required><span class="error"></span>
-            </label>
-            <label class="field" data-field="costPerT">Stock cost price (£/t)
-              <input name="costPerT" type="number" min="0" step="0.01" required><span class="error"></span>
-            </label>
-            <label class="field" data-field="leadTimeWeeks">Lead time (weeks) <span class="hint">Sets the reorder point</span>
-              <input name="leadTimeWeeks" type="number" min="0" step="1" placeholder="Optional"><span class="error"></span>
-            </label>
-            <label class="field" data-field="safetyStockT">Safety stock (t)
-              <input name="safetyStockT" type="number" min="0" step="0.001" placeholder="0"><span class="error"></span>
-            </label>
-            <label class="field" data-field="targetCoverMonths">Target cover after delivery (months)
-              <input name="targetCoverMonths" type="number" min="0.5" max="36" step="0.5" placeholder="3"><span class="error"></span>
-            </label>
-            <label class="field" data-field="targetBuyPrice">Target buy price (£/t)
-              <input name="targetBuyPrice" type="number" min="0" step="0.01" placeholder="Optional ceiling"><span class="error"></span>
-            </label>
-            <label class="field span-2">Notes
-              <input name="notes" maxlength="1000" placeholder="Grade, length, preferred mills…">
-            </label>
-          </div>
-          <div class="actions" style="margin-top:16px">
-            <button class="btn btn-primary" type="submit" id="form-save">Save product</button>
-            <button class="btn btn-danger" type="button" id="form-archive" hidden>Archive product</button>
-          </div>
-        </form>
+      <section class="attention" id="attention" hidden aria-labelledby="attention-title">
+        <h2 id="attention-title">Needs ordering</h2>
+        <ul id="attention-list"></ul>
       </section>
 
       <section class="table-card">
         <div class="toolbar">
-          <label class="search"><input type="search" id="q" placeholder="Search description, code, category" aria-label="Search products"></label>
+          <label class="search"><input type="search" id="q" placeholder="Search products" aria-label="Search products"></label>
+          <select id="f-category" aria-label="Filter by category"><option value="">All categories</option></select>
           <select id="f-status" aria-label="Filter by status">
-            <option value="">All products</option>
+            <option value="">All statuses</option>
             <option value="order">Need ordering</option>
+            <option value="ok">OK</option>
           </select>
         </div>
         <div class="table-scroll">
@@ -112,35 +73,155 @@
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Commodity code</th>
                 <th class="num">Stock</th>
-                <th class="num">Monthly usage</th>
-                <th style="min-width:170px">Cover</th>
-                <th>Runs out</th>
-                <th class="num">Cost £/t</th>
-                <th class="num">Stock value</th>
+                <th>Cover</th>
+                <th class="num">Value</th>
                 <th>Status</th>
-                <th class="num">Best quote</th>
-                <th><span hidden>Actions</span></th>
+                <th><span class="sr-only">Open</span></th>
               </tr>
             </thead>
-            <tbody id="rows"><tr><td colspan="11" class="empty">Loading products…</td></tr></tbody>
+            <tbody id="rows"><tr><td colspan="6" class="empty">Loading products…</td></tr></tbody>
           </table>
         </div>
       </section>
 
       <section class="card" id="quota-card" hidden>
         <div class="card-head">
-          <h2>Quota lines your products depend on</h2>
+          <h2>Quota lines for your products</h2>
           <span class="small muted" id="quota-src"></span>
         </div>
         <div class="quota-groups" id="quota-groups"></div>
-        <p class="small muted" style="margin:12px 0 0">Live from HMRC. Imports from an origin whose line is used up pay the 50% steel duty on top of ordinary duty. <a href="quotas.html">All quota lines →</a></p>
+        <p class="small muted" style="margin:12px 0 0">Live from HMRC. Once an origin's line is used up, imports pay the 50% steel duty on top of ordinary duty. <a href="quotas.html">All quota lines →</a></p>
       </section>
+
+      <!-- side panel: product detail, add/edit form, import -->
+      <div class="drawer-backdrop" id="backdrop" hidden></div>
+      <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+        <header class="drawer-head">
+          <div>
+            <p class="eyebrow" id="drawer-eyebrow"></p>
+            <h2 id="drawer-title"></h2>
+          </div>
+          <button class="icon-btn" type="button" id="drawer-close" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+
+        <!-- detail -->
+        <div class="drawer-body" id="view-detail" hidden></div>
+
+        <!-- add / edit -->
+        <form class="drawer-body" id="view-form" novalidate hidden>
+          <fieldset>
+            <legend>Product</legend>
+            <label class="field" data-field="name"><span class="label-text">Description<span class="req" aria-hidden="true"> *</span></span>
+              <input name="name" maxlength="120" placeholder="e.g. 50×40×5 Angle" autocomplete="off" required><span class="error"></span>
+            </label>
+            <div class="grid-2">
+              <label class="field" data-field="category">Category
+                <input name="category" maxlength="80" list="category-list" placeholder="e.g. Merchant Bar"><span class="error"></span>
+              </label>
+              <label class="field" data-field="spec">Specification
+                <input name="spec" maxlength="160" placeholder="Grade, length, finish"><span class="error"></span>
+              </label>
+            </div>
+            <datalist id="category-list"></datalist>
+            <label class="field" data-field="commodityCode"><span class="label-text">Commodity code<span class="req" aria-hidden="true"> *</span></span>
+              <input name="commodityCode" list="code-list" inputmode="numeric" autocomplete="off" placeholder="Type a code or a product word, e.g. angle" required>
+              <span class="hint" id="code-hint">10-digit UK tariff code — sets the steel quota category.</span><span class="error"></span>
+            </label>
+            <datalist id="code-list"></datalist>
+          </fieldset>
+
+          <fieldset>
+            <legend>Stock &amp; demand</legend>
+            <div class="grid-3">
+              <label class="field" data-field="stockT"><span class="label-text">Current stock<span class="req" aria-hidden="true"> *</span></span>
+                <span class="input-unit"><input name="stockT" type="number" min="0" step="0.001" inputmode="decimal" required><span>t</span></span><span class="error"></span>
+              </label>
+              <label class="field" data-field="stockAsOf">Stock as of
+                <input name="stockAsOf" type="date"><span class="error"></span>
+              </label>
+              <label class="field" data-field="monthlyUsageT"><span class="label-text">Monthly usage<span class="req" aria-hidden="true"> *</span></span>
+                <span class="input-unit"><input name="monthlyUsageT" type="number" min="0" step="0.001" inputmode="decimal" required><span>t</span></span><span class="error"></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Buying rules</legend>
+            <div class="grid-2">
+              <label class="field" data-field="leadTimeWeeks">Lead time
+                <span class="input-unit"><input name="leadTimeWeeks" type="number" min="0" max="104" step="1" placeholder="Optional"><span>weeks</span></span>
+                <span class="hint">Sets the reorder point and order-by date.</span><span class="error"></span>
+              </label>
+              <label class="field" data-field="moqT">Minimum order (MOQ)
+                <span class="input-unit"><input name="moqT" type="number" min="0" step="0.001" placeholder="Optional"><span>t</span></span><span class="error"></span>
+              </label>
+              <label class="field" data-field="safetyStockT">Safety stock
+                <span class="input-unit"><input name="safetyStockT" type="number" min="0" step="0.001" placeholder="0"><span>t</span></span><span class="error"></span>
+              </label>
+              <label class="field" data-field="targetCoverMonths">Cover after delivery
+                <span class="input-unit"><input name="targetCoverMonths" type="number" min="0.5" max="36" step="0.5" placeholder="3"><span>months</span></span><span class="error"></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Commercials</legend>
+            <div class="grid-2">
+              <label class="field" data-field="costPerT"><span class="label-text">Stock cost price<span class="req" aria-hidden="true"> *</span></span>
+                <span class="input-unit input-unit-pre"><span>£</span><input name="costPerT" type="number" min="0" step="0.01" inputmode="decimal" required><span>/t</span></span><span class="error"></span>
+              </label>
+              <label class="field" data-field="targetBuyPrice">Target buy price
+                <span class="input-unit input-unit-pre"><span>£</span><input name="targetBuyPrice" type="number" min="0" step="0.01" placeholder="Optional"><span>/t</span></span>
+                <span class="hint">The most you'd pay — quotes are compared against it.</span><span class="error"></span>
+              </label>
+            </div>
+            <label class="field">Notes
+              <textarea name="notes" maxlength="1000" rows="2" placeholder="Preferred mills, lengths, anything buyers should know"></textarea>
+            </label>
+          </fieldset>
+
+          <section class="preview" id="preview" aria-live="polite">
+            <p class="preview-title">What this means</p>
+            <div class="preview-grid">
+              <div><span>Cover</span><strong id="pv-cover">—</strong></div>
+              <div><span>Runs out</span><strong id="pv-out">—</strong></div>
+              <div><span>Status</span><strong id="pv-status">—</strong></div>
+              <div><span>Suggested order</span><strong id="pv-order">—</strong></div>
+            </div>
+            <p class="small muted" id="pv-note"></p>
+          </section>
+        </form>
+
+        <!-- import -->
+        <div class="drawer-body" id="view-import" hidden>
+          <div id="import-step1">
+            <p class="muted" style="margin-top:0">Copy rows from Excel or Google Sheets (including the header row) and paste them below. Recognised columns: Description, Category, Product Code, Current Stock, Monthly Usage, Stock Cost Price, plus optional Lead Time, MOQ, Safety Stock, Target Buy Price, Notes.</p>
+            <label class="field"><span class="sr-only">Rows to import</span>
+              <textarea id="import-text" rows="10" placeholder="Category&#9;Description&#9;Product Code&#9;Current Stock&#9;Monthly Usage&#9;Stock Cost Price"></textarea>
+            </label>
+            <p class="small muted">Products whose description matches an existing one are updated; the rest are added.</p>
+          </div>
+          <div id="import-step2" hidden>
+            <p id="import-summary" class="import-summary"></p>
+            <div class="table-scroll">
+              <table class="data import-table">
+                <thead><tr><th></th><th>Description</th><th>Category</th><th>Code</th><th class="num">Stock</th><th class="num">Usage/mo</th><th class="num">Cost £/t</th></tr></thead>
+                <tbody id="import-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <footer class="drawer-foot" id="drawer-foot"></footer>
+      </aside>
     </main>
     </div>
 
     <script src="steel-trade-measure.js"></script>
+    <script src="steel-commodities.js" defer></script>
     <script src="order-common.js"></script>
     <script src="products.js"></script>
     <script src="nav-menu.js"></script>

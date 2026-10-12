@@ -108,7 +108,11 @@ All 72 quota lines of the UK steel trade measure from 1 July 2026 (order numbers
 
 ### Products (`/products.html`)
 
-Stock list saved in `var/products.json` (first run seeds the five sample Merchant Bar products). Per product: months of cover, stock-out date, stock value at cost, reorder status, suggested order (enough for the lead time + target cover, default 3 months, plus safety stock), best saved quote vs stock cost, and the live quota lines for its steel category. "Price an order" opens the order tool pre-filled (`order-tool.html?product=<id>`). API: `GET/POST /api/products`, `GET/PUT /api/products/:id`, `POST /api/products/:id/archive`.
+Stock list saved in `var/products.json` (first run seeds the five sample Merchant Bar products). Data points follow Stage 01 of the plan: description, category, specification, commodity code (→ steel quota category); current stock with the date it was counted, monthly usage; lead time, MOQ, safety stock, cover after delivery; stock cost price, target buy price.
+
+Calculated per product: estimated stock today (recorded stock less usage since the count), months of cover, stock-out date, reorder point and order-by date (needs a lead time), suggested order (lead time + target cover + safety stock, rounded up to the MOQ), stock value, status. Click a row for the full detail panel; "Add product" shows a live preview; "Import" accepts rows pasted from Excel/Sheets or CSV (matches existing products by description and updates them).
+
+API: `GET/POST /api/products`, `GET/PUT /api/products/:id`, `POST /api/products/:id/archive`, `POST /api/products/preview`, `POST /api/products/import` (`{ text, commit }`).
 
 ### Settings (environment variables)
 

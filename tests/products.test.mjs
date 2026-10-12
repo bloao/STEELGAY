@@ -47,3 +47,58 @@ test("100×50 Flat (1.5 t, 2 t/month) is the urgent sample line", () => {
   assert.equal(m.stockOutDate, "2026-11-04");
   assert.equal(m.suggestedOrderT, 5);
 });
+
+// ---- data points added on the products-tab branch
+import { parseProductTable } from "../lib/products.mjs";
+
+test("stock recorded on an earlier date is drawn down by usage", () => {
+  const p = validateProduct({ name: "x", commodityCode: "7216210000", stockT: 30, monthlyUsageT: 10, costPerT: 800, stockAsOf: "2026-09-12" }, { asOf }).product;
+  const m = stockMetrics(p, asOf); // ~1 month later
+  assert.equal(m.estimated, true);
+  assert.equal(Math.round(m.stockNowT), 20);
+  assert.equal(m.stockValue, m.stockNowT * 800); // valued at cost on estimated stock
+});
+
+test("stock date cannot be in the future", () => {
+  assert.ok(validateProduct({ name: "x", commodityCode: "7216210000", stockT: 1, monthlyUsageT: 1, costPerT: 1, stockAsOf: "2099-01-01" }, { asOf }).errors.stockAsOf);
+});
+
+test("suggested order is rounded up to the MOQ", () => {
+  const m = stockMetrics(P({ stockT: 25, moqT: 20 }), asOf); // would suggest 5 t
+  assert.equal(m.suggestedOrderT, 20);
+  assert.equal(m.moqApplied, true);
+  assert.equal(stockMetrics(P({ stockT: 40, moqT: 20 }), asOf).suggestedOrderT, 0); // nothing needed → no MOQ order
+});
+
+test("pasted spreadsheet rows (tab-separated, with a category heading row) import", () => {
+  const text = [
+    "Category\tDescription\tProduct Code\tCurrent Stock\tMonthly Usage\tStock Cost Price",
+    "Merchant Bar\t\t\t\t\t",
+    "\t40×40×3 Angle\t7216210000\t36t\t10t\t£766",
+    "\t100×50 Flat\t7214 9110 90\t1.5t\t2t\t£781",
+  ].join("\n");
+  const { rows, error, columns } = parseProductTable(text);
+  assert.equal(error, null);
+  assert.equal(columns.commodityCode, 2);
+  assert.equal(rows.length, 2);
+  const v = validateProduct(rows[1], { asOf });
+  assert.equal(v.valid, true);
+  assert.equal(v.product.category, "Merchant Bar");
+  assert.equal(v.product.commodityCode, "7214911090");
+  assert.equal(v.product.stockT, 1.5);
+  assert.equal(v.product.costPerT, 781);
+});
+
+test("CSV with quotes and optional columns imports", () => {
+  const { rows } = parseProductTable('Description,Commodity code,Stock,Usage,Cost,Lead time,MOQ\n"Angle, 50×50×6",72162100,"1,200",80,"£812",8 weeks,25t');
+  const v = validateProduct(rows[0], { asOf });
+  assert.equal(v.valid, true);
+  assert.equal(v.product.name, "Angle, 50×50×6");
+  assert.equal(v.product.stockT, 1200);
+  assert.equal(v.product.leadTimeWeeks, 8);
+  assert.equal(v.product.moqT, 25);
+});
+
+test("text without a recognisable header is rejected with a helpful message", () => {
+  assert.match(parseProductTable("hello\tworld").error, /header row/);
+});

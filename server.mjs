@@ -10,7 +10,7 @@ import { createStore } from "./lib/store.mjs";
 import { buildSampleRecords } from "./lib/demo.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
-import { SEED_PRODUCTS, validateProduct, stockMetrics } from "./lib/products.mjs";
+import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -1406,8 +1406,10 @@ async function productView(p) {
   const category = findCategory(p.commodityCode, tradeMeasure.categories);
   return {
     ...p,
+    stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || null,
     steelCategory: category ? { id: category.id, name: category.name } : null,
-    metrics: stockMetrics(p),
+    metrics: stockMetrics({ ...p, stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || undefined }),
+    activity: (p.activity || []).slice(-10),
   };
 }
 
@@ -1419,10 +1421,61 @@ async function handleProductApi(request, response, url) {
     sendJson(response, 200, { products: await Promise.all(products.map(productView)) });
     return;
   }
+  if (url.pathname === "/api/products/preview" && method === "POST") {
+    const { product, errors, valid } = validateProduct(await readJsonBody(request));
+    const tradeMeasure = await loadTradeMeasure();
+    const category = /^\d{10}$/.test(product.commodityCode) ? findCategory(product.commodityCode, tradeMeasure.categories) : null;
+    const canCompute = product.stockT !== null && product.monthlyUsageT !== null && product.costPerT !== null && !errors.stockAsOf;
+    return sendJson(response, 200, {
+      valid,
+      errors,
+      steelCategory: category ? { id: category.id, name: category.name } : null,
+      metrics: canCompute ? stockMetrics(product) : null,
+    });
+  }
+
+  if (url.pathname === "/api/products/import" && method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot add products.");
+    const body = await readJsonBody(request, 500_000);
+    const parsed = typeof body.text === "string" ? parseProductTable(body.text) : { rows: Array.isArray(body.rows) ? body.rows : [], columns: {}, unmatched: [] };
+    if (parsed.error) return sendJson(response, 422, { ok: false, error: parsed.error });
+    const existing = (await productStore.list()).filter((p) => p.status !== "archived");
+    const key = (p) => p.name.trim().toLowerCase();
+    const seen = new Set();
+    const results = parsed.rows.slice(0, 500).map((raw, index) => {
+      const { product, errors, valid } = validateProduct({ ...(body.defaults || {}), ...raw });
+      const match = existing.find((p) => key(p) === key(product));
+      if (seen.has(key(product))) errors.name = "Duplicate of an earlier row.";
+      seen.add(key(product));
+      return { index, product, errors, valid: valid && !errors.name, action: match ? "update" : "create", existingId: match?.id || null };
+    });
+    if (body.commit) {
+      let created = 0;
+      let updated = 0;
+      for (const r of results.filter((x) => x.valid)) {
+        if (r.existingId) {
+          const current = existing.find((p) => p.id === r.existingId);
+          const changes = Object.fromEntries(Object.entries(r.product).filter(([k, v]) => v !== null && v !== "" && JSON.stringify(v) !== JSON.stringify(current[k])));
+          // eslint-disable-next-line no-await-in-loop
+          await productStore.update(r.existingId, (p) => Object.assign(p, changes), user.name, "updated by import", Object.keys(changes).join(", "));
+          updated += 1;
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          await productStore.create({ ...r.product, status: "active" }, user.name);
+          created += 1;
+        }
+      }
+      return sendJson(response, 200, { ok: true, created, updated, skipped: results.length - created - updated });
+    }
+    return sendJson(response, 200, { ok: true, columns: parsed.columns, unmatched: parsed.unmatched, results });
+  }
+
   if (url.pathname === "/api/products" && method === "POST") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot add products.");
     const { product, errors, valid } = validateProduct(await readJsonBody(request));
-    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    const clash = (await productStore.list()).find((p) => p.status !== "archived" && p.name.trim().toLowerCase() === product.name.trim().toLowerCase());
+    if (clash) errors.name = "A product with this description already exists.";
+    if (!valid || clash) return sendJson(response, 422, { ok: false, errors });
     const saved = await productStore.create({ ...product, status: "active" }, user.name);
     sendJson(response, 201, await productView(saved));
     return;
@@ -1435,8 +1488,11 @@ async function handleProductApi(request, response, url) {
   if (!action && method === "GET") return sendJson(response, 200, await productView(existing));
   if (!action && method === "PUT") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot edit products.");
-    const { product, errors, valid } = validateProduct(await readJsonBody(request));
-    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    const body = await readJsonBody(request);
+    const { product, errors, valid } = validateProduct(body);
+    const clash = (await productStore.list()).find((p) => p.id !== id && p.status !== "archived" && p.name.trim().toLowerCase() === product.name.trim().toLowerCase());
+    if (clash) errors.name = "Another product already has this description.";
+    if (!valid || clash) return sendJson(response, 422, { ok: false, errors });
     const changed = Object.keys(product).filter((k) => JSON.stringify(product[k]) !== JSON.stringify(existing[k]));
     const detail = changed.slice(0, 6).map((k) => `${k}: ${existing[k] ?? "—"} → ${product[k] ?? "—"}`).join("; ");
     const saved = await productStore.update(id, (p) => Object.assign(p, product), user.name, "edited", detail);
