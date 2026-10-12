@@ -21,7 +21,13 @@
   let previewTimer = null;
   let importResults = null;
   let highlightId = null;
-  let serverErrors = {}; // errors from the last save, kept until that field is edited
+  let serverErrors = {};
+  let allScenarios = [];
+  let profileTab = "overview";
+  let auditFilter = "all";
+  const SIZE_KEY = "agx-profile-size";
+  let large = false;
+  try { large = localStorage.getItem(SIZE_KEY) === "large"; } catch { /* storage unavailable */ } // errors from the last save, kept until that field is edited
 
   const FIELDS = ["name", "category", "spec", "commodityCode", "stockT", "stockAsOf", "monthlyUsageT", "costPerT", "leadTimeWeeks", "moqT", "safetyStockT", "targetCoverMonths", "targetBuyPrice", "notes"];
   const STATUS = {
@@ -165,6 +171,9 @@
     $("view-detail").hidden = newMode !== "detail";
     form.hidden = newMode !== "form";
     $("view-import").hidden = newMode !== "import";
+    $("profile-tabs").hidden = newMode !== "detail";
+    drawer.classList.toggle("is-large", large);
+    syncSizeButton();
     drawer.hidden = false;
     $("backdrop").hidden = false;
     document.body.classList.add("drawer-open");
@@ -200,32 +209,56 @@
     return dl;
   }
 
-  function openDetail(id) {
-    const p = products.find((x) => x.id === id);
-    if (!p) return;
-    detailId = id;
+  function syncSizeButton() {
+    const btn = $("drawer-size");
+    btn.setAttribute("aria-label", large ? "Switch to small view" : "Switch to large view");
+    btn.title = large ? "Small view" : "Large view";
+  }
+
+  function setSize(toLarge) {
+    large = toLarge;
+    try { localStorage.setItem(SIZE_KEY, large ? "large" : "small"); } catch { /* ignore */ }
+    drawer.classList.toggle("is-large", large);
+    syncSizeButton();
+  }
+
+  const fmtVal = (field, v) => {
+    if (v === null || v === undefined || v === "") return "—";
+    if (["stockT", "monthlyUsageT", "moqT", "safetyStockT"].includes(field)) return t(Number(v));
+    if (["costPerT", "targetBuyPrice"].includes(field)) return `${fmt.money(Number(v), true)}/t`;
+    if (field === "stockAsOf") return fmt.date(v);
+    if (field === "commodityCode") return fmtCode(v);
+    if (field === "leadTimeWeeks") return `${v} weeks`;
+    if (field === "targetCoverMonths") return `${v} months`;
+    return String(v);
+  };
+
+  function productQuotes(p) {
+    return allScenarios.filter((sc) => sc.commodityCode === p.commodityCode && sc.status !== "archived");
+  }
+
+  function overviewPanel(p) {
     const m = p.metrics;
     const best = quotes.get(p.commodityCode);
-    const lines = quota && p.steelCategory ? quota.lines.filter((l) => l.categoryId === p.steelCategory.id) : [];
-    const [label] = STATUS[m.status] || [m.status];
-    showDrawer("detail", p.name, `${p.category}${p.spec ? ` · ${p.spec}` : ""}`);
-    $("view-detail").replaceChildren(
-      el("div", {}, statusDot(m.status), el("span", { class: "small muted", style: "margin-left:8px", text: m.reason })),
-      el("div", { class: "kv-head" },
+    return el("div", { class: "profile-panel profile-overview" },
+      el("div", { class: "span-all" }, statusDot(m.status), el("span", { class: "small muted", style: "margin-left:8px", text: m.reason })),
+      el("div", { class: "kv-head span-all" },
         el("div", {}, el("span", { text: m.estimated ? "Stock now (est.)" : "Stock" }), el("strong", { text: t(m.stockNowT) })),
         el("div", {}, el("span", { text: "Cover" }), el("strong", { text: months(m.coverMonths) })),
         el("div", {}, el("span", { text: "Runs out" }), el("strong", { text: m.stockOutDate ? fmt.date(m.stockOutDate) : "—" })),
         el("div", {}, el("span", { text: "Suggested order" }), el("strong", { text: m.suggestedOrderT ? `${m.suggestedOrderT} t` : "None" }))),
       el("section", { class: "detail-section" }, el("h3", { text: "Product" }), kv([
+        ["Description", p.name],
         ["Category", p.category],
         ["Specification", p.spec],
         ["Commodity code", fmtCode(p.commodityCode)],
         ["Steel quota category", p.steelCategory ? `Category ${p.steelCategory.id}` : "Not covered", p.steelCategory ? p.steelCategory.name : "No steel quota — ordinary duty only"],
       ])),
       el("section", { class: "detail-section" }, el("h3", { text: "Stock & demand" }), kv([
-        ["Stock recorded", t(p.stockT), p.stockAsOf ? `as of ${fmt.date(p.stockAsOf)}` : null],
+        ["Current stock (recorded)", t(p.stockT), p.stockAsOf ? `as of ${fmt.date(p.stockAsOf)}` : null],
         ["Estimated stock today", t(m.stockNowT), m.estimated ? "recorded stock less usage since then" : null],
         ["Monthly usage", `${t(p.monthlyUsageT)}/month`],
+        ["Months of cover", months(m.coverMonths)],
         ["Projected stock-out", m.stockOutDate ? fmt.date(m.stockOutDate) : null],
       ])),
       el("section", { class: "detail-section" }, el("h3", { text: "Buying rules" }), kv([
@@ -241,23 +274,166 @@
         ["Stock cost price", `${fmt.money(p.costPerT, true)}/t`],
         ["Stock value", fmt.money(m.stockValue)],
         ["Target buy price", p.targetBuyPrice ? `${fmt.money(p.targetBuyPrice, true)}/t` : null],
-        ["Best saved quote", best ? el("a", { href: `order-tool.html?id=${best.id}`, text: `${fmt.perT(best.expectedPerT)}` }) : null,
+        ["Best saved quote", best ? el("a", { href: `order-tool.html?id=${best.id}`, text: fmt.perT(best.expectedPerT) }) : null,
           best ? `${best.supplier || best.title} · ${best.expectedPerT > (p.targetBuyPrice || p.costPerT) ? "above" : "below"} ${p.targetBuyPrice ? "target" : "cost"}` : "No saved quotes for this code"],
       ])),
-      lines.length ? el("section", { class: "detail-section" }, el("h3", { text: `Quota · Category ${p.steelCategory.id}` }), kv(lines.map((l) => [
-        l.residual ? "Other origins" : l.origin, l.found ? `${fmt.tonnesRound(l.balanceT)} left` : "—", `${l.orderNumber} · ${({ exhausted: "used up", critical: "runs out this quarter", watch: "under 30% left", open: "open" })[l.risk] || l.risk}`]))) : null,
-      p.notes ? el("section", { class: "detail-section" }, el("h3", { text: "Notes" }), el("p", { style: "margin:0;white-space:pre-wrap", text: p.notes })) : null,
-      el("section", { class: "detail-section" }, el("h3", { text: "History" }),
-        el("ul", { class: "history" }, ...[...(p.activity || [])].reverse().map((a) =>
-          el("li", {}, el("strong", { text: a.by }), ` ${a.action}`, a.detail ? ` — ${a.detail}` : "", el("time", { datetime: a.at, text: fmt.dateTime(a.at) }))))),
-    );
+      p.notes ? el("section", { class: "detail-section span-all" }, el("h3", { text: "Notes" }), el("p", { style: "margin:0;white-space:pre-wrap", text: p.notes })) : null);
+  }
+
+  function quotasPanel(p) {
+    if (!p.steelCategory) {
+      return el("div", { class: "profile-panel" }, el("div", { class: "empty-state" },
+        el("h3", { text: "No steel quota applies" }),
+        el("p", { text: `${fmtCode(p.commodityCode)} isn't in a UK steel-measure category, so imports pay ordinary duty only.` })));
+    }
+    if (!quota) {
+      return el("div", { class: "profile-panel" }, el("div", { class: "empty-state" }, el("h3", { text: "Loading live quota balances…" })));
+    }
+    const lines = quota.lines.filter((l) => l.categoryId === p.steelCategory.id);
+    const named = lines.filter((l) => !l.residual).map((l) => l.origin);
+    const riskMap = { exhausted: ["Used up", "is-bad"], critical: ["Runs out this quarter", "is-bad"], watch: ["Under 30% left", "is-warn"], open: ["Open", ""], blocked: ["Blocked", "is-bad"], unknown: ["No data", "is-muted"] };
+    const totalLeft = lines.reduce((sum, l) => sum + (l.balanceT || 0), 0);
+    return el("div", { class: "profile-panel" },
+      el("div", {},
+        el("h3", { style: "margin:0 0 2px;font-size:15px", text: `Category ${p.steelCategory.id} · ${p.steelCategory.name}` }),
+        el("p", { class: "small muted", style: "margin:0", text: `${quota.quarter.label} · live from ${quota.sources.tariff.lines ? "HMRC Trade Tariff" : "DBT daily dataset"} at ${fmt.time(quota.fetchedAt)} · ${fmt.tonnesRound(totalLeft)} left across ${lines.length} lines` })),
+      el("div", { class: "table-scroll" }, el("table", { class: "quota-table" },
+        el("thead", {}, el("tr", {},
+          el("th", { text: "Origin" }), el("th", { text: "Order no." }),
+          el("th", { class: "num wide-only", text: "Annual" }), el("th", { class: "num", text: "This quarter" }),
+          el("th", { class: "wide-only", text: "Used" }), el("th", { class: "num", text: "Left" }),
+          el("th", { class: "num wide-only", text: "Burn/day" }), el("th", { text: "Runs out" }), el("th", { text: "Status" }),
+          el("th", { class: "num wide-only", text: "Next quarter" }))),
+        el("tbody", {}, ...lines.map((l) => {
+          const [label, cls] = riskMap[l.risk] || [l.risk, ""];
+          const share = l.usedShare !== null && l.usedShare !== undefined ? Math.max(0, Math.min(1, l.usedShare)) : null;
+          return el("tr", {},
+            el("td", {}, el("strong", { text: l.residual ? "Other origins" : l.origin })),
+            el("td", {}, el("a", { href: `https://www.trade-tariff.service.gov.uk/quota_search?order_number=${l.orderNumber}`, target: "_blank", rel: "noopener", text: l.orderNumber })),
+            el("td", { class: "num wide-only", text: fmt.tonnesRound(l.annualTonnes) }),
+            el("td", { class: "num", text: l.found ? fmt.tonnesRound(l.initialT) : "—" }),
+            el("td", { class: "wide-only" }, share === null ? "—" : el("div", { class: "usage" },
+              el("div", { class: `bar ${cls}`, "aria-hidden": "true" }, el("div", { style: `width:${(share * 100).toFixed(1)}%` })),
+              el("span", { text: `${Math.round(share * 100)}%` }))),
+            el("td", { class: "num" }, el("strong", { text: l.found ? fmt.tonnesRound(l.balanceT) : "—" })),
+            el("td", { class: "num wide-only", text: l.found && l.burnPerDayT !== null ? fmt.tonnesRound(l.burnPerDayT) : "—" }),
+            el("td", { text: l.risk === "exhausted" ? "Used up" : l.runOutDate ? fmt.date(l.runOutDate) : "—" }),
+            el("td", {}, el("span", { class: `status-dot ${cls}`, style: "font-size:12px", text: label })),
+            el("td", { class: "num wide-only", text: l.nextOpeningT ? fmt.tonnesRound(l.nextOpeningT) : "—" }));
+        })))),
+      el("p", { class: "small muted", style: "margin:0" },
+        `"Other origins" covers every country not named for this category${named.length ? ` (named: ${named.join(", ")})` : ""}. Ukraine is excluded from the measure. Within quota there's no steel duty; once a line is used up, the 50% steel duty applies on top of ordinary duty. `,
+        el("a", { href: `quotas.html?category=${encodeURIComponent(p.steelCategory.id)}`, text: "Open in Live quotas →" })),
+      large ? null : el("p", { class: "small muted", style: "margin:0", text: "Switch to the large view for annual allocation, usage, burn rate and next quarter." }));
+  }
+
+  function suppliersPanel() {
+    const panel = el("div", { class: "profile-panel" });
+    const box = el("div", { class: "empty-state" });
+    box.innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l5 3V10l5 3V6l8 4v11z"/><path d="M3 21h18"/></svg>';
+    box.append(el("h3", { text: "No suppliers linked yet" }), el("p", { text: "Suppliers for this product — mills, origins, prices, lead times and reliability — will appear here." }));
+    panel.append(box);
+    return panel;
+  }
+
+  const ACTION = {
+    created: ["Created", ""],
+    edited: ["Edited", ""],
+    "stock updated": ["Stock updated", "is-stock"],
+    "updated by import": ["Updated by import", "is-stock"],
+    archived: ["Archived", "is-archive"],
+  };
+
+  function auditPanel(p) {
+    const entries = (p.activity || []).map((a) => ({ kind: "change", at: a.at, a }));
+    const priced = productQuotes(p);
+    const events = [...entries, ...priced.map((sc) => ({ kind: "quote", at: sc.updatedAt, sc }))]
+      .sort((x, y) => String(y.at).localeCompare(String(x.at)));
+    const edits = entries.filter((e) => e.a.action === "edited").length;
+    const stockUpdates = entries.filter((e) => ["stock updated", "updated by import"].includes(e.a.action) || (e.a.changes || []).some((c) => c.field === "stockT")).length;
+    const created = entries.find((e) => e.a.action === "created");
+    const shown = events.filter((e) => auditFilter === "all" || (auditFilter === "changes" && e.kind === "change") || (auditFilter === "quotes" && e.kind === "quote"));
+
+    const filterBtn = (key, label) => el("button", { class: "chip", type: "button", "aria-pressed": String(auditFilter === key), text: label,
+      onclick: () => { auditFilter = key; renderProfileBody(p); } });
+
+    return el("div", { class: "profile-panel" },
+      el("div", { class: "audit-summary" },
+        el("div", {}, el("span", { text: "Created" }), el("strong", { style: "font-size:15px", text: created ? fmt.date(created.a.at) : "—" }), el("span", { text: created ? `by ${created.a.by}` : "" })),
+        el("div", {}, el("span", { text: "Times edited" }), el("strong", { text: edits })),
+        el("div", {}, el("span", { text: "Stock updates" }), el("strong", { text: stockUpdates })),
+        el("div", {}, el("span", { text: "Times priced" }), el("strong", { text: priced.length }), el("span", { text: priced.length ? `${priced.filter((x) => x.status === "approved").length} approved` : "quotes for this code" }))),
+      el("div", { class: "audit-filters", role: "group", "aria-label": "Filter history" },
+        filterBtn("all", `All (${events.length})`), filterBtn("changes", `Changes (${entries.length})`), filterBtn("quotes", `Quotes (${priced.length})`)),
+      shown.length
+        ? el("ul", { class: "timeline" }, ...shown.map((e) => {
+            if (e.kind === "quote") {
+              const sc = e.sc;
+              return el("li", {}, el("span", { class: "dot is-quote", "aria-hidden": "true" }),
+                el("div", { class: "t-head" }, el("strong", { text: "Priced" }), el("span", { text: `${sc.createdBy || ""} · ${fmt.dateTime(sc.updatedAt)}` })),
+                el("p", { class: "t-note" }, el("a", { href: `order-tool.html?id=${sc.id}`, text: sc.title }),
+                  ` — ${sc.supplier || "no supplier"}, ${sc.origin}, ${t(sc.tonnage)} at ${fmt.perT(sc.expectedPerT)} · ${sc.status}`));
+            }
+            const a = e.a;
+            const [label, cls] = ACTION[a.action] || [a.action.charAt(0).toUpperCase() + a.action.slice(1), ""];
+            return el("li", {}, el("span", { class: `dot ${cls}`, "aria-hidden": "true" }),
+              el("div", { class: "t-head" }, el("strong", { text: label }), el("span", { text: `${a.by} · ${fmt.dateTime(a.at)}` })),
+              a.changes && a.changes.length
+                ? el("dl", { class: "t-changes" }, ...a.changes.flatMap((c) => [
+                    el("dt", { text: c.label }),
+                    el("dd", {}, el("del", { text: fmtVal(c.field, c.from) }), " → ", el("strong", { text: fmtVal(c.field, c.to) }))]))
+                : a.detail ? el("p", { class: "t-note", text: a.detail }) : null);
+          }))
+        : el("p", { class: "muted", text: "Nothing to show yet." }));
+  }
+
+  function renderProfileBody(p) {
+    const body = profileTab === "quotas" ? quotasPanel(p)
+      : profileTab === "suppliers" ? suppliersPanel(p)
+      : profileTab === "audit" ? auditPanel(p)
+      : overviewPanel(p);
+    $("view-detail").replaceChildren(body);
+    $("view-detail").setAttribute("aria-labelledby", `tab-${profileTab}`);
+  }
+
+  function renderTabs(p) {
+    const lines = quota && p.steelCategory ? quota.lines.filter((l) => l.categoryId === p.steelCategory.id).length : 0;
+    const tabs = [
+      ["overview", "Overview", null],
+      ["quotas", "Quotas", p.steelCategory ? lines || null : 0],
+      ["suppliers", "Suppliers", 0],
+      ["audit", "Audit trail", (p.activity || []).length + productQuotes(p).length],
+    ];
+    $("profile-tabs").replaceChildren(...tabs.map(([key, label, count]) => el("button", {
+      class: "profile-tab", type: "button", role: "tab", id: `tab-${key}`, "aria-selected": String(profileTab === key), "aria-controls": "view-detail",
+      tabindex: profileTab === key ? "0" : "-1",
+      onclick: () => { profileTab = key; renderTabs(p); renderProfileBody(p); },
+      onkeydown: (e) => {
+        if (!["ArrowRight", "ArrowLeft"].includes(e.key)) return;
+        const i = tabs.findIndex((x) => x[0] === key);
+        const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length][0];
+        profileTab = next; renderTabs(p); renderProfileBody(p); $(`tab-${next}`).focus();
+      },
+    }, label, count !== null && count !== undefined ? el("span", { class: "count", text: count }) : null)));
+  }
+
+  function openDetail(id, tab) {
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    if (detailId !== id) { profileTab = tab || "overview"; auditFilter = "all"; }
+    if (tab) profileTab = tab;
+    detailId = id;
+    const m = p.metrics;
+    showDrawer("detail", p.name, `${p.category}${p.spec ? ` · ${p.spec}` : ""} · ${fmtCode(p.commodityCode)}`);
+    renderTabs(p);
+    renderProfileBody(p);
     const archiveBtn = el("button", { class: "btn btn-danger", type: "button", text: "Archive", onclick: () => archive(p, archiveBtn) });
     footer(
       me.canEdit ? archiveBtn : null,
       el("span", { class: "spacer" }),
       me.canEdit ? el("button", { class: "btn", type: "button", text: "Edit", onclick: () => openForm(p) }) : null,
       el("a", { class: "btn btn-primary", href: `order-tool.html?product=${p.id}`, text: m.suggestedOrderT ? `Price ${m.suggestedOrderT} t` : "Price an order" }));
-    $("drawer-close").focus();
+    if (!drawer.contains(document.activeElement)) $(`tab-${profileTab}`).focus();
   }
 
   async function archive(p, btn) {
@@ -365,7 +541,7 @@
     const cancel = el("button", { class: "btn", type: "button", "data-cancel": "", text: "Cancel", onclick: () => closeDrawer() });
     const save = el("button", { class: "btn btn-primary", type: "submit", form: "view-form", id: "form-save", text: p ? "Save changes" : "Add product" });
     footer(el("span", { class: "spacer" }), cancel, save);
-    setTimeout(() => field("name").focus(), 30);
+    field("name").focus();
   }
 
   async function submitForm(event) {
@@ -380,9 +556,11 @@
         ? await api(`/api/products/${editing.id}`, { method: "PUT", body })
         : await api("/api/products", { method: "POST", body });
       highlightId = saved.id;
-      toast(editing ? `${saved.name} updated` : `${saved.name} added`);
+      const wasEditing = Boolean(editing);
+      toast(wasEditing ? `${saved.name} updated` : `${saved.name} added`);
       closeDrawer(true);
       await load();
+      if (wasEditing) openDetail(saved.id);
       setTimeout(() => { highlightId = null; }, 2500);
     } catch (error) {
       const errors = (error.data && error.data.errors) || {};
@@ -472,6 +650,7 @@
         api("/api/scenarios").catch(() => ({ scenarios: [] })),
       ]);
       products = list.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name, "en", { numeric: true }));
+      allScenarios = scen.scenarios;
       quotes = new Map();
       for (const s of scen.scenarios) {
         if (!Number.isFinite(s.expectedPerT) || ["archived", "rejected"].includes(s.status)) continue;
@@ -491,6 +670,7 @@
     try {
       quota = await api("/api/steel-quotas/live");
       renderQuota();
+      if (mode === "detail" && detailId) openDetail(detailId);
     } catch { /* optional */ }
   }
 
@@ -509,6 +689,10 @@
   $("add-btn").addEventListener("click", () => openForm(null));
   $("import-btn").addEventListener("click", openImport);
   $("drawer-close").addEventListener("click", () => closeDrawer());
+  $("drawer-size").addEventListener("click", () => {
+    setSize(!large);
+    if (mode === "detail" && detailId) { const p = products.find((x) => x.id === detailId); if (p) renderProfileBody(p); }
+  });
   $("backdrop").addEventListener("click", () => closeDrawer());
   document.addEventListener("keydown", (e) => {
     if (drawer.hidden) return;
@@ -528,5 +712,9 @@
     me = m;
     if (!me.canEdit) { $("add-btn").hidden = true; $("import-btn").hidden = true; }
   });
-  load().then(loadQuota);
+  load().then(() => {
+    const deep = new URLSearchParams(window.location.search).get("product");
+    if (deep && products.some((p) => p.id === deep)) openDetail(deep);
+    return loadQuota();
+  });
 })();

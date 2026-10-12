@@ -1401,6 +1401,23 @@ async function handleAssistantApi(request, response, url) {
 
 // ------------------------------------------------------------ product API
 
+const PRODUCT_LABELS = {
+  name: "Description", category: "Category", spec: "Specification", commodityCode: "Commodity code",
+  stockT: "Current stock (t)", stockAsOf: "Stock as of", monthlyUsageT: "Monthly usage (t)", costPerT: "Stock cost price (£/t)",
+  leadTimeWeeks: "Lead time (weeks)", moqT: "MOQ (t)", safetyStockT: "Safety stock (t)", targetCoverMonths: "Cover after delivery (months)",
+  targetBuyPrice: "Target buy price (£/t)", notes: "Notes",
+};
+
+function productChanges(before, after) {
+  const blank = (v) => (v === undefined || v === null || v === "" ? null : v);
+  const was = (k) => blank(k === "stockAsOf" ? before.stockAsOf || (before.createdAt || "").slice(0, 10) : before[k]);
+  const defaults = { safetyStockT: 0, targetCoverMonths: 3 };
+  return Object.keys(PRODUCT_LABELS)
+    .filter((k) => k in after)
+    .filter((k) => JSON.stringify(blank(after[k]) ?? defaults[k] ?? null) !== JSON.stringify(was(k) ?? defaults[k] ?? null))
+    .map((k) => ({ field: k, label: PRODUCT_LABELS[k], from: before[k] ?? null, to: after[k] ?? null }));
+}
+
 async function productView(p) {
   const tradeMeasure = await loadTradeMeasure();
   const category = findCategory(p.commodityCode, tradeMeasure.categories);
@@ -1409,7 +1426,7 @@ async function productView(p) {
     stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || null,
     steelCategory: category ? { id: category.id, name: category.name } : null,
     metrics: stockMetrics({ ...p, stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || undefined }),
-    activity: (p.activity || []).slice(-10),
+    activity: p.activity || [],
   };
 }
 
@@ -1455,9 +1472,12 @@ async function handleProductApi(request, response, url) {
       for (const r of results.filter((x) => x.valid)) {
         if (r.existingId) {
           const current = existing.find((p) => p.id === r.existingId);
-          const changes = Object.fromEntries(Object.entries(r.product).filter(([k, v]) => v !== null && v !== "" && JSON.stringify(v) !== JSON.stringify(current[k])));
-          // eslint-disable-next-line no-await-in-loop
-          await productStore.update(r.existingId, (p) => Object.assign(p, changes), user.name, "updated by import", Object.keys(changes).join(", "));
+          const incoming = Object.fromEntries(Object.entries(r.product).filter(([, v]) => v !== null && v !== ""));
+          const changes = productChanges(current, incoming);
+          if (changes.length) {
+            // eslint-disable-next-line no-await-in-loop
+            await productStore.update(r.existingId, (p) => Object.assign(p, incoming), user.name, "updated by import", changes.map((c) => c.label).join(", "), { changes });
+          }
           updated += 1;
         } else {
           // eslint-disable-next-line no-await-in-loop
@@ -1493,9 +1513,11 @@ async function handleProductApi(request, response, url) {
     const clash = (await productStore.list()).find((p) => p.id !== id && p.status !== "archived" && p.name.trim().toLowerCase() === product.name.trim().toLowerCase());
     if (clash) errors.name = "Another product already has this description.";
     if (!valid || clash) return sendJson(response, 422, { ok: false, errors });
-    const changed = Object.keys(product).filter((k) => JSON.stringify(product[k]) !== JSON.stringify(existing[k]));
-    const detail = changed.slice(0, 6).map((k) => `${k}: ${existing[k] ?? "—"} → ${product[k] ?? "—"}`).join("; ");
-    const saved = await productStore.update(id, (p) => Object.assign(p, product), user.name, "edited", detail);
+    const changes = productChanges(existing, product);
+    if (!changes.length) return sendJson(response, 200, await productView(existing));
+    const stockOnly = changes.every((c) => ["stockT", "stockAsOf"].includes(c.field));
+    const saved = await productStore.update(id, (p) => Object.assign(p, product), user.name,
+      stockOnly ? "stock updated" : "edited", changes.map((c) => c.label).join(", "), { changes });
     return sendJson(response, 200, await productView(saved));
   }
   if (action === "archive" && method === "POST") {

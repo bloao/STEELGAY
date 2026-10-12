@@ -102,10 +102,17 @@
             <p class="eyebrow" id="drawer-eyebrow"></p>
             <h2 id="drawer-title"></h2>
           </div>
+          <div class="drawer-tools">
+          <button class="icon-btn" type="button" id="drawer-size" aria-label="Switch to large view" title="Large view">
+            <svg class="i-expand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            <svg class="i-collapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>
+          </button>
           <button class="icon-btn" type="button" id="drawer-close" aria-label="Close">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
           </button>
+          </div>
         </header>
+        <div class="profile-tabs" id="profile-tabs" role="tablist" aria-label="Product profile sections" hidden></div>
 
         <!-- detail -->
         <div class="drawer-body" id="view-detail" hidden></div>

@@ -148,7 +148,11 @@
     try {
       const [live] = await Promise.all([api(`/api/steel-quotas/live${force ? "?refresh=1" : ""}`), loadExposure()]);
       data = live;
-      if (!$("f-category").options.length || $("f-category").options.length === 1) fillFilters();
+      if (!$("f-category").options.length || $("f-category").options.length === 1) {
+        fillFilters();
+        const wanted = new URLSearchParams(window.location.search).get("category");
+        if (wanted && [...$("f-category").options].some((o) => o.value === wanted)) $("f-category").value = wanted;
+      }
       renderSummary();
       render();
     } catch (error) {
