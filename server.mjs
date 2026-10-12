@@ -11,6 +11,7 @@ import { buildSampleRecords } from "./lib/demo.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics } from "./lib/products.mjs";
+import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
 
@@ -1319,6 +1320,85 @@ async function renderPlanPdf(request, response) {
   }
 }
 
+// ------------------------------------------------------------ assistant
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
+const ASSISTANT_MODEL = process.env.ASSISTANT_MODEL || DEFAULT_MODEL;
+const assistantRate = new Map(); // user -> recent request timestamps
+
+let fallbackCommodities = null;
+async function commodityList() {
+  if (caches.commodities.payload?.commodities?.length) return caches.commodities.payload.commodities;
+  if (!fallbackCommodities) {
+    const context = { window: {} };
+    vm.createContext(context);
+    vm.runInContext(await readFile(join(root, "steel-commodities.js"), "utf8"), context);
+    fallbackCommodities = context.window.STEEL_COMMODITIES?.commodities || [];
+  }
+  return fallbackCommodities;
+}
+
+async function callAnthropic(body) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(90_000),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data?.error?.message || response.statusText;
+    const hint = response.status === 401 ? " — check ANTHROPIC_API_KEY in .env"
+      : response.status === 404 ? ` — model "${body.model}" not available to this key; set ASSISTANT_MODEL`
+      : response.status === 429 ? " — rate limited, try again shortly" : "";
+    throw Object.assign(new Error(`Claude API ${response.status}: ${message}${hint}`), { statusCode: 502 });
+  }
+  return data;
+}
+
+async function handleAssistantApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  if (url.pathname === "/api/assistant/status" && request.method === "GET") {
+    sendJson(response, 200, { configured: Boolean(ANTHROPIC_API_KEY), model: ASSISTANT_MODEL });
+    return;
+  }
+  if (url.pathname !== "/api/assistant" || request.method !== "POST") return sendError(response, 404, "Not found");
+  if (!ANTHROPIC_API_KEY) return sendError(response, 503, "The assistant is not set up yet: add ANTHROPIC_API_KEY to .env and restart the server.");
+
+  const now = Date.now();
+  const recent = (assistantRate.get(user.name) || []).filter((t) => now - t < 60_000);
+  if (recent.length >= 20) return sendError(response, 429, "Too many questions in a minute — wait a moment.");
+  recent.push(now);
+  assistantRate.set(user.name, recent);
+
+  const body = await readJsonBody(request, 200_000);
+  const messages = Array.isArray(body.messages) ? body.messages.slice(-30) : [];
+  const clean = messages
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
+  while (clean.length && clean[0].role !== "user") clean.shift();
+  if (!clean.length || clean[clean.length - 1].role !== "user") return sendError(response, 400, "Send a question.");
+
+  const tradeMeasure = await loadTradeMeasure();
+  const data = {
+    products: async () => Promise.all((await productStore.list()).filter((p) => p.status !== "archived").map(productView)),
+    scenarios: async () => (await store.list()).map(summarise),
+    scenario: async (id) => store.get(String(id)),
+    quotas: () => getMeasureQuotas(),
+    price: (inputs) => runScenario(inputs),
+    commodities: commodityList,
+    categoryFor: (code) => findCategory(code, tradeMeasure.categories)?.id || null,
+  };
+  const result = await converse({
+    messages: clean,
+    callModel: callAnthropic,
+    data,
+    model: ASSISTANT_MODEL,
+    system: systemPrompt({ today: new Date().toISOString().slice(0, 10), user: user.name }),
+  });
+  sendJson(response, 200, { ...result, model: ASSISTANT_MODEL });
+}
+
 // ------------------------------------------------------------ product API
 
 async function productView(p) {
@@ -1644,6 +1724,11 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname.startsWith("/api/assistant")) {
+      await handleAssistantApi(request, response, url);
+      return;
+    }
+
     if (url.pathname.startsWith("/api/products")) {
       await handleProductApi(request, response, url);
       return;
@@ -1687,4 +1772,5 @@ server.listen(port, bindHost, () => {
   console.log(`Steel ARB live app running at http://${bindHost}:${port}`);
   console.log(`Order tool:   http://${bindHost}:${port}/orders.html   (engine v${ENGINE_VERSION}, from ${root})`);
   console.log(`HMRC Trade Tariff access: ${tariffAuthMode === "registered" ? "registered credentials loaded" : "public (no credentials)"}`);
+  console.log(`Assistant: ${ANTHROPIC_API_KEY ? `ready (${ASSISTANT_MODEL})` : "not set up — add ANTHROPIC_API_KEY to .env"}`);
 });

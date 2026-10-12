@@ -118,6 +118,7 @@ Stock list saved in `var/products.json` (first run seeds the five sample Merchan
 | `SITE_PASSWORD` | Old single shared login (user `team`, admin role) — still supported. |
 | `DATA_DIR` | Where scenarios are saved (default `./var`). On Fly/Render this must be a mounted volume. |
 | `TARIFF_CLIENT_ID`, `TARIFF_CLIENT_SECRET`, `TARIFF_TOKEN_URL` | Optional HMRC Trade Tariff API credentials from the free Developer Portal (https://hub.trade-tariff.service.gov.uk/). Raises HMRC's rate limit. Or set `TARIFF_ACCESS_TOKEN` directly. Without them the public API is used. |
+| `ANTHROPIC_API_KEY` | Enables the Assistant tab (Claude, server-side; read-only tools over products, scenarios, live quotas and the pricing engine). Optional `ASSISTANT_MODEL` (default `claude-sonnet-5-5`). |
 | `ALLOWED_ORIGIN` | Only set if another site must call the API; otherwise same-origin only. |
 
 FX for EUR/USD quotes uses the ECB reference rate (Frankfurter); a manual rate can be entered per scenario.

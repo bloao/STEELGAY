@@ -12,12 +12,14 @@
     suppliers: '<path d="M3 21V10l5 3V10l5 3V6l8 4v11z"/><path d="M3 21h18"/><path d="M7 17h1M12 17h1M17 17h1"/>',
     products: '<path d="M12 3 4 7v10l8 4 8-4V7z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/>',
     quotas: '<path d="M4 15a8 8 0 1 1 16 0"/><path d="m12 15 4-5"/><path d="M4 19h16"/>',
+    assistant: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/>',
   };
   var ITEMS = [
     { key: "orders", label: "Orders", href: "orders.html" },
     { key: "suppliers", label: "Suppliers", href: "suppliers.html" },
     { key: "products", label: "Products", href: "products.html" },
     { key: "quotas", label: "Live quotas", href: "quotas.html" },
+    { key: "assistant", label: "Assistant", href: "assistant.html" },
   ];
   var active = aside.getAttribute("data-active");
 

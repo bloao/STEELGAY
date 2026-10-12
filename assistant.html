@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Assistant · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="assistant"></aside>
+      <script src="app-sidebar.js"></script>
+    <main class="page chat-page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Ask about stock, quotes and quotas</p>
+          <h1>Assistant</h1>
+        </div>
+        <div class="actions">
+          <span class="small muted" id="model-label"></span>
+          <button class="btn" type="button" id="clear-btn">New chat</button>
+        </div>
+      </div>
+
+      <section class="card" id="setup-card" hidden>
+        <h2>Set up the assistant</h2>
+        <p class="muted" style="margin:0 0 12px">The assistant uses Claude from Anthropic. It needs an API key on the server (never in the browser).</p>
+        <ol class="checks">
+          <li>Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API keys</a> (add billing credit first).</li>
+          <li>Add a line to <code>.env</code> in the project folder: <code>ANTHROPIC_API_KEY=sk-ant-…</code></li>
+          <li>Restart: <code>node --env-file=.env server.mjs</code></li>
+        </ol>
+      </section>
+
+      <section class="chat" aria-label="Conversation">
+        <div class="chat-log" id="log" aria-live="polite">
+          <div class="chat-empty" id="empty">
+            <h2>What do you want to know?</h2>
+            <p class="muted">It reads your products, saved scenarios and HMRC's live quota balances, and can price an order with the same engine as the order tool. It can't change anything.</p>
+            <div class="suggestions" id="suggestions">
+              <button class="chip" type="button">Which products need ordering, and how much?</button>
+              <button class="chip" type="button">What's the live quota position for my merchant bar?</button>
+              <button class="chip" type="button">Price 16 t of 40×10 flat from Turkey at $640/t CFR, landing next month</button>
+              <button class="chip" type="button">Which of my saved HR coil quotes is cheapest once quota risk is included?</button>
+              <button class="chip" type="button">Which quota lines run out before the end of this quarter?</button>
+            </div>
+          </div>
+        </div>
+        <form class="chat-form" id="chat-form">
+          <label for="question" hidden>Your question</label>
+          <textarea id="question" rows="1" placeholder="Ask about stock, quotes, duty or quotas…" maxlength="4000"></textarea>
+          <button class="btn btn-primary" type="submit" id="send-btn" aria-label="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+        <p class="disclaimer">Answers come from your data and live GOV.UK feeds via Claude. Estimates only — not customs advice. Check important figures in the app.</p>
+      </section>
+    </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="assistant.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>
