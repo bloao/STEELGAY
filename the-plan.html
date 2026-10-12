@@ -12,23 +12,45 @@
   </head>
   <body>
     <nav class="site-nav" aria-label="Primary">
-      <a class="site-nav__brand" href="the-plan.html">
+      <a class="site-nav__brand" href="index.html">
         <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
         <span class="site-nav__brand-text">Datafab AGX</span>
       </a>
       <div class="site-nav__links">
-        <a class="site-nav__link is-active" href="the-plan.html" aria-current="page">The plan</a>
+        <a class="site-nav__link" href="index.html">Dashboard</a>
+        <a class="site-nav__link" href="industry-primer.html">Industry primer</a>
+        <div class="site-nav__dropdown">
+          <button type="button" class="site-nav__link site-nav__link--menu">Supply routes</button>
+          <div class="site-nav__menu" role="menu">
+            <p class="site-nav__menu-heading">PHYSICAL ROUTES</p>
+            <a href="sea-freight.html">Sea freight</a>
+            <a href="road-freight.html">Road / RoRo</a>
+            <a href="rail-freight.html">Rail &amp; intermodal</a>
+            <a href="air-freight.html">Air freight</a>
+            <a href="inland-waterway.html">Inland waterway</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">CUSTOMS PROCEDURE</p>
+            <a href="customs-warehouse.html">Customs / bonded warehouse</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">COMMERCIAL CHANNELS</p>
+            <a href="direct-mill.html">Direct mill purchase</a>
+            <a href="trader-agent.html">Trader or agent</a>
+            <a href="online-marketplace.html">Online marketplace</a>
+          </div>
+        </div>
         <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
-        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
-        <a class="site-nav__link" href="orders.html">Orders</a>
-      </div></nav>
+        <a class="site-nav__link" href="live-comparison.html">Live comparison</a>
+        <a class="site-nav__link is-active" href="the-plan.html" aria-current="page">The plan</a>
+        <a class="site-nav__link" href="order-tool.html">Order tool</a>
+      </div>
+    </nav>
 
     <main class="plan2">
       <header class="plan2__hero">
         <div class="plan2__hero-head">
           <div>
             <p class="eyebrow">System design</p>
-            <h1>A live intelligence layer for your existing procurement process</h1>
+            <h1>UK steel procurement intelligence system</h1>
           </div>
           <button type="button" class="button button-primary plan2__download" data-download-pdf>
             <span aria-hidden="true">&#8681;</span>
@@ -36,16 +58,11 @@
           </button>
         </div>
         <p class="plan2__lede">
-          One interface that brings together the data your procurement process already relies on &mdash; HMRC, MEPS, supplier quotes, stock levels, consumption, FX and freight &mdash; without replacing the way you already work.
-        </p>
-        <p class="plan2__lede">
-          The difference is <strong>speed and visibility</strong>. Instead of waiting for monthly or quarterly reviews, key information is refreshed as close to real time as each source allows, and in real time where it matters most.
-        </p>
-        <p class="plan2__lede">
-          In many cases, procurement problems are not caused by a failure to act &mdash; they are caused by not knowing, in time, that action was needed.
-        </p>
-        <p class="plan2__lede">
-          The first objective is therefore to remove that information lag, so decisions can be made while they still have an impact. Once that foundation is fast, reliable and trusted, a forecasting layer can be added on top to provide a forward-looking view of risk, cost and opportunity.
+          A ten-stage engine, a set of feeding databases and a live supplier network. For every
+          product on the pilot list it answers six questions: who&rsquo;s selling it, who&rsquo;s
+          making it, what the true landed cost is on a cash-adjusted basis, where the market is
+          heading, whether to buy today or wait, and how much of the requirement should sit with the
+          UK domestic mill versus imports.
         </p>
         <div class="plan2__legend">
           <span class="plan-chip plan-chip--internal">Internal</span>
@@ -53,241 +70,24 @@
           <span class="plan-chip plan-chip--inferred">Inferred</span>
           <span class="plan-chip plan-chip--forecast">Forecast</span>
         </div>
-
-        <!-- Final objective, folded into the hero -->
-        <div class="plan2__hero-objective" id="objective">
-          <div class="plan2__hero-objective-head">
-            <p class="eyebrow">Final objective</p>
-            <h2>The one sentence the system has to be able to write</h2>
-            <p>This is what the whole engine is built to produce for every product on the pilot list. Everything that follows &mdash; the ten stages, the fifteen data sources, the supplier network, the working-capital module &mdash; exists to make this sentence answerable with evidence.</p>
-          </div>
-          <blockquote class="objective-quote">
-            For <strong>50&times;40&times;5 Angle</strong>, we currently have <strong>100 tonnes</strong> in stock and consume approximately <strong>30 tonnes per month</strong>. Supplier A is offering <strong>&pound;X/t DDP</strong> from Mill Y, while Supplier B is offering <strong>&pound;Y/t non-DDP</strong> from Mill Z. Based on current quota utilisation, freight, FX, steel benchmarks, raw-material trends, market-participant behaviour and expected stock depletion, the recommended action is to purchase <strong>X tonnes from Supplier Y by DATE</strong> at a target price of <strong>&pound;Z/t</strong>. Waiting is expected to <strong>increase / decrease</strong> procurement cost by approximately <strong>&pound;X</strong>. <em>Confidence: X%.</em>
-          </blockquote>
-        </div>
       </header>
 
-      <section class="plan2__section" id="chain">
+      <section class="plan2__section plan2__section--dark" id="objective">
         <header class="plan2__section-head">
-          <p class="eyebrow">Reading guide</p>
-          <h2>Section&nbsp;1 and Section&nbsp;2, and how they fit together</h2>
-          <p class="plan2__section-lede">Section&nbsp;1 defines the calculations. Section&nbsp;2 stores the numbers those calculations need. Every stage in Section&nbsp;1 reaches down into specific fields in the Section&nbsp;2 data sources &mdash; that&rsquo;s the chain shown here.</p>
+          <p class="eyebrow">Final objective</p>
+          <h2>The one sentence the system has to be able to write</h2>
+          <p>This is what the whole engine is built to produce for every product on the pilot list. Everything that follows &mdash; the ten stages, the fifteen databases, the supplier network, the working-capital module &mdash; exists to make this sentence answerable with evidence.</p>
         </header>
-
-        <div class="chain-intro">
-          <article class="chain-intro__card">
-            <h3>Section&nbsp;1 &mdash; the foundation</h3>
-            <p>The foundation of the whole system is <strong>agreeing the core framework</strong>. For each product, we need to align on the stages of the supply chain, the assumptions behind each calculation, the variables that matter, and the decision points that affect cost, risk and margin. This includes freight, duty, quota exposure, FX, expected demand, payment terms and supplier reliability. Once these inputs are agreed, the Section&nbsp;2 numbers can be applied consistently across the model.</p>
-          </article>
-          <article class="chain-intro__card">
-            <h3>How they connect &mdash; the chain</h3>
-            <p>Each calculation depends on a <strong>clear link</strong> between the variable, the data point that supplies it, and the field in the Section&nbsp;2 schema it is read from.</p>
-            <p>The model does not invent numbers. It pulls agreed values from agreed locations and uses them consistently across each stage.</p>
-          </article>
-          <article class="chain-intro__card">
-            <h3>Section&nbsp;2 &mdash; the data that feeds it</h3>
-            <p>Section&nbsp;2 defines the <strong>data layer</strong> behind the model.</p>
-            <p>For each source, we need to align on the data points it contains, where they sit, who owns them, how often they update, and what the schema looks like.</p>
-            <p>Once this is agreed, the model can read the right inputs from the right places in the right format.</p>
-          </article>
-        </div>
-
-        <figure class="chain-diagram">
-          <figcaption class="chain-diagram__title">Read top-down &mdash; data sources feed the variables that resolve the foundation equation</figcaption>
-          <svg viewBox="0 0 1440 640" xmlns="http://www.w3.org/2000/svg" role="img" class="cd-svg" aria-label="Three-step decomposition, top down: data sources with data points inside, variables in the middle, foundation equation at the bottom">
-            <defs>
-              <marker id="td-arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                <path d="M0 0 L10 5 L0 10 Z" fill="#6190ae"/>
-              </marker>
-              <linearGradient id="cd-foundation-grad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"  stop-color="#0c2740"/>
-                <stop offset="50%" stop-color="#153a5f"/>
-                <stop offset="100%" stop-color="#0c2740"/>
-              </linearGradient>
-              <linearGradient id="cd-shimmer" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stop-color="rgba(143,190,221,0)"/>
-                <stop offset="45%"  stop-color="rgba(143,190,221,0)"/>
-                <stop offset="50%"  stop-color="rgba(143,190,221,0.35)"/>
-                <stop offset="55%"  stop-color="rgba(143,190,221,0)"/>
-                <stop offset="100%" stop-color="rgba(143,190,221,0)"/>
-              </linearGradient>
-            </defs>
-
-            <!-- STEP 1 · DATA SOURCES (top) — data points nested inside their containers -->
-            <text x="720" y="20" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">SECTION 2 &middot; DATA SOURCES &mdash; DATA POINTS NESTED INSIDE</text>
-
-            <!-- Container A · Internal -->
-            <g>
-              <rect x="100" y="30" width="190" height="260" rx="12" fill="#0c2740" class="cd-src"/>
-              <rect x="112" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="122" cy="56" r="14" fill="#6190ae"/>
-              <text x="122" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">A</text>
-              <text x="148" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Internal</text>
-              <text x="148" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">company data</text>
-              <rect x="122" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2" class="cd-pill"/>
-              <text x="195" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">A2.supplier_quotes</text>
-              <text x="195" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.price_gbp_per_t</text>
-              <text x="195" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">&pound; 850</text>
-              <text x="195" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
-            </g>
-
-            <!-- Container G · Transport (wider, holds 2 data points) -->
-            <g>
-              <rect x="310" y="30" width="400" height="260" rx="12" fill="#0c2740" class="cd-src"/>
-              <rect x="322" y="86" width="376" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="332" cy="56" r="14" fill="#6190ae"/>
-              <text x="332" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">G</text>
-              <text x="358" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Transport costs</text>
-              <text x="358" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">freight, insurance, terminals</text>
-              <!-- Freight data point -->
-              <rect x="332" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2" class="cd-pill"/>
-              <text x="405" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">G1.transport_costs</text>
-              <text x="405" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.freight_gbp_per_t</text>
-              <text x="405" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 42</text>
-              <text x="405" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
-              <!-- Insurance data point -->
-              <rect x="542" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2" class="cd-pill"/>
-              <text x="615" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">G1.transport_costs</text>
-              <text x="615" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.insurance_gbp_per_t</text>
-              <text x="615" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 6</text>
-              <text x="615" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">value read</text>
-            </g>
-
-            <!-- Container B · HMRC UK trade -->
-            <g>
-              <rect x="730" y="30" width="190" height="260" rx="12" fill="#0c2740" class="cd-src"/>
-              <rect x="742" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="752" cy="56" r="14" fill="#6190ae"/>
-              <text x="752" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">B</text>
-              <text x="778" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">HMRC UK trade</text>
-              <text x="778" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">tariffs &amp; duty rates</text>
-              <rect x="752" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2" class="cd-pill"/>
-              <text x="825" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">B2.HMRC_control</text>
-              <text x="825" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.duty_rate</text>
-              <text x="825" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 0</text>
-              <text x="825" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">in-quota</text>
-            </g>
-
-            <!-- Container F · Steel quotas -->
-            <g>
-              <rect x="940" y="30" width="190" height="260" rx="12" fill="#0c2740" class="cd-src"/>
-              <rect x="952" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="962" cy="56" r="14" fill="#6190ae"/>
-              <text x="962" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">F</text>
-              <text x="988" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Steel quotas</text>
-              <text x="988" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">TRQ balances</text>
-              <rect x="962" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2" class="cd-pill"/>
-              <text x="1035" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">F1.steel_quotas</text>
-              <text x="1035" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.remaining_pct</text>
-              <text x="1035" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">+ &pound; 18</text>
-              <text x="1035" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">30% exhaust risk</text>
-            </g>
-
-            <!-- Container L · Currency -->
-            <g>
-              <rect x="1150" y="30" width="190" height="260" rx="12" fill="#0c2740" class="cd-src"/>
-              <rect x="1162" y="86" width="166" height="192" rx="6" fill="#ffffff"/>
-              <circle cx="1172" cy="56" r="14" fill="#6190ae"/>
-              <text x="1172" y="61" text-anchor="middle" font-family="Manrope,system-ui" font-size="13" font-weight="800" fill="#ffffff">L</text>
-              <text x="1198" y="61" font-family="Manrope,system-ui" font-size="13" font-weight="700" fill="#ffffff">Currency</text>
-              <text x="1198" y="76" font-family="Inter,system-ui" font-size="10" fill="#8fbedd">FX spot rates</text>
-              <rect x="1172" y="146" width="146" height="60" rx="6" fill="rgba(97,144,174,0.10)" stroke="#6190ae" stroke-width="1.2" class="cd-pill"/>
-              <text x="1245" y="170" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">L1.gbp_eur</text>
-              <text x="1245" y="190" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" fill="#0c2740">.close</text>
-              <text x="1245" y="236" text-anchor="middle" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">&ndash; &pound; 3</text>
-              <text x="1245" y="254" text-anchor="middle" font-family="Inter,system-ui" font-size="10" fill="#0c2740" opacity="0.6">GBP strengthened</text>
-            </g>
-
-            <!-- Connectors: data sources → variables (top-down) -->
-            <line x1="195"  y1="290" x2="195"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow"/>
-            <line x1="405"  y1="290" x2="405"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow"/>
-            <line x1="615"  y1="290" x2="615"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow"/>
-            <line x1="825"  y1="290" x2="825"  y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow"/>
-            <line x1="1035" y1="290" x2="1035" y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow"/>
-            <line x1="1245" y1="290" x2="1245" y2="356" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow"/>
-
-            <!-- STEP 2 · VARIABLES (middle) -->
-            <text x="720" y="336" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">THE CHAIN &middot; VARIABLES</text>
-            <g font-family="Menlo,ui-monospace" font-size="13" font-weight="700" fill="#0c2740">
-              <rect x="105"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5" class="cd-var"/><text x="195"  y="387" text-anchor="middle">supplier_price</text>
-              <rect x="315"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5" class="cd-var"/><text x="405"  y="387" text-anchor="middle">freight</text>
-              <rect x="525"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5" class="cd-var"/><text x="615"  y="387" text-anchor="middle">insurance</text>
-              <rect x="735"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5" class="cd-var"/><text x="825"  y="387" text-anchor="middle">duty</text>
-              <rect x="945"  y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5" class="cd-var"/><text x="1035" y="387" text-anchor="middle">quota_uplift</text>
-              <rect x="1155" y="356" width="180" height="48" rx="8" fill="#ffffff" stroke="#6190ae" stroke-width="1.5" class="cd-var"/><text x="1245" y="387" text-anchor="middle">fx</text>
-            </g>
-
-            <!-- Connectors: variables → foundation (top-down) -->
-            <line x1="195"  y1="404" x2="195"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow cd-arrow--fast"/>
-            <line x1="405"  y1="404" x2="405"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow cd-arrow--fast"/>
-            <line x1="615"  y1="404" x2="615"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow cd-arrow--fast"/>
-            <line x1="825"  y1="404" x2="825"  y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow cd-arrow--fast"/>
-            <line x1="1035" y1="404" x2="1035" y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow cd-arrow--fast"/>
-            <line x1="1245" y1="404" x2="1245" y2="456" stroke="#6190ae" stroke-width="1.5" marker-end="url(#td-arrow2)" class="cd-arrow cd-arrow--fast"/>
-
-            <!-- STEP 3 · THE FOUNDATION (bottom) -->
-            <text x="720" y="436" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" letter-spacing="0.18em" fill="#6190ae">SECTION 1 &middot; THE FOUNDATION</text>
-            <rect x="100" y="456" width="1240" height="80" rx="12" fill="url(#cd-foundation-grad)" class="cd-foundation"/>
-            <rect x="100" y="456" width="1240" height="80" rx="12" fill="url(#cd-shimmer)" class="cd-shimmer" pointer-events="none"/>
-            <text x="720" y="504" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="15" font-weight="700" fill="#ffffff">landed_cost = supplier_price + freight + insurance + duty + quota_uplift + fx</text>
-          </svg>
-        </figure>
-
-        <div class="chain-example">
-          <p class="chain-example__eyebrow">The same chain, as a table</p>
-          <h3>Every variable, its data point, its schema field</h3>
-          <div class="chain-table-wrap">
-            <table class="chain-table">
-              <thead>
-                <tr>
-                  <th scope="col">Variable</th>
-                  <th scope="col">Data point</th>
-                  <th scope="col">Schema field</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row"><code>supplier_price</code></th>
-                  <td>Quoted &pound;/tonne on the offer</td>
-                  <td><code>A2.supplier_quotes.price_gbp_per_t</code></td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>freight</code></th>
-                  <td>Sea + inland to depot, &pound;/t</td>
-                  <td><code>G1.transport_costs.freight_gbp_per_t</code></td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>insurance</code></th>
-                  <td>Insurance line, &pound;/t</td>
-                  <td><code>G1.transport_costs.insurance_gbp_per_t</code></td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>duty</code></th>
-                  <td>Duty rate on commodity code</td>
-                  <td><code>B2.HMRC_control_files.duty_rate</code></td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>quota_uplift</code></th>
-                  <td>P(exhaustion) &times; 50&nbsp;% out-of-quota rate</td>
-                  <td><code>F1.steel_quotas.remaining_pct</code></td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>fx</code></th>
-                  <td>Spot rate at booking</td>
-                  <td><code>L1.gbp_eur.close</code> / <code>L2.gbp_usd.close</code></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="chain-example__foot">Every one of the ten stages resolves the same way. Read <a href="#flow">Section&nbsp;1</a> to see the stages. Read <a href="#data-sources">Section&nbsp;2</a> to see the schemas they reach into. The rest of the document assumes this chain.</p>
-        </div>
+        <blockquote class="objective-quote">
+          For <strong>50&times;40&times;5 Angle</strong>, we currently have <strong>100 tonnes</strong> in stock and consume approximately <strong>30 tonnes per month</strong>. Supplier A is offering <strong>&pound;X/t DDP</strong> from Mill Y, while Supplier B is offering <strong>&pound;Y/t non-DDP</strong> from Mill Z. Based on current quota utilisation, freight, FX, steel benchmarks, raw-material trends, market-participant behaviour and expected stock depletion, the recommended action is to purchase <strong>X tonnes from Supplier Y by DATE</strong> at a target price of <strong>&pound;Z/t</strong>. Waiting is expected to <strong>increase / decrease</strong> procurement cost by approximately <strong>&pound;X</strong>. <em>Confidence: X%.</em>
+        </blockquote>
       </section>
 
       <section class="plan2__section" id="flow">
         <header class="plan2__section-head">
           <p class="eyebrow">Section 1 &middot; The engine</p>
           <h2>Overall flow</h2>
-          <p class="plan2__section-lede">Ten stages, always left to right &mdash; top row 01&ndash;05, then bottom row 06&ndash;10. Each stage is a supply-chain equation (see the <a href="#chain">chain above</a>).</p>
+          <p class="plan2__section-lede">Ten stages, always left to right &mdash; top row 01&ndash;05, then bottom row 06&ndash;10.</p>
           <ul class="section-meta">
             <li><span>Shape</span><strong>S-flow, 5&nbsp;&times;&nbsp;2 grid</strong></li>
             <li><span>Each cell</span><strong>Inputs above, output below</strong></li>
@@ -299,98 +99,88 @@
         <ol class="pflow">
 
           <li class="pflow__stage">
-            <header><span class="pflow__num">01</span><h3>Our product &amp; demand baseline</h3><span class="plan-chip plan-chip--internal">Fixed</span></header>
-            <p class="pflow__what">Our fixed truth &mdash; what we sell, what we hold, what we&rsquo;ll pay. The constraint every downstream stage is built to satisfy.</p>
+            <header><span class="pflow__num">01</span><h3>Product / demand data</h3><span class="plan-chip plan-chip--internal">Internal</span></header>
             <ul>
-              <li>Our product list &middot; dimensions &middot; commodity code &middot; quota category</li>
-              <li>Our demand: monthly consumption &middot; current stock &middot; projected stock-out</li>
-              <li>Our operational constraints: MOQ we accept &middot; cover we hold &middot; safety stock we protect</li>
-              <li>Our commercial ceiling: target &pound;/t buy price we won&rsquo;t exceed</li>
+              <li>Product ID / commodity code</li>
+              <li>Monthly consumption &middot; current stock</li>
+              <li>Target buy price</li>
+              <li>Lead time / MOQ</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
             <header><span class="pflow__num">02</span><h3>UK market mapping</h3><span class="plan-chip plan-chip--confirmed">HMRC</span></header>
-            <p class="pflow__what">The addressable market for this commodity code.</p>
             <ul>
-              <li>Rolling 12-month UK import volume for this commodity code</li>
-              <li>Origin &amp; dispatch countries with market share and trend</li>
-              <li>Active UK importers &mdash; competitors and neutrals</li>
-              <li>Transport modes and typical UK entry ports</li>
+              <li>Products entering the UK</li>
+              <li>Origin and dispatch countries</li>
+              <li>Import volume and statistical value</li>
+              <li>Transport mode and UK importer</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
-            <header><span class="pflow__num">03</span><h3>Approved supplier universe</h3><span class="plan-chip plan-chip--internal">Restricted</span></header>
-            <p class="pflow__what">The suppliers we can actually depend on for this product &mdash; approved, qualified, ours.</p>
+            <header><span class="pflow__num">03</span><h3>Supplier discovery</h3><span class="plan-chip plan-chip--inferred">Inferred</span></header>
             <ul>
-              <li>Approved supplier list for this product (mill &middot; trader &middot; stockholder)</li>
-              <li>Status per supplier: active &middot; qualified &middot; preferred &middot; restricted</li>
-              <li>What each can supply: dimensions &middot; grade &middot; DDP availability &middot; MOQ</li>
-              <li>Fallback set &mdash; approved alternates if the primary is unavailable</li>
+              <li>Foreign mills making each product</li>
+              <li>Traders selling into the UK</li>
+              <li>Supplier &rarr; UK-importer links</li>
+              <li>Direct-mill vs. trader sourcing</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
             <header><span class="pflow__num">04</span><h3>Market participant analysis</h3><span class="plan-chip plan-chip--inferred">Network</span></header>
-            <p class="pflow__what">Assesses the candidates and picks the shortlist.</p>
             <ul>
-              <li>Independent-mill count behind the shortlist &mdash; real concentration risk</li>
-              <li>Shared-mill exposure &mdash; which traders quote the same source</li>
-              <li>Peer / competitor buying patterns from these suppliers</li>
-              <li>Shortlist of realistic suppliers to invite to quote</li>
+              <li>Mill &rarr; trader relationships</li>
+              <li>Competitor / importer activity</li>
+              <li>Supplier concentration &amp; alternatives</li>
+              <li>Quota competition &middot; DDP vs. non-DDP</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
             <header><span class="pflow__num">05</span><h3>True landed cost engine</h3><span class="plan-chip plan-chip--confirmed">Live</span></header>
-            <p class="pflow__what">Converts every candidate offer to &pound;/t delivered, risk-adjusted.</p>
             <ul class="pflow__stack">
-              <li>Supplier price + Incoterm normalisation</li>
-              <li>+ freight &middot; insurance &middot; terminal &middot; customs &middot; inland</li>
-              <li>+ duty &middot; quota uplift (P(exhausted)&times;50%) &middot; CBAM</li>
-              <li>+ FX adjustment &middot; financing cost of payment terms</li>
-              <li class="pflow__stack-total">= <strong>risk-adjusted &pound;/t delivered, per candidate</strong></li>
+              <li>Supplier price</li>
+              <li>+ freight, insurance, terminals</li>
+              <li>+ UK transport, duty, quota</li>
+              <li>+ FX, CBAM, financing</li>
+              <li class="pflow__stack-total">= <strong>true &pound;/tonne delivered</strong></li>
             </ul>
           </li>
 
           <li class="pflow__stage">
-            <header><span class="pflow__num">06</span><h3>Risk envelope &amp; time exposure</h3><span class="plan-chip plan-chip--forecast">Uncertainty</span></header>
-            <p class="pflow__what">First Part&nbsp;2 stage &mdash; takes the fixed Stage&nbsp;05 numbers and asks what could shift between now and shipment.</p>
+            <header><span class="pflow__num">06</span><h3>Domestic vs import &amp; working capital</h3><span class="plan-chip plan-chip--confirmed">Cash-adjusted</span></header>
             <ul>
-              <li>Which Stage&nbsp;05 variables carry time exposure (quota, FX, freight, MEPS)</li>
-              <li>Payment-terms exposure per candidate (working-capital days tied up)</li>
-              <li>Cash at risk per option &mdash; financing cost of the WC gap, &pound;/t</li>
-              <li>Range of outcomes per unknown &mdash; best case &middot; base &middot; stress</li>
-              <li>Frames the risk envelope that stages 07&ndash;08 populate with forecasts</li>
+              <li>Tata Steel UK vs EU / Turkey / other</li>
+              <li>Payment terms &middot; funding days</li>
+              <li>Financing cost &middot; inventory holding</li>
+              <li>Total economic procurement cost</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
             <header><span class="pflow__num">07</span><h3>Market forecast engine</h3><span class="plan-chip plan-chip--confirmed">Signals</span></header>
-            <p class="pflow__what">Turns market signals into directional pressure on the definitive variables.</p>
             <ul>
-              <li>MEPS + scrap + iron ore + coking coal &rarr; mill cost pressure</li>
-              <li>Energy + FX + freight indices &rarr; landed-cost drift</li>
-              <li>Quota burn rate + market intelligence &rarr; supply constraint signal</li>
-              <li>Manufacturing + construction PMIs &rarr; demand direction</li>
+              <li>Steel benchmarks &middot; scrap &middot; iron ore</li>
+              <li>Energy &middot; currency &middot; shipping</li>
+              <li>Quota consumption &middot; intelligence</li>
+              <li>Manufacturing &amp; construction PMIs</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
             <header><span class="pflow__num">08</span><h3>30 / 60 / 90-day forecast</h3><span class="plan-chip plan-chip--forecast">Forecast</span></header>
-            <p class="pflow__what">Probabilistic forward view for our specific product.</p>
             <ul>
-              <li>Expected replacement &pound;/t at 30 &middot; 60 &middot; 90 days</li>
-              <li>P(price &uarr;) vs P(price &darr;) with confidence band</li>
-              <li>P(quota exhausts before our shipment date)</li>
-              <li>Supplier availability &amp; lead-time risk</li>
+              <li>Expected replacement &pound;/t</li>
+              <li>Price &uarr; / &darr; probability</li>
+              <li>Quota exhaustion probability</li>
+              <li>Supplier availability risk</li>
             </ul>
           </li>
 
           <li class="pflow__stage">
             <header><span class="pflow__num">09</span><h3>Buying decision</h3><span class="plan-chip plan-chip--confirmed">Action</span></header>
-            <p class="pflow__what">Selects the action that maximises expected margin. All upstream stages converge here.</p>
             <div class="pflow__actions">
               <span class="plan-action plan-action--go">BUY NOW</span>
               <span class="plan-action">WAIT</span>
@@ -404,48 +194,24 @@
 
           <li class="pflow__stage">
             <header><span class="pflow__num">10</span><h3>Final output</h3><span class="plan-chip plan-chip--forecast">Deliverable</span></header>
-            <p class="pflow__what">The exemplar sentence, populated for one product.</p>
             <ul class="pflow__grid">
-              <li>Recommended supplier &amp; underlying mill</li>
-              <li>Recommended origin &amp; sourcing mix (if split)</li>
+              <li>Best supplier / trader</li>
+              <li>Best origin &amp; sourcing mix</li>
               <li>Target &pound;/t &middot; expected landed &pound;/t</li>
-              <li>Recommended quantity &amp; required delivery date</li>
-              <li>Peak cash requirement &middot; funding days</li>
-              <li>Expected saving vs baseline &middot; confidence %</li>
+              <li>Recommended quantity &amp; date</li>
+              <li>Peak cash requirement</li>
+              <li>Expected saving &middot; confidence</li>
             </ul>
           </li>
         </ol>
       </section>
 
-      <section class="plan2__section" id="data-sources">
+      <section class="plan2__section" id="databases">
         <header class="plan2__section-head">
-          <p class="eyebrow">Section 2 <a class="xref" href="#chain">&harr; populates the Section 1 engine</a></p>
-          <h2>Data sources and datasets required</h2>
-          <p>Fifteen data sources feed the pipeline. HMRC feeds already exist; the rest need to be built or subscribed to. Each card lists purpose, the datasets it holds, and how it&rsquo;s used. Every field named here is a candidate <em>data point</em> in the <a href="#chain">stage &rarr; equation &rarr; variable &rarr; data point &rarr; data source chain</a>.</p>
+          <p class="eyebrow">Section 2</p>
+          <h2>Databases and datasets required</h2>
+          <p>Fifteen data stores feed the pipeline. HMRC feeds already exist; the rest need to be built or subscribed to. Each card lists purpose, the datasets it holds, and how it&rsquo;s used.</p>
         </header>
-
-        <aside class="db2-summary">
-          <h3>How the fifteen fit together</h3>
-          <ol class="db2-summary__flow">
-            <li><strong>A</strong> tells us what we need.</li>
-            <li><strong>B&nbsp;+&nbsp;D</strong> map the UK market and flows.</li>
-            <li><strong>C&nbsp;+&nbsp;E&nbsp;+&nbsp;H</strong> identify who can supply it.</li>
-            <li><strong>F&nbsp;+&nbsp;G&nbsp;+&nbsp;L&nbsp;+&nbsp;A5</strong> give the true landed cost.</li>
-            <li><strong>I&nbsp;+&nbsp;J&nbsp;+&nbsp;K&nbsp;+&nbsp;L&nbsp;+&nbsp;M&nbsp;+&nbsp;N&nbsp;+&nbsp;O</strong> forecast the market 30/60/90 days out.</li>
-            <li>All of the above &rarr; the procurement engine picks a decision.</li>
-          </ol>
-          <div class="db2-summary__actions">
-            <span class="plan-action plan-action--go">BUY NOW</span>
-            <span class="plan-action">WAIT</span>
-            <span class="plan-action">NEGOTIATE</span>
-            <span class="plan-action">SWITCH SUPPLIER</span>
-            <span class="plan-action">SWITCH ORIGIN</span>
-            <span class="plan-action">DOMESTIC + IMPORT MIX</span>
-            <span class="plan-action">ACCELERATE DELIVERY</span>
-          </div>
-          <p class="db2-summary__note">The goal isn&rsquo;t the cheapest quote &mdash; it&rsquo;s the lowest <strong>risk-adjusted, cash-adjusted</strong> total procurement cost while keeping stock intact.</p>
-        </aside>
-
 
         <ol class="db2-list">
 
@@ -454,7 +220,7 @@
               <summary class="db2__head">
                 <span class="db2__letter">A</span>
                 <div>
-                  <h3>Internal company data</h3>
+                  <h3>Internal company database</h3>
                   <p>Products, stock, consumption, quotes, purchase history and supplier commercial terms.</p>
                 </div>
                 <span class="db2__chev" aria-hidden="true"></span>
@@ -471,7 +237,7 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <th scope="row">A1 &middot; products<br><small>Product master</small></th>
+                      <th scope="row">A1 &middot; products<br><small>SKU master</small></th>
                       <td>Reorder decisions &middot; target-price checks &middot; stock-cover analysis</td>
                       <td>Commodity code &middot; product category &middot; target price &middot; monthly consumption &middot; current stock &middot; cover &middot; MOQ &middot; lead time</td>
                     </tr>
@@ -507,7 +273,7 @@
               <summary class="db2__head">
                 <span class="db2__letter">B</span>
                 <div>
-                  <h3>UK trade data &mdash; HMRC</h3>
+                  <h3>UK trade database &mdash; HMRC</h3>
                   <p>What steel enters the UK, from where, by whom.</p>
                 </div>
                 <span class="db2__chev" aria-hidden="true"></span>
@@ -568,7 +334,7 @@
                   <tbody>
                     <tr>
                       <th scope="row">C1 &middot; market_participants<br><small>Structured company map</small></th>
-                      <td>Vetting our approved list &middot; finding qualified alternates &middot; capability lookup</td>
+                      <td>Supplier discovery &middot; sourcing alternatives &middot; capability search</td>
                       <td>Company name &middot; type (mill / trader / stockholder) &middot; country &middot; products &middot; DDP availability &middot; confidence</td>
                     </tr>
                     <tr>
@@ -745,7 +511,7 @@
               <summary class="db2__head">
                 <span class="db2__letter">H</span>
                 <div>
-                  <h3>Route data</h3>
+                  <h3>Route database</h3>
                   <p>Sanity-checks whether an assumed supply route is plausible.</p>
                 </div>
                 <span class="db2__chev" aria-hidden="true"></span>
@@ -1024,13 +790,35 @@
             </details>
           </li>
         </ol>
+
+        <aside class="db2-summary">
+          <h3>How the fifteen fit together</h3>
+          <ol class="db2-summary__flow">
+            <li><strong>A</strong> tells us what we need.</li>
+            <li><strong>B&nbsp;+&nbsp;D</strong> map the UK market and flows.</li>
+            <li><strong>C&nbsp;+&nbsp;E&nbsp;+&nbsp;H</strong> identify who can supply it.</li>
+            <li><strong>F&nbsp;+&nbsp;G&nbsp;+&nbsp;L&nbsp;+&nbsp;A5</strong> give the true landed cost.</li>
+            <li><strong>I&nbsp;+&nbsp;J&nbsp;+&nbsp;K&nbsp;+&nbsp;L&nbsp;+&nbsp;M&nbsp;+&nbsp;N&nbsp;+&nbsp;O</strong> forecast the market 30/60/90 days out.</li>
+            <li>All of the above &rarr; the procurement engine picks a decision.</li>
+          </ol>
+          <div class="db2-summary__actions">
+            <span class="plan-action plan-action--go">BUY NOW</span>
+            <span class="plan-action">WAIT</span>
+            <span class="plan-action">NEGOTIATE</span>
+            <span class="plan-action">SWITCH SUPPLIER</span>
+            <span class="plan-action">SWITCH ORIGIN</span>
+            <span class="plan-action">DOMESTIC + IMPORT MIX</span>
+            <span class="plan-action">ACCELERATE DELIVERY</span>
+          </div>
+          <p class="db2-summary__note">The goal isn&rsquo;t the cheapest quote &mdash; it&rsquo;s the lowest <strong>risk-adjusted, cash-adjusted</strong> total procurement cost while keeping stock intact.</p>
+        </aside>
       </section>
 
       <section class="plan2__section" id="pilot">
         <header class="plan2__section-head">
           <p class="eyebrow">Reference</p>
           <h2>Pilot products</h2>
-          <p>The five products the system will be proven against end to end.</p>
+          <p>The five SKUs the system will be proven against end to end.</p>
         </header>
         <div class="plan2__table-wrap">
           <table class="plan2__table">
@@ -1054,41 +842,144 @@
         </div>
       </section>
 
-      <section class="plan2__section" id="working-capital">
+      <section class="plan2__section" id="network">
         <header class="plan2__section-head">
-          <p class="eyebrow">Example output &middot; what the analysis would show</p>
-          <h2>What the tool produces &mdash; sourcing analysis, in the UI</h2>
-          <p>Once the engine runs, this is what appears in the tool: ranked sourcing options compared on <strong>total economic procurement cost</strong>, not headline &pound;/tonne alone. Numbers below are illustrative &mdash; the real ones are calculated from live business data.</p>
+          <p class="eyebrow">Section 3</p>
+          <h2>Supply-network seed data</h2>
+          <p>Starting mill-and-trader relationships for the Hollow Section and Merchant Bar markets. Every link stored in the participant database also carries an evidence source and a confidence rating.</p>
         </header>
 
-        <div class="wc-compare">
-          <h3>What the tool compares</h3>
-          <div class="wc-compare__grid">
-            <div class="wc-compare__cell">
-              <span class="wc-compare__label">Cost</span>
-              <p>Price and delivered landed cost</p>
-            </div>
-            <div class="wc-compare__cell">
-              <span class="wc-compare__label">Cash</span>
-              <p>Payment terms and cash-flow impact</p>
-            </div>
-            <div class="wc-compare__cell">
-              <span class="wc-compare__label">Time</span>
-              <p>Lead time and inventory requirement</p>
-            </div>
-            <div class="wc-compare__cell">
-              <span class="wc-compare__label">Risk</span>
-              <p>Quota exposure, CBAM and duty</p>
-            </div>
-            <div class="wc-compare__cell">
-              <span class="wc-compare__label">Market</span>
-              <p>FX and logistics risk</p>
-            </div>
-            <div class="wc-compare__cell">
-              <span class="wc-compare__label">Trust</span>
-              <p>Supplier reliability</p>
-            </div>
+        <div class="net-grid">
+          <article class="net">
+            <header><h3>Hollow Section &mdash; Turkey</h3></header>
+            <ul>
+              <li><strong>Noksel</strong> &larr; Kama Steel Trading, Kocaer, Duferco, Almet, Ronly.</li>
+              <li><strong>Toscelik / Tosyali group</strong> &larr; All Steels, Salzgitter, OPR; Barretts &amp; All Steels also buy direct.</li>
+              <li><strong>Cinar Boru</strong> &larr; Kama Steel Trading.</li>
+              <li><strong>Basatli</strong> &larr; Salzgitter.</li>
+              <li><strong>Yucel Boru</strong> &larr; ThyssenKrupp.</li>
+              <li><strong>Ozdemir</strong> &larr; Almet.</li>
+              <li><strong>Mescier</strong> &larr; Ronly.</li>
+            </ul>
+          </article>
+
+          <article class="net">
+            <header><h3>Hollow Section &mdash; EU &amp; other</h3></header>
+            <ul>
+              <li><strong>EU mills</strong>: Padana, Ferpinta, Marcegaglia, Aratubo, Tumesa, Tata Netherlands, Voest Alpine, Welser, Arvedi.</li>
+              <li><strong>UTP UAE</strong> &larr; Brisko.</li>
+              <li><strong>Garg Tube (India)</strong> &mdash; direct.</li>
+            </ul>
+          </article>
+
+          <article class="net">
+            <header><h3>Merchant Bar &mdash; EU</h3></header>
+            <ul>
+              <li><strong>LME / Beltrame</strong>, <strong>Megasa</strong>, <strong>Olifer</strong>, <strong>Venete</strong>.</li>
+              <li><strong>Kromat</strong> &mdash; trader for a German mill.</li>
+            </ul>
+          </article>
+
+          <article class="net">
+            <header><h3>Merchant Bar &mdash; Turkey &amp; other</h3></header>
+            <ul>
+              <li><strong>Kocaer</strong> &mdash; own mill.</li>
+              <li><strong>Ozkan</strong> &larr; All Steels.</li>
+              <li><strong>Lamoa (Algeria)</strong> &larr; OPR.</li>
+            </ul>
+          </article>
+
+          <article class="net net--wide">
+            <header><h3>UK Merchant Bar &mdash; producer / importer</h3></header>
+            <p>
+              <strong>7 Steel</strong> is a major UK producer <em>and</em> imports Merchant Bar sizes
+              outside its own production range from <strong>Megasa (Spain)</strong>. Some of these sizes
+              remain inside the relevant quota category despite being unavailable from UK manufacture &mdash;
+              worth flagging as a specific quota-competition risk in the Buying Decision engine.
+            </p>
+          </article>
+        </div>
+
+        <div class="net-scores">
+          <p class="eyebrow">Analyse the network to produce</p>
+          <ul>
+            <li>Mills that supply the greatest number of traders &mdash; concentration on the supply side.</li>
+            <li>Traders highly dependent on one mill &mdash; supplier concentration risk.</li>
+            <li>Traders with diversified sourcing &mdash; safer counterparties in a squeeze.</li>
+            <li>Different-looking quotes that ultimately depend on the same mill.</li>
+            <li>Direct-mill opportunities where a trader adds no value beyond markup.</li>
+            <li>Where a trader adds real value: logistics, credit, aggregation, quota management, risk transfer.</li>
+            <li>Participants competing for the same tariff-rate quotas.</li>
+            <li>Alternative mills / origins if quota, price or availability deteriorates.</li>
+            <li>Concentration risk by product &middot; supplier substitution options.</li>
+          </ul>
+          <p class="eyebrow eyebrow--offset">Scores emitted per participant</p>
+          <div class="net-scores__row">
+            <span class="net-score">Supplier concentration</span>
+            <span class="net-score">Trader dependency</span>
+            <span class="net-score">Sourcing diversification</span>
+            <span class="net-score">Alternative-source count</span>
+            <span class="net-score">Quota exposure</span>
+            <span class="net-score">Evidence confidence</span>
           </div>
+        </div>
+      </section>
+
+      <section class="plan2__section" id="ddp">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 4</p>
+          <h2>DDP and import-liability analysis</h2>
+          <p>Every quote is stored with its Incoterm and compared DDP vs. non-DDP on a risk-adjusted basis. The engine keeps tracking the underlying import and quota exposure even when a supplier quotes DDP &mdash; especially where the DDP price includes some or all of the potential tariff.</p>
+        </header>
+        <div class="ddp-grid">
+          <article class="ddp-card">
+            <h3>Every quote records</h3>
+            <ul>
+              <li>Supplier / trader</li>
+              <li>Underlying mill where known</li>
+              <li>Product &middot; origin</li>
+              <li>Price &pound;/t &middot; Incoterm</li>
+              <li>Transport included &middot; duty included</li>
+              <li>Tariff-cap arrangement</li>
+              <li>Quota category</li>
+              <li>Lead time &middot; MOQ &middot; validity</li>
+            </ul>
+          </article>
+          <article class="ddp-card ddp-card--calc">
+            <h3>Risk-adjusted comparison</h3>
+            <div class="pflow__eq">
+DDP offer expected landed cost
+vs.
+Non-DDP supplier price + logistics + insurance + customs + expected quota/duty cost + financing
+= <strong>risk-adjusted landed cost</strong>
+            </div>
+            <p class="ddp-card__note">Do not assume the lowest headline supplier price is the cheapest option. Some DDP prices may include a tariff cap; buyer pays the lower net price if the tariff is avoided.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="plan2__section" id="working-capital">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 5 &middot; Stage 06 in depth</p>
+          <h2>Domestic vs. import sourcing and working capital</h2>
+          <p>Compares Tata Steel UK against EU, Turkish and other imports on <strong>total economic procurement cost</strong> &mdash; price plus cash plus inventory plus risk plus time &mdash; not on headline &pound;/tonne alone.</p>
+        </header>
+
+        <div class="wc-key">
+          <span>Compare on:</span>
+          <ul>
+            <li>Purchase price</li>
+            <li>Delivered landed cost</li>
+            <li>Payment terms</li>
+            <li>Cash-flow impact</li>
+            <li>Inventory requirement</li>
+            <li>Lead time</li>
+            <li>Quota exposure</li>
+            <li>Duty &amp; CBAM</li>
+            <li>FX exposure</li>
+            <li>Logistics risk</li>
+            <li>Supplier reliability</li>
+          </ul>
         </div>
 
         <div class="wc-options">
@@ -1097,293 +988,393 @@
               <span class="wc-option__tag">Domestic</span>
               <h3>Tata Steel UK</h3>
             </header>
-            <p class="wc-option__pro"><strong>Strengths:</strong> no quota, no CBAM, minimal FX, short lead time, low disruption risk.</p>
-            <p class="wc-option__pro"><strong>Trade-off:</strong> 30-day payment term creates working-capital pressure that must be priced in.</p>
+            <ul class="wc-option__attrs">
+              <li><strong>Payment terms</strong> 30 days (strict)</li>
+              <li><strong>Import quota exposure</strong> None</li>
+              <li><strong>CBAM exposure</strong> None</li>
+              <li><strong>International freight</strong> None / substantially reduced</li>
+              <li><strong>FX exposure</strong> Low or none</li>
+              <li><strong>Customs / ports</strong> None</li>
+              <li><strong>Lead time &amp; MOQ</strong> Use actual company data</li>
+              <li><strong>Delivery frequency</strong> Use actual company data</li>
+            </ul>
+            <p class="wc-option__pro"><strong>Main disadvantage:</strong> the strict 30-day payment term creates working-capital pressure that must be priced in.</p>
           </article>
+
           <article class="wc-option wc-option--imp">
             <header>
               <span class="wc-option__tag">Import</span>
               <h3>EU / Turkey / other</h3>
             </header>
-            <p class="wc-option__pro"><strong>Strengths:</strong> often lower mill price, longer payment terms (60&ndash;90 days), more sourcing options.</p>
-            <p class="wc-option__pro"><strong>Trade-off:</strong> quota, CBAM, FX, freight and longer lead times all need to be priced in before comparing.</p>
+            <ul class="wc-option__attrs">
+              <li><strong>Headline price</strong> Potentially lower</li>
+              <li><strong>Payment terms</strong> Often longer (60 / 90 days)</li>
+              <li><strong>Quota exposure</strong> Yes &mdash; may attract the 50% out-of-quota tariff</li>
+              <li><strong>CBAM</strong> Yes, on covered inputs</li>
+              <li><strong>Freight, insurance, customs, terminal</strong> Yes, all layered on</li>
+              <li><strong>Lead time</strong> Longer, drives higher safety stock</li>
+              <li><strong>Disruption risk</strong> Ports, weather, geopolitics</li>
+              <li><strong>FX exposure</strong> EUR / USD depending on origin</li>
+            </ul>
+            <p class="wc-option__pro"><strong>Main advantage:</strong> lower mill price and longer payment terms can offset the extra landed-cost lines &mdash; but only after quota, inventory and financing cost are priced in.</p>
           </article>
         </div>
 
-        <div class="wc-formula">
-          <p class="wc-formula__eyebrow">Total economic procurement cost</p>
-          <p class="wc-formula__line"><strong>Price</strong> + <strong>landed-cost lines</strong> + <strong>cash, risk &amp; time costs</strong> = total economic &pound;/tonne</p>
-          <p class="wc-formula__note">The cheapest headline &pound;/tonne does not always win. Once cash, risk and time are included, the ranking often flips.</p>
+        <div class="wc-flow">
+          <article class="wc-card">
+            <h3>Total economic procurement cost</h3>
+            <div class="pflow__eq">
+Supplier price
++ international transport, insurance, terminal handling, customs
++ UK inland transport
++ duty
++ expected quota cost
++ CBAM
++ FX impact
++ supplier financing cost
++ inventory holding cost
++ expected disruption cost
+= <strong>total economic procurement cost</strong>
+            </div>
+          </article>
+
+          <article class="wc-card">
+            <h3>Cash-flow &amp; financing cost</h3>
+            <div class="pflow__eq">
+funding days = customer cash-in date &minus; supplier payment date
+financing cost = purchase value &times; annual cost of capital &times; funding days &divide; 365
+per tonne = financing cost &divide; tonnes purchased
+            </div>
+            <p class="wc-card__note">Illustrative: 500 t &times; &pound;700 &times; 10% &times; 75/365 &asymp; &pound;7,192 &asymp; <strong>&pound;14.38/t</strong>. Tata&rsquo;s economic cost becomes &pound;714/t, not &pound;700/t. Cost-of-capital and payment schedules come from the business, not assumptions.</p>
+          </article>
+        </div>
+
+        <div class="wc-comp">
+          <h3>Head-to-head, cash-adjusted</h3>
+          <div class="plan2__table-wrap">
+            <table class="plan2__table wc-table">
+              <thead>
+                <tr>
+                  <th>Option</th>
+                  <th class="num">Headline &pound;/t</th>
+                  <th>Payment</th>
+                  <th class="num">Funding days</th>
+                  <th class="num">Working-capital &pound;/t</th>
+                  <th class="num">Cash-adjusted &pound;/t</th>
+                  <th>Quota &amp; CBAM</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Tata Steel UK</strong></td>
+                  <td class="num">&pound;700</td>
+                  <td>30 days</td>
+                  <td class="num">75</td>
+                  <td class="num">+ &pound;14</td>
+                  <td class="num">&pound;714</td>
+                  <td>None</td>
+                </tr>
+                <tr>
+                  <td><strong>EU supplier</strong></td>
+                  <td class="num">&pound;710 landed</td>
+                  <td>90 days</td>
+                  <td class="num">15</td>
+                  <td class="num">+ &pound;3</td>
+                  <td class="num">&pound;713</td>
+                  <td>Quota + CBAM apply</td>
+                </tr>
+                <tr>
+                  <td><strong>Turkey supplier</strong></td>
+                  <td class="num">&pound;690 landed</td>
+                  <td>60 days</td>
+                  <td class="num">45</td>
+                  <td class="num">+ &pound;8</td>
+                  <td class="num">&pound;698</td>
+                  <td>Quota exposure high</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="wc-comp__note">Headline &pound;/t alone picks Tata. On cash-adjusted total economic cost the picture flips once the quota and CBAM risk on the imports is priced in on a probability-weighted basis.</p>
+        </div>
+
+        <div class="wc-inventory">
+          <article class="wc-card">
+            <h3>Inventory requirement &amp; holding cost</h3>
+            <p>Domestic supply can justify a lower stock cover because of shorter lead times, more frequent deliveries, no customs delays and lower disruption risk.</p>
+            <ul>
+              <li><strong>Imported source</strong> &mdash; 3 months cover &middot; 300 t &middot; capital tied up <strong>&pound;210,000</strong>.</li>
+              <li><strong>Tata</strong> &mdash; 1.5 months cover &middot; 150 t &middot; capital tied up <strong>&pound;105,000</strong>.</li>
+              <li>Potential working-capital release from switching to Tata: <strong>&pound;105,000</strong>.</li>
+            </ul>
+            <p class="wc-card__note">Holding cost per tonne includes financing, warehousing, insurance, deterioration risk, slow-moving stock and opportunity cost.</p>
+          </article>
+
+          <article class="wc-card">
+            <h3>Order size &amp; frequency</h3>
+            <p>Tata&rsquo;s 30-day term can also be managed by ordering smaller quantities more often. Compare:</p>
+            <ul>
+              <li>500 tonnes every 2 months</li>
+              <li>125 tonnes every 2 weeks</li>
+            </ul>
+            <p>The model optimises order quantity &times; frequency against payment terms, freight, MOQ, stock, lead time and available cash. Outputs: <strong>recommended order quantity</strong>, <strong>delivery frequency</strong>, <strong>peak cash requirement</strong>.</p>
+          </article>
+        </div>
+
+        <div class="wc-tata">
+          <article class="wc-list wc-list--pro">
+            <h3>Tata &mdash; value to give economic credit for</h3>
+            <ul>
+              <li>No import quota exposure</li>
+              <li>No 50% out-of-quota tariff risk</li>
+              <li>No CBAM</li>
+              <li>Reduced FX exposure</li>
+              <li>Shorter supply chain</li>
+              <li>Potentially shorter lead time</li>
+              <li>More frequent deliveries</li>
+              <li>Lower safety-stock requirement</li>
+              <li>Reduced customs / admin burden</li>
+              <li>Higher supply certainty</li>
+            </ul>
+            <p class="wc-list__note">Quantified where possible &mdash; do not assume these automatically make Tata cheaper.</p>
+          </article>
+          <article class="wc-list wc-list--con">
+            <h3>Tata &mdash; disadvantages to model</h3>
+            <ul>
+              <li>30-day payment term</li>
+              <li>Potentially higher headline &pound;/t</li>
+              <li>Reduced cash-flow flexibility</li>
+              <li>Credit-limit constraints where relevant</li>
+              <li>Product / size availability limitations</li>
+            </ul>
+          </article>
+          <article class="wc-list wc-list--pro">
+            <h3>Imports &mdash; potential advantages</h3>
+            <ul>
+              <li>Lower mill price</li>
+              <li>Longer supplier payment terms</li>
+              <li>More sourcing competition</li>
+              <li>Wider product availability</li>
+              <li>Favourable market opportunities</li>
+              <li>Bulk buying at attractive pricing</li>
+            </ul>
+          </article>
+          <article class="wc-list wc-list--con">
+            <h3>Imports &mdash; potential disadvantages</h3>
+            <ul>
+              <li>Quota exposure &middot; 50% out-of-quota tariff risk</li>
+              <li>CBAM</li>
+              <li>FX exposure</li>
+              <li>Freight, insurance, customs, ports</li>
+              <li>Longer lead times</li>
+              <li>Higher safety stock</li>
+              <li>Disruption risk &middot; landed-cost uncertainty</li>
+            </ul>
+          </article>
         </div>
 
         <div class="wc-mix">
-          <p class="wc-mix__eyebrow">Aggregation &middot; sourcing mix</p>
-          <h3>The tool can recommend a mix, not just a single supplier</h3>
-          <p>When no single option is the clear winner on expected value, splitting the requirement across suppliers lowers combined risk and still hits the stock target.</p>
+          <h3>Recommend a sourcing mix, not a single supplier</h3>
+          <p>The engine can split a requirement across sources. Percentages are calculated from live data, not fixed.</p>
           <div class="wc-mix__grid">
             <div class="wc-mix__cell wc-mix__cell--dom">
               <span class="wc-mix__pct">60%</span>
               <strong>Tata Steel UK</strong>
-              <p>Base requirement &middot; short lead time &middot; low risk</p>
+              <p>Base requirement &mdash; short lead time, regular replenishment, lower quota &amp; logistics risk, lower safety stock.</p>
             </div>
             <div class="wc-mix__cell">
               <span class="wc-mix__pct">30%</span>
               <strong>EU import</strong>
-              <p>Bulk &middot; better landed cost when quota holds</p>
+              <p>Bulk / opportunistic &mdash; lower landed cost, quota available, good supplier terms.</p>
             </div>
             <div class="wc-mix__cell">
               <span class="wc-mix__pct">10%</span>
               <strong>Turkey</strong>
-              <p>Opportunistic &middot; when the window is open</p>
+              <p>Opportunistic &mdash; when market conditions and quota headroom favour it.</p>
             </div>
           </div>
         </div>
 
-        <div class="wc-recommendation">
-          <h3>Example recommendation output</h3>
-          <ul class="wc-recommendation__list">
-            <li>Preferred supplier or sourcing mix</li>
-            <li>Recommended order quantity and delivery date</li>
-            <li>Expected procurement cost &pound;/tonne</li>
-            <li>Expected saving vs. the next-best option</li>
-            <li>Peak cash requirement and funding period</li>
-            <li>Negotiation opportunities &mdash; payment terms, MOQ, credit limits, call-off agreements</li>
-            <li>Main reason &middot; confidence %</li>
+        <div class="wc-neg">
+          <article class="wc-card">
+            <h3>Negotiation opportunities beyond &pound;/t</h3>
+            <ul>
+              <li>Longer payment terms &middot; higher credit limit</li>
+              <li>Smaller MOQ &middot; more frequent / scheduled deliveries</li>
+              <li>Call-off agreements &middot; consignment stock</li>
+              <li>Price locks &middot; volume rebates</li>
+              <li>Vendor-managed inventory</li>
+            </ul>
+            <p class="wc-card__note">If Tata&rsquo;s 30-day term itself cannot change, higher delivery frequency or smaller order sizes may reduce the working-capital impact.</p>
+          </article>
+          <article class="wc-card">
+            <h3>External financing &mdash; is it worth it?</h3>
+            <div class="pflow__eq">
+Tata procurement advantage before finance:  &pound;25/t
+Financing cost caused by payment terms:    &pound;12/t
+Net advantage:                              &pound;13/t &rarr; <strong>Tata still attractive</strong>
+
+Tata advantage:                             &pound;8/t
+Financing cost:                             &pound;12/t
+Net:                                       &minus;&pound;4/t &rarr; <strong>Payment terms eliminate the edge</strong>
+            </div>
+          </article>
+        </div>
+
+        <div class="wc-cash">
+          <h3>Working-capital constraint &amp; cash forecast</h3>
+          <p>The buying engine must consider available cash &mdash; not just headline price. Inputs it must respect:</p>
+          <ul class="wc-cash__inputs">
+            <li>Available procurement cash</li>
+            <li>Working-capital facility</li>
+            <li>Supplier credit limits</li>
+            <li>Outstanding supplier liabilities</li>
+            <li>Expected customer receipts</li>
+            <li>Existing inventory value</li>
           </ul>
+          <p>Every recommended decision emits a 30 / 60 / 90-day cash impact, funding duration and estimated financing cost. A purchase is not recommended just because the &pound;/t is attractive if it creates an unacceptable cash-flow position.</p>
+        </div>
+
+        <div class="wc-example">
+          <h3>Example output &mdash; per product</h3>
+          <div class="plan2__table-wrap">
+            <table class="plan2__table wc-table">
+              <thead>
+                <tr>
+                  <th>40&times;40&times;3 Angle</th>
+                  <th>Delivered &pound;/t</th>
+                  <th>Payment</th>
+                  <th>Lead time</th>
+                  <th>Required cover</th>
+                  <th>Working-capital &pound;/t</th>
+                  <th>Quota / CBAM</th>
+                  <th class="num">Total economic &pound;/t</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Option 1 &mdash; Tata</strong></td>
+                  <td>&pound;X</td>
+                  <td>30 d</td>
+                  <td>X d</td>
+                  <td>X mo</td>
+                  <td>&pound;X</td>
+                  <td>None</td>
+                  <td class="num">&pound;X</td>
+                </tr>
+                <tr>
+                  <td><strong>Option 2 &mdash; EU import</strong></td>
+                  <td>&pound;X</td>
+                  <td>X d</td>
+                  <td>X d</td>
+                  <td>X mo</td>
+                  <td>&pound;X</td>
+                  <td>Medium &middot; &pound;X</td>
+                  <td class="num">&pound;X</td>
+                </tr>
+                <tr>
+                  <td><strong>Option 3 &mdash; Turkey</strong></td>
+                  <td>&pound;X</td>
+                  <td>X d</td>
+                  <td>X d</td>
+                  <td>X mo</td>
+                  <td>&pound;X</td>
+                  <td>Higher &middot; &pound;X</td>
+                  <td class="num">&pound;X</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="wc-example__reco"><strong>Recommendation covers:</strong> preferred supplier &middot; sourcing mix (e.g. 60% Tata / 30% EU / 10% Turkey) &middot; order quantity &middot; purchase date &middot; expected procurement cost &pound;/t &middot; expected saving vs. alternative &middot; peak cash requirement &middot; funding period &middot; main reason &middot; confidence %.</p>
+        </div>
+
+        <div class="wc-principle">
+          <p class="eyebrow">Key principle</p>
+          <p>Do not choose between Tata and imports using headline steel price alone. Compare <strong>price + cash + inventory + risk + time</strong>. The domestic option may justify a higher &pound;/t if it reduces inventory, quota risk, CBAM, logistics, lead time and supply-chain uncertainty. Imports may still win where the landed price is sufficiently lower, quota risk is low, payment terms are better and market conditions favour them.</p>
         </div>
       </section>
 
-      <section class="plan2__section hiw" id="how-it-works">
+      <section class="plan2__section" id="connects">
         <header class="plan2__section-head">
-          <p class="eyebrow">Putting it all together</p>
-          <h2>How it works, end to end</h2>
-          <p class="plan2__section-lede">
-            Data flows in from many sources. Each supply chain resolves its own equation into one risk-adjusted price. Those prices meet our stock and cash constraints, the aggregation engine picks the best mix, and the recommendation drops out at the bottom.
-          </p>
+          <p class="eyebrow">Section 6</p>
+          <h2>How everything connects</h2>
+          <p>Which inputs feed which stage, in order.</p>
         </header>
+        <div class="connect">
+          <div class="connect__col">
+            <span class="connect__label">Data flow</span>
+            <ol class="connect__list">
+              <li><strong>Internal product data</strong> &rarr; the ask &mdash; what do we need, how much, by when.</li>
+              <li><strong>HMRC + foreign export data</strong> &rarr; UK market picture &mdash; who imports what, from where.</li>
+              <li><strong>Supplier research + participant network + shipment data</strong> &rarr; supplier universe &rarr; shortlist.</li>
+              <li><strong>Quotes + transport + quota + FX + CBAM</strong> &rarr; true landed cost per option.</li>
+              <li><strong>Payment terms + inventory + cost of capital</strong> &rarr; cash-adjusted total economic cost.</li>
+              <li><strong>MEPS + scrap + energy + FX + shipping + Kallanish + network + PMIs</strong> &rarr; 30 / 60 / 90-day forecast.</li>
+              <li><strong>Stock + consumption + open POs + lead time + MOQ</strong> &rarr; buying engine.</li>
+              <li>&rarr; <strong>Decision</strong>: supplier, mix, quantity, timing, expected saving, confidence.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
 
-        <figure class="hiw-diagram" aria-label="End-to-end flow: data sources feed variables, variables feed supply-chain equations, equations produce risk-adjusted prices, those meet stock and cash constraints, the aggregation engine outputs the recommended sourcing mix">
-          <svg viewBox="0 0 1440 1420" xmlns="http://www.w3.org/2000/svg" role="img" class="hiw-svg">
-            <defs>
-              <marker id="hiw-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-                <path d="M0 0 L10 5 L0 10 Z" fill="#6190ae"/>
-              </marker>
-              <marker id="hiw-arrow-strong" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
-                <path d="M0 0 L10 5 L0 10 Z" fill="#0c2740"/>
-              </marker>
-              <marker id="hiw-arrow-final" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="12" markerHeight="12" orient="auto">
-                <path d="M0 0 L10 5 L0 10 Z" fill="#4a8f4a"/>
-              </marker>
-            </defs>
-
-            <!-- ================= STAGE 1 · DATA SOURCES ================= -->
-            <text x="80" y="34" font-family="Manrope,system-ui" font-size="12" font-weight="800" letter-spacing="0.16em" fill="#6190ae">STAGE 1 &middot; DATA SOURCES</text>
-            <g class="hiw-sources">
-              <g class="hiw-src" transform="translate(80,50)">
-                <rect width="160" height="72" rx="10" fill="#0c2740"/>
-                <text x="80" y="30" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#8fbedd" letter-spacing="0.14em">B &middot; HMRC</text>
-                <text x="80" y="52" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#ffffff">UK trade &amp; quotas</text>
-              </g>
-              <g class="hiw-src" transform="translate(260,50)">
-                <rect width="160" height="72" rx="10" fill="#0c2740"/>
-                <text x="80" y="30" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#8fbedd" letter-spacing="0.14em">I &middot; MEPS</text>
-                <text x="80" y="52" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#ffffff">Steel benchmarks</text>
-              </g>
-              <g class="hiw-src" transform="translate(440,50)">
-                <rect width="160" height="72" rx="10" fill="#0c2740"/>
-                <text x="80" y="30" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#8fbedd" letter-spacing="0.14em">N &middot; KALLANISH</text>
-                <text x="80" y="52" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#ffffff">Market intelligence</text>
-              </g>
-              <g class="hiw-src" transform="translate(620,50)">
-                <rect width="160" height="72" rx="10" fill="#0c2740"/>
-                <text x="80" y="30" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#8fbedd" letter-spacing="0.14em">A &middot; SUPPLIER QUOTES</text>
-                <text x="80" y="52" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#ffffff">Internal &amp; live</text>
-              </g>
-              <g class="hiw-src" transform="translate(800,50)">
-                <rect width="160" height="72" rx="10" fill="#0c2740"/>
-                <text x="80" y="30" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#8fbedd" letter-spacing="0.14em">G / M &middot; FREIGHT</text>
-                <text x="80" y="52" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#ffffff">Indices &amp; port rates</text>
-              </g>
-              <g class="hiw-src" transform="translate(980,50)">
-                <rect width="160" height="72" rx="10" fill="#0c2740"/>
-                <text x="80" y="30" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#8fbedd" letter-spacing="0.14em">L &middot; FX</text>
-                <text x="80" y="52" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#ffffff">Spot rates</text>
-              </g>
-              <g class="hiw-src hiw-src--wom" transform="translate(1160,50)">
-                <rect width="200" height="72" rx="10" fill="#ffffff" stroke="#c85a3c" stroke-width="1.5" stroke-dasharray="6 4"/>
-                <text x="100" y="30" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#c85a3c" letter-spacing="0.14em">WORD OF MOUTH</text>
-                <text x="100" y="52" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#0c2740">Trader chatter, sentiment</text>
-              </g>
-            </g>
-
-            <!-- ================= FLOW LINES: data sources → variables ================= -->
-            <g class="hiw-flow" stroke="#6190ae" stroke-width="1.5" fill="none" stroke-dasharray="4 6" opacity="0.55">
-              <!-- Chain 1 (Tata) targets -->
-              <path d="M 160 122 C 200 220, 240 250, 220 290"/>
-              <path d="M 700 122 C 620 200, 400 240, 310 290"/>
-              <path d="M 340 122 C 340 220, 340 260, 360 290"/>
-              <!-- Chain 2 (EU) targets -->
-              <path d="M 340 122 C 400 240, 620 260, 660 290"/>
-              <path d="M 700 122 C 700 240, 730 260, 720 290"/>
-              <path d="M 160 122 C 400 240, 720 260, 810 290"/>
-              <path d="M 880 122 C 800 240, 780 260, 780 290"/>
-              <path d="M 1060 122 C 1000 240, 880 260, 860 290"/>
-              <!-- Chain 3 (Turkey) targets -->
-              <path d="M 700 122 C 900 220, 1080 260, 1120 290"/>
-              <path d="M 880 122 C 1000 240, 1140 260, 1180 290"/>
-              <path d="M 160 122 C 700 260, 1120 260, 1220 290"/>
-              <path d="M 1260 122 C 1260 220, 1280 260, 1280 290"/>
-            </g>
-
-            <!-- ================= STAGE 2 · SUPPLY CHAINS (3 equation blocks) ================= -->
-            <text x="80" y="270" font-family="Manrope,system-ui" font-size="12" font-weight="800" letter-spacing="0.16em" fill="#6190ae">STAGE 2 &middot; PER-CHAIN EQUATIONS</text>
-
-            <!-- Chain 1 · DOMESTIC (Tata) -->
-            <g class="hiw-chain" transform="translate(60,290)">
-              <rect width="420" height="340" rx="14" fill="#ffffff" stroke="#6190ae" stroke-width="2"/>
-              <rect width="420" height="52" rx="14" fill="#6190ae"/>
-              <text x="20" y="33" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#ffffff">DOMESTIC &middot; Tata Steel UK</text>
-              <text x="400" y="33" text-anchor="end" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#ffffff">no import risk</text>
-              <text x="210" y="82" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#0c2740" opacity="0.75">EQUATION</text>
-              <rect x="20" y="94" width="380" height="40" rx="6" fill="rgba(97,144,174,0.08)" stroke="#6190ae" stroke-width="1" stroke-dasharray="3 3"/>
-              <text x="210" y="119" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="12" font-weight="700" fill="#0c2740">total = price + short_freight + financing</text>
-              <text x="210" y="160" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#0c2740" opacity="0.75">VARIABLES</text>
-              <g font-family="Menlo,ui-monospace" font-size="12" font-weight="700" fill="#0c2740">
-                <rect data-var="tata-price"   x="20"  y="172" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="110" y="193" text-anchor="middle">supplier_price</text>
-                <rect data-var="tata-freight" x="220" y="172" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="310" y="193" text-anchor="middle">short_freight</text>
-                <rect data-var="tata-fin"     x="20"  y="216" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="110" y="237" text-anchor="middle">financing_gap</text>
-                <rect data-var="tata-cover"   x="220" y="216" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="310" y="237" text-anchor="middle">stock_cover</text>
-              </g>
-              <text x="210" y="285" text-anchor="middle" font-family="Manrope,system-ui" font-size="12" font-weight="800" fill="#6190ae" letter-spacing="0.14em">RISK-ADJUSTED OUTPUT</text>
-              <rect x="60" y="297" width="300" height="34" rx="6" fill="#0c2740"/>
-              <text x="210" y="320" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="13" font-weight="700" fill="#ffffff">&pound; 928 / t &nbsp;&nbsp; risk: low</text>
-            </g>
-
-            <!-- Chain 2 · EU IMPORT -->
-            <g class="hiw-chain" transform="translate(510,290)">
-              <rect width="420" height="340" rx="14" fill="#ffffff" stroke="#6190ae" stroke-width="2"/>
-              <rect width="420" height="52" rx="14" fill="#6190ae"/>
-              <text x="20" y="33" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#ffffff">EU IMPORT &middot; direct mill</text>
-              <text x="400" y="33" text-anchor="end" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#ffffff">quota + fx exposure</text>
-              <text x="210" y="82" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#0c2740" opacity="0.75">EQUATION</text>
-              <rect x="20" y="94" width="380" height="40" rx="6" fill="rgba(97,144,174,0.08)" stroke="#6190ae" stroke-width="1" stroke-dasharray="3 3"/>
-              <text x="210" y="119" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">landed = price + freight + duty + fx + insurance</text>
-              <text x="210" y="160" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#0c2740" opacity="0.75">VARIABLES</text>
-              <g font-family="Menlo,ui-monospace" font-size="12" font-weight="700" fill="#0c2740">
-                <rect x="20"  y="172" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="110" y="193" text-anchor="middle">supplier_price</text>
-                <rect x="220" y="172" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="310" y="193" text-anchor="middle">freight</text>
-                <rect x="20"  y="216" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="110" y="237" text-anchor="middle">duty</text>
-                <rect x="220" y="216" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="310" y="237" text-anchor="middle">fx + insurance</text>
-              </g>
-              <text x="210" y="285" text-anchor="middle" font-family="Manrope,system-ui" font-size="12" font-weight="800" fill="#6190ae" letter-spacing="0.14em">RISK-ADJUSTED OUTPUT</text>
-              <rect x="60" y="297" width="300" height="34" rx="6" fill="#0c2740"/>
-              <text x="210" y="320" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="13" font-weight="700" fill="#ffffff">&pound; 902 / t &nbsp;&nbsp; risk: medium</text>
-            </g>
-
-            <!-- Chain 3 · TURKEY via TRADER -->
-            <g class="hiw-chain" transform="translate(960,290)">
-              <rect width="420" height="340" rx="14" fill="#ffffff" stroke="#6190ae" stroke-width="2"/>
-              <rect width="420" height="52" rx="14" fill="#6190ae"/>
-              <text x="20" y="33" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#ffffff">TURKEY &middot; via trader</text>
-              <text x="400" y="33" text-anchor="end" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#ffffff">high variance</text>
-              <text x="210" y="82" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#0c2740" opacity="0.75">EQUATION</text>
-              <rect x="20" y="94" width="380" height="40" rx="6" fill="rgba(97,144,174,0.08)" stroke="#6190ae" stroke-width="1" stroke-dasharray="3 3"/>
-              <text x="210" y="119" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="11" font-weight="700" fill="#0c2740">landed = price + freight + duty + quota + fx + trader</text>
-              <text x="210" y="160" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#0c2740" opacity="0.75">VARIABLES</text>
-              <g font-family="Menlo,ui-monospace" font-size="12" font-weight="700" fill="#0c2740">
-                <rect x="20"  y="172" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="110" y="193" text-anchor="middle">supplier_price</text>
-                <rect x="220" y="172" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="310" y="193" text-anchor="middle">freight_sea</text>
-                <rect x="20"  y="216" width="180" height="34" rx="6" fill="#ffffff" stroke="#6190ae"/>
-                <text x="110" y="237" text-anchor="middle">quota_uplift</text>
-                <rect x="220" y="216" width="180" height="34" rx="6" fill="#ffffff" stroke="#c85a3c" stroke-dasharray="4 3"/>
-                <text x="310" y="237" text-anchor="middle" fill="#c85a3c">trader_markup</text>
-              </g>
-              <text x="210" y="285" text-anchor="middle" font-family="Manrope,system-ui" font-size="12" font-weight="800" fill="#6190ae" letter-spacing="0.14em">RISK-ADJUSTED OUTPUT</text>
-              <rect x="60" y="297" width="300" height="34" rx="6" fill="#0c2740"/>
-              <text x="210" y="320" text-anchor="middle" font-family="Menlo,ui-monospace" font-size="13" font-weight="700" fill="#ffffff">&pound; 895 / t &nbsp;&nbsp; risk: high</text>
-            </g>
-
-            <!-- ================= STAGE 3 · CONSTRAINTS ================= -->
-            <text x="80" y="700" font-family="Manrope,system-ui" font-size="12" font-weight="800" letter-spacing="0.16em" fill="#6190ae">STAGE 3 &middot; OUR CONSTRAINTS</text>
-            <g class="hiw-constraint" transform="translate(80,720)">
-              <rect width="380" height="130" rx="12" fill="#ffffff" stroke="#6190ae" stroke-width="2"/>
-              <text x="24" y="34" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#6190ae" letter-spacing="0.14em">CONSTRAINT A</text>
-              <text x="24" y="66" font-family="Manrope,system-ui" font-size="18" font-weight="800" fill="#0c2740">Stock needs</text>
-              <text x="24" y="94" font-family="Inter,system-ui" font-size="12" fill="#0c2740" opacity="0.75">How many tonnes we need &mdash; by when.</text>
-              <text x="24" y="116" font-family="Menlo,ui-monospace" font-size="12" font-weight="700" fill="#0c2740">need = 250 t &middot; before 14 Nov</text>
-            </g>
-            <g class="hiw-constraint" transform="translate(980,720)">
-              <rect width="380" height="130" rx="12" fill="#ffffff" stroke="#6190ae" stroke-width="2"/>
-              <text x="24" y="34" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#6190ae" letter-spacing="0.14em">CONSTRAINT B</text>
-              <text x="24" y="66" font-family="Manrope,system-ui" font-size="18" font-weight="800" fill="#0c2740">Cash flow</text>
-              <text x="24" y="94" font-family="Inter,system-ui" font-size="12" fill="#0c2740" opacity="0.75">How much we can commit &mdash; after WC.</text>
-              <text x="24" y="116" font-family="Menlo,ui-monospace" font-size="12" font-weight="700" fill="#0c2740">headroom = &pound; 210k this cycle</text>
-            </g>
-
-            <!-- ================= FLOW LINES: chain outputs + constraints → engine ================= -->
-            <g class="hiw-flow2" stroke="#0c2740" stroke-width="2.2" fill="none">
-              <path d="M 270 630 C 270 800, 480 900, 640 970" marker-end="url(#hiw-arrow-strong)"/>
-              <path d="M 720 630 C 720 800, 720 900, 720 970" marker-end="url(#hiw-arrow-strong)"/>
-              <path d="M 1170 630 C 1170 800, 960 900, 800 970" marker-end="url(#hiw-arrow-strong)"/>
-              <path d="M 270 850 C 400 900, 550 950, 640 990" marker-end="url(#hiw-arrow-strong)"/>
-              <path d="M 1170 850 C 1040 900, 890 950, 800 990" marker-end="url(#hiw-arrow-strong)"/>
-            </g>
-
-            <!-- ================= STAGE 4 · AGGREGATION ENGINE ================= -->
-            <text x="80" y="900" font-family="Manrope,system-ui" font-size="12" font-weight="800" letter-spacing="0.16em" fill="#6190ae">STAGE 4 &middot; AGGREGATION ENGINE</text>
-            <g class="hiw-engine" transform="translate(540,940)">
-              <circle class="hiw-engine__ring" cx="180" cy="90" r="100" fill="none" stroke="#6190ae" stroke-width="1" stroke-dasharray="6 6" opacity="0.6"/>
-              <circle class="hiw-engine__ring hiw-engine__ring--inner" cx="180" cy="90" r="72" fill="none" stroke="#6190ae" stroke-width="1" stroke-dasharray="4 6" opacity="0.4"/>
-              <circle cx="180" cy="90" r="72" fill="#0c2740"/>
-              <text x="180" y="80" text-anchor="middle" font-family="Manrope,system-ui" font-size="11" font-weight="800" fill="#8fbedd" letter-spacing="0.16em">SOLVE</text>
-              <text x="180" y="108" text-anchor="middle" font-family="Manrope,system-ui" font-size="18" font-weight="800" fill="#ffffff">min E[cost]</text>
-              <text x="180" y="128" text-anchor="middle" font-family="Inter,system-ui" font-size="11" fill="#ffffff" opacity="0.75">s.t. stock &amp; cash</text>
-            </g>
-
-            <!-- Arrow from engine to final -->
-            <line x1="720" y1="1120" x2="720" y2="1200" stroke="#4a8f4a" stroke-width="3" marker-end="url(#hiw-arrow-final)"/>
-
-            <!-- ================= STAGE 5 · FINAL OUTPUT ================= -->
-            <text x="80" y="1180" font-family="Manrope,system-ui" font-size="12" font-weight="800" letter-spacing="0.16em" fill="#4a8f4a">STAGE 5 &middot; FINAL OUTPUT</text>
-            <g class="hiw-final" transform="translate(180,1210)">
-              <rect width="1080" height="180" rx="16" fill="#e7f3e5" stroke="#4a8f4a" stroke-width="2"/>
-              <rect width="1080" height="52" rx="16" fill="#4a8f4a"/>
-              <text x="30" y="33" font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#ffffff" letter-spacing="0.06em">RECOMMENDED SOURCING MIX &middot; best aggregation of all chains</text>
-              <text x="1050" y="33" text-anchor="end" font-family="Menlo,ui-monospace" font-size="12" font-weight="700" fill="#ffffff">confidence: 82%</text>
-
-              <!-- Mix pills -->
-              <g font-family="Manrope,system-ui" font-size="14" font-weight="800" fill="#0c2740">
-                <rect x="30"  y="78" width="330" height="76" rx="10" fill="#ffffff" stroke="#4a8f4a"/>
-                <text x="195" y="108" text-anchor="middle" font-size="26">60% &middot; Tata</text>
-                <text x="195" y="134" text-anchor="middle" font-size="12" fill="#0c2740" opacity="0.7">150 t &middot; short lead &middot; low risk</text>
-
-                <rect x="375" y="78" width="330" height="76" rx="10" fill="#ffffff" stroke="#4a8f4a"/>
-                <text x="540" y="108" text-anchor="middle" font-size="26">30% &middot; EU import</text>
-                <text x="540" y="134" text-anchor="middle" font-size="12" fill="#0c2740" opacity="0.7">75 t &middot; scheduled &middot; medium risk</text>
-
-                <rect x="720" y="78" width="330" height="76" rx="10" fill="#ffffff" stroke="#4a8f4a"/>
-                <text x="885" y="108" text-anchor="middle" font-size="26">10% &middot; Turkey</text>
-                <text x="885" y="134" text-anchor="middle" font-size="12" fill="#0c2740" opacity="0.7">25 t &middot; opportunistic</text>
-              </g>
-            </g>
-
-            <!-- Legend for animated flow (bottom right) -->
-            <g transform="translate(1160,10)" font-family="Manrope,system-ui" font-size="10" fill="#0c2740" opacity="0.7">
-              <circle cx="6" cy="10" r="4" fill="#6190ae"/>
-              <text x="16" y="14">flow &middot; data moving through the pipe</text>
-            </g>
-          </svg>
-        </figure>
+      <section class="plan2__section" id="priority">
+        <header class="plan2__section-head">
+          <p class="eyebrow">Section 7</p>
+          <h2>Database priority &mdash; four phases</h2>
+          <p>Sequenced so the system delivers value at every phase, not just at the end.</p>
+        </header>
+        <div class="phases">
+          <article class="phase">
+            <header><span class="phase__num">Phase 1</span><h3>Immediate / already available</h3></header>
+            <ol>
+              <li>HMRC Imports</li>
+              <li>HMRC Control Files</li>
+              <li>HMRC Importer Details</li>
+              <li>Internal products</li>
+              <li>Current stock</li>
+              <li>Monthly consumption</li>
+              <li>Target buy prices</li>
+              <li>Supplier / trader database</li>
+              <li>Mill relationships</li>
+              <li>Current supplier quotes</li>
+            </ol>
+          </article>
+          <article class="phase">
+            <header><span class="phase__num">Phase 2</span><h3>Procurement cost intelligence</h3></header>
+            <ol start="11">
+              <li>UK quota database</li>
+              <li>Transport-cost database</li>
+              <li>Historic purchase prices</li>
+              <li>Incoterms / DDP database</li>
+              <li>Lead times</li>
+              <li>Outstanding POs</li>
+              <li>Supplier performance</li>
+            </ol>
+          </article>
+          <article class="phase">
+            <header><span class="phase__num">Phase 3</span><h3>Forward-price intelligence</h3></header>
+            <ol start="18">
+              <li>MEPS</li>
+              <li>Scrap prices</li>
+              <li>Energy</li>
+              <li>Currency</li>
+              <li>Freight / shipping</li>
+              <li>Kallanish</li>
+              <li>Supplier-network updates</li>
+            </ol>
+          </article>
+          <article class="phase">
+            <header><span class="phase__num">Phase 4</span><h3>Advanced market intelligence</h3></header>
+            <ol start="25">
+              <li>Foreign-country export statistics</li>
+              <li>Shipment / trade databases</li>
+              <li>Manufacturing indicators</li>
+              <li>Construction indicators</li>
+              <li>Route / port datasets</li>
+              <li>Competitor / importer behaviour model</li>
+            </ol>
+          </article>
+        </div>
       </section>
 
     </main>
