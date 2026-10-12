@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Live quotas · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="quotas"></aside>
+      <script src="app-sidebar.js"></script>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">UK steel trade measure · from 1 July 2026</p>
+          <h1>Live quotas</h1>
+          <p class="muted" style="margin:6px 0 0;max-width:680px">All 72 tariff-rate quota lines (order numbers 058600–058671). Imports within quota pay no steel duty; once a line is used up, the 50% steel duty applies on top of ordinary duty.</p>
+        </div>
+        <div class="actions">
+          <span class="data-status" id="feed-status">Loading live balances…</span>
+          <button class="btn" type="button" id="refresh-btn">Refresh</button>
+        </div>
+      </div>
+
+      <div class="notice notice-warn" id="feed-warning" hidden style="margin:0"></div>
+
+      <section class="kpis" aria-label="Summary">
+        <div class="kpi"><p>Quota lines this quarter</p><strong id="kpi-lines">–</strong></div>
+        <div class="kpi is-warn"><p>Projected to run out this quarter</p><strong id="kpi-critical">–</strong></div>
+        <div class="kpi"><p>Under 30% left</p><strong id="kpi-watch">–</strong></div>
+        <div class="kpi"><p>Exhausted — 50% applies</p><strong id="kpi-exhausted">–</strong></div>
+      </section>
+
+      <section class="table-card">
+        <div class="toolbar">
+          <label class="search"><input type="search" id="q" placeholder="Search order number, category, origin" aria-label="Search quota lines"></label>
+          <select id="f-category" aria-label="Filter by category"><option value="">All categories</option></select>
+          <select id="f-origin" aria-label="Filter by origin"><option value="">All origins</option></select>
+          <select id="f-risk" aria-label="Filter by risk">
+            <option value="">All lines</option>
+            <option value="atrisk">At risk (watch, critical, exhausted)</option>
+            <option value="critical">Runs out this quarter</option>
+            <option value="exhausted">Exhausted</option>
+            <option value="mine">Used by my scenarios</option>
+          </select>
+          <select id="f-sort" aria-label="Sort">
+            <option value="order">Sort: order number</option>
+            <option value="left">Sort: least left first</option>
+            <option value="runout">Sort: earliest run-out</option>
+          </select>
+        </div>
+        <div class="table-scroll">
+          <table class="data quota-table">
+            <thead>
+              <tr>
+                <th>Order no.</th>
+                <th>Category</th>
+                <th>Origin</th>
+                <th class="num">Opening this quarter</th>
+                <th style="min-width:200px">Used</th>
+                <th class="num">Left</th>
+                <th class="num">Burn / day</th>
+                <th>Projected run-out</th>
+                <th>Status</th>
+                <th class="num">My scenarios</th>
+              </tr>
+            </thead>
+            <tbody id="rows"><tr><td colspan="10" class="empty">Loading live quota balances…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>How to read this</h3>
+        <ul class="checks">
+          <li>Balances come from HMRC's Trade Tariff quota service; any line it doesn't return is filled from the Department for Business and Trade daily quota dataset (the row is marked "daily").</li>
+          <li>Quotas run quarterly (Q1 Jul–Sep, Q2 Oct–Dec, Q3 Jan–Mar, Q4 Apr–Jun). Unused volume carries into the next quarter, but not into the next quota year.</li>
+          <li>Run-out dates project the average daily use so far this quarter forward. HMRC allocates first come, first served on the day goods are declared.</li>
+          <li>"Residual" lines cover every origin not named for that category. Ukraine is excluded from the measure. Codes 7217 30 49 and 7217 30 90 left Category 28 on 1 October 2026.</li>
+          <li>Category 1 authorised-use goods have a separate global quota with a 40% per-country cap (not shown here).</li>
+        </ul>
+        <p class="small muted" style="margin:12px 0 0">Source: <a href="https://www.gov.uk/government/publications/uks-steel-trade-measure-from-1-july-2026/uks-steel-trade-measure-from-1-july-2026" target="_blank" rel="noopener">GOV.UK — UK's steel trade measure from 1 July 2026</a> (updated 1 Oct 2026) · <a href="https://www.trade-tariff.service.gov.uk/quota_search" target="_blank" rel="noopener">HMRC quota search</a></p>
+      </section>
+    </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="quotas.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

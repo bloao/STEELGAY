@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Order scenarios · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="orders"></aside>
+      <script src="app-sidebar.js"></script>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Steel procurement</p>
+          <h1>Order scenarios</h1>
+        </div>
+        <div class="actions">
+          <span class="data-status" id="data-status">Checking data…</span>
+          <a class="btn" href="/api/scenarios.csv" id="csv-btn" download>Export CSV</a>
+          <a class="btn btn-primary" href="order-tool.html" id="new-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+            New scenario
+          </a>
+        </div>
+      </div>
+
+      <section class="kpis" aria-label="Summary">
+        <div class="kpi"><p>Open scenarios</p><strong id="kpi-open">–</strong></div>
+        <div class="kpi"><p>Awaiting approval</p><strong id="kpi-submitted">–</strong></div>
+        <div class="kpi is-warn"><p>Quota exhaust risk ≥ 50%</p><strong id="kpi-risk">–</strong></div>
+        <div class="kpi"><p>Quotes expiring in 7 days</p><strong id="kpi-expiring">–</strong></div>
+      </section>
+
+      <section class="table-card">
+        <div class="toolbar">
+          <label class="search">
+            <span class="visually-hidden" hidden>Search</span>
+            <input type="search" id="search" placeholder="Search product, code, supplier" aria-label="Search scenarios">
+          </label>
+          <select id="filter-status" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="submitted">Awaiting approval</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <select id="filter-origin" aria-label="Filter by origin"><option value="">All origins</option></select>
+          <button class="btn" id="compare-btn" type="button" disabled>Compare selected</button>
+        </div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead>
+              <tr>
+                <th style="width:36px"><span hidden>Select</span></th>
+                <th>Product</th>
+                <th>Supplier · origin</th>
+                <th class="num">Tonnes</th>
+                <th class="num">Expected landed</th>
+                <th>Quota</th>
+                <th>Import date</th>
+                <th>Status</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="empty" hidden>
+          <p style="margin:0 0 6px;font-weight:600;color:var(--ink)">No scenarios yet</p>
+          <p style="margin:0 0 16px">Load six worked examples to see the full flow — quota risk, DDP vs FOB, approvals and comparison — or start your own.</p>
+          <div class="actions" style="justify-content:center">
+            <button class="btn btn-primary" type="button" id="sample-btn">Load sample scenarios</button>
+            <a class="btn" href="order-tool.html">Create a scenario</a>
+          </div>
+        </div>
+      </section>
+      <p class="disclaimer">Estimates only — not customs advice. Each saved scenario keeps the tariff, quota and FX values it was calculated with. Tick 2–4 rows to compare them.</p>
+    </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="orders.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Suppliers · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="suppliers"></aside>
+      <script src="app-sidebar.js"></script>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Steel procurement</p>
+          <h1>Suppliers</h1>
+          <p class="muted" style="margin:6px 0 0;max-width:640px">Every supplier, trader and mill you have quoted with — where they ship from, what they offer and how their prices land.</p>
+        </div>
+        <div class="actions"><a class="btn btn-primary" href="order-tool.html">New scenario</a></div>
+      </div>
+      <section class="table-card">
+        <div class="toolbar"><strong>From your saved scenarios</strong><span class="small muted" id="count"></span></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Supplier</th><th>Mills</th><th>Origins</th><th>Incoterms</th><th class="num">Scenarios</th><th class="num">Best expected landed</th><th>Latest quote</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="empty" hidden>No suppliers yet — they appear here once a scenario names one.</div>
+      </section>
+      <h2 style="font-size:18px;margin-top:8px">Planned for this page</h2>
+      <section class="placeholder">
+        <div class="card"><span class="coming">Coming next</span><h3>Supplier profiles</h3><p>Contacts, approved status, payment terms, certifications and the mills each trader represents.</p></div>
+        <div class="card"><span class="coming">Coming next</span><h3>Price history</h3><p>Every quote over time against the MEPS benchmark, so you can see who is drifting above market.</p></div>
+        <div class="card"><span class="coming">Coming next</span><h3>Reliability</h3><p>On-time delivery, quality claims and how often quotes are honoured.</p></div>
+        <div class="card"><span class="coming">Coming next</span><h3>Risk checks</h3><p>Sanctions screening, credit checks and origin-evidence status per supplier.</p></div>
+      </section>
+    </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="sections.js" data-section="suppliers"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

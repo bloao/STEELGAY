@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <title>Steel Order Scenario Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Order scenario · Datafab AGX</title>
     <link rel="stylesheet" href="order-tool.css">
     <link rel="stylesheet" href="nav.css">
   </head>
   <body>
-<nav class="site-nav" aria-label="Primary">
+    <nav class="site-nav" aria-label="Primary">
       <a class="site-nav__brand" href="the-plan.html">
         <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
         <span class="site-nav__brand-text">Datafab AGX</span>
@@ -20,112 +20,231 @@
         <a class="site-nav__link" href="the-plan.html">The plan</a>
         <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
         <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
-        <a class="site-nav__link is-active" href="order-tool.html" aria-current="page">Order tool</a>
-      </div></nav>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
 
-    <main class="app-shell">
-      <section class="entry-panel" aria-labelledby="page-title">
-        <div class="masthead">
-          <p class="eyebrow">Steel procurement model</p>
-          <h1 id="page-title">Order scenario intake</h1>
-          <p class="intro">
-            Capture the basic variables needed to start assessing tariff, CBAM,
-            supplier, and working-capital exposure.
-          </p>
-        </div>
-
-        <form id="order-form" class="order-form">
-          <div class="field-group">
-            <label for="commodity">Commodity</label>
-            <input id="commodity" name="commodity" type="text" list="commodity-options" placeholder="Start typing a code or steel product" autocomplete="off" required>
-            <datalist id="commodity-options"></datalist>
-            <p class="field-note" id="commodity-source">Loading official steel commodity codes...</p>
-          </div>
-
-          <div class="field-group">
-            <label for="origin">Where from</label>
-            <select id="origin" name="origin" required>
-              <option value="">Select origin</option>
-              <option value="United Kingdom">United Kingdom</option>
-              <option value="European Union">European Union</option>
-              <option value="Turkey">Turkey</option>
-              <option value="India">India</option>
-              <option value="China">China</option>
-              <option value="South Korea">South Korea</option>
-              <option value="Other non-UK">Other non-UK</option>
-            </select>
-          </div>
-
-          <div class="field-group">
-            <label for="tonnage">Tonnage</label>
-            <input id="tonnage" name="tonnage" type="number" min="0" step="0.001" placeholder="e.g. 2" required>
-          </div>
-
-          <div class="field-group">
-            <label for="base-price">Base price per tonne</label>
-            <input id="base-price" name="base-price" type="number" min="0" step="0.01" placeholder="e.g. 700" required>
-          </div>
-
-          <div class="field-group">
-            <label for="order-date">Expected import date</label>
-            <input id="order-date" name="order-date" type="date" required>
-          </div>
-
-          <div class="field-group">
-            <label for="emissions-intensity">Emissions intensity</label>
-            <input id="emissions-intensity" name="emissions-intensity" type="number" min="0" step="0.001" placeholder="tCO2e per tonne, e.g. 2.1">
-          </div>
-
-          <div class="field-group">
-            <label for="carbon-price">Carbon price</label>
-            <input id="carbon-price" name="carbon-price" type="number" min="0" step="0.01" placeholder="GBP per tCO2e, e.g. 75">
-          </div>
-
-          <div class="field-group">
-            <label for="overseas-carbon-price">Overseas carbon price paid</label>
-            <input id="overseas-carbon-price" name="overseas-carbon-price" type="number" min="0" step="0.01" placeholder="GBP per tCO2e, e.g. 0">
-          </div>
-
-          <button class="primary-action" type="submit">Assess order</button>
-        </form>
-      </section>
-
-      <section class="result-panel" aria-labelledby="result-title">
+    <div class="app-layout">
+      <aside class="sidebar" data-active="orders"></aside>
+      <script src="app-sidebar.js"></script>
+    <main class="page">
+      <div class="page-head">
         <div>
-          <p class="eyebrow">Initial readout</p>
-          <h2 id="result-title">Scenario summary</h2>
+          <a class="back-link no-print" href="orders.html">← Order scenarios</a>
+          <div class="title-row">
+            <h1 id="page-title">New order scenario</h1>
+            <span id="status-badge"></span>
+            <span class="small muted" id="save-state"></span>
+          </div>
         </div>
-
-        <dl class="summary-list" id="summary-list">
-          <div><dt>Commodity</dt><dd id="summary-commodity">Not selected</dd></div>
-          <div><dt>Heading</dt><dd id="summary-heading">Not selected</dd></div>
-          <div><dt>Steel measure</dt><dd id="summary-category">Not selected</dd></div>
-          <div><dt>Origin</dt><dd id="summary-origin">Not selected</dd></div>
-          <div><dt>Import date</dt><dd id="summary-date">Not selected</dd></div>
-          <div><dt>Quota period</dt><dd id="summary-quarter">Not selected</dd></div>
-          <div><dt>Quota line</dt><dd id="summary-quota-line">Not selected</dd></div>
-          <div><dt>Order number</dt><dd id="summary-order-number">Not selected</dd></div>
-          <div><dt>Quota balance</dt><dd id="summary-balance">Not selected</dd></div>
-          <div><dt>Import duty</dt><dd id="summary-duty">Not selected</dd></div>
-          <div><dt>50% exposure</dt><dd id="summary-exposure">Not selected</dd></div>
-          <div><dt>CBAM status</dt><dd id="summary-cbam-status">Not selected</dd></div>
-          <div><dt>CBAM emissions</dt><dd id="summary-cbam-emissions">Not selected</dd></div>
-          <div><dt>CBAM estimate</dt><dd id="summary-cbam-cost">Not selected</dd></div>
-        </dl>
-
-        <div class="risk-box" id="risk-box" aria-live="polite">
-          <h3>Exposure notes</h3>
-          <ul id="risk-list">
-            <li>Enter an order scenario to see the first set of checks.</li>
-          </ul>
+        <div class="actions" id="actions">
+          <button class="btn" type="button" id="btn-recalc" hidden>Recalculate with latest data</button>
+          <button class="btn" type="button" id="btn-duplicate" hidden>Duplicate as alternative</button>
+          <button class="btn" type="button" id="btn-print" hidden>Print / PDF</button>
+          <button class="btn btn-primary" type="button" id="btn-save">Save scenario</button>
         </div>
-      </section>
+      </div>
+
+      <div class="notice notice-bad" id="form-error" role="alert" hidden></div>
+      <div class="notice notice-warn" id="sample-note" hidden style="margin:0"></div>
+      <div class="notice notice-good" id="product-note" hidden style="margin:0"></div>
+
+      <div class="editor">
+        <form class="editor-main" id="scenario-form" novalidate>
+          <section class="card">
+            <h2>1 · Product</h2>
+            <div class="grid-2">
+              <label class="field span-2">Scenario name <span class="hint">Optional — defaults to the product description</span>
+                <input name="title" maxlength="120" placeholder="e.g. HR coil Q1 top-up">
+              </label>
+              <label class="field span-2" data-field="commodityCode">Commodity code
+                <input name="commodityCode" list="commodity-options" autocomplete="off" placeholder="Start typing a code or steel product" required>
+                <span class="hint" id="commodity-hint">Loading steel commodity codes…</span>
+                <span class="error"></span>
+              </label>
+              <datalist id="commodity-options"></datalist>
+              <label class="field" data-field="tonnage">Tonnage
+                <input name="tonnage" type="number" min="0" step="0.001" inputmode="decimal" required>
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="importDate">Expected import date
+                <input name="importDate" type="date" required>
+                <span class="hint" id="period-hint"></span>
+                <span class="error"></span>
+              </label>
+              <label class="field span-2">Specification
+                <input name="spec" maxlength="200" placeholder="Width × thickness, grade, coating">
+              </label>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>2 · Supplier &amp; quote</h2>
+            <div class="grid-3">
+              <label class="field">Supplier / trader
+                <input name="supplier" maxlength="120">
+              </label>
+              <label class="field">Mill
+                <input name="mill" maxlength="120">
+              </label>
+              <label class="field" data-field="origin">Country of origin
+                <select name="origin" required><option value="">Select origin</option></select>
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="priceAmount">Price per tonne
+                <span class="field-row">
+                  <input name="priceAmount" type="number" min="0" step="0.01" inputmode="decimal" required>
+                  <select name="priceCurrency" aria-label="Currency"></select>
+                </span>
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="incoterm">Incoterm
+                <select name="incoterm"></select>
+                <span class="hint" id="incoterm-hint"></span>
+              </label>
+              <label class="field">Importer of record
+                <select name="importerOfRecord">
+                  <option value="us">Us</option>
+                  <option value="supplier">Supplier / trader</option>
+                </select>
+              </label>
+              <label class="field" data-field="fxRateOverride" id="fx-field" hidden>FX rate (GBP per unit)
+                <input name="fxRateOverride" type="number" min="0" step="0.0001" placeholder="Blank = live ECB rate">
+                <span class="hint" id="fx-hint"></span>
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="fxBufferPct" id="fx-buffer-field" hidden>FX buffer %
+                <input name="fxBufferPct" type="number" min="0" step="0.1" placeholder="0">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="quoteValidUntil">Quote valid until
+                <input name="quoteValidUntil" type="date">
+                <span class="error"></span>
+              </label>
+              <label class="field">Lead time (weeks)
+                <input name="leadTimeWeeks" type="number" min="0" step="1">
+              </label>
+              <label class="field">Payment terms
+                <input name="paymentTerms" maxlength="120" placeholder="e.g. 60 days LC">
+              </label>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>3 · Freight &amp; costs</h2>
+            <div class="grid-3">
+              <label class="field" data-field="freightToUkPerT">Freight to UK £/t
+                <input name="freightToUkPerT" type="number" min="0" step="0.01" placeholder="0">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="insurancePerT">Insurance £/t
+                <input name="insurancePerT" type="number" min="0" step="0.01" placeholder="0">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="inlandFreightPerT">UK inland freight £/t
+                <input name="inlandFreightPerT" type="number" min="0" step="0.01" placeholder="0">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="brokeragePerShipment">Customs brokerage £/shipment
+                <input name="brokeragePerShipment" type="number" min="0" step="0.01" placeholder="0">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="financeRatePct">Finance rate % p.a.
+                <input name="financeRatePct" type="number" min="0" step="0.1" placeholder="0">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="financeDays">Cash tied up (days)
+                <input name="financeDays" type="number" min="0" step="1" placeholder="0">
+                <span class="error"></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>4 · Carbon (UK CBAM)</h2>
+              <span class="small muted">Applies to imports from 1 Jan 2027</span>
+            </div>
+            <div class="grid-3">
+              <label class="field" data-field="emissionsPerT">Emissions tCO2e/t
+                <input name="emissionsPerT" type="number" min="0" step="0.001" placeholder="From mill declaration">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="ukCarbonPrice">UK CBAM rate £/tCO2e
+                <input name="ukCarbonPrice" type="number" min="0" step="0.01" placeholder="Published rate">
+                <span class="error"></span>
+              </label>
+              <label class="field" data-field="overseasCarbonPrice">Carbon price paid overseas
+                <input name="overseasCarbonPrice" type="number" min="0" step="0.01" placeholder="0">
+                <span class="error"></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>5 · Notes</h2>
+            <label class="field"><span hidden>Notes</span>
+              <textarea name="notes" maxlength="2000" placeholder="Anything the approver should know"></textarea>
+            </label>
+          </section>
+
+          <section class="card" id="activity-card" hidden>
+            <h2>Activity</h2>
+            <ul class="activity" id="activity"></ul>
+          </section>
+        </form>
+
+        <aside class="editor-side" aria-live="polite">
+          <div class="total-card" id="total-card">
+            <p class="eyebrow">Expected landed cost</p>
+            <p class="big" id="total-perT">—</p>
+            <p id="total-sub">Fill in product, origin, tonnage and price.</p>
+          </div>
+
+          <section class="card" id="approval-card" hidden>
+            <h3>Approval</h3>
+            <label class="field"><span class="hint">Note (optional)</span>
+              <textarea id="status-note" maxlength="500"></textarea>
+            </label>
+            <div class="actions" style="margin-top:12px" id="status-actions"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h3>Cost build-up per tonne</h3>
+              <span class="small muted" id="customs-value"></span>
+            </div>
+            <div class="build-up" id="build-up"><p class="muted small">No calculation yet.</p></div>
+            <p class="small muted" id="vat-line" style="margin:10px 0 0"></p>
+          </section>
+
+          <section class="card" id="quota-card" hidden>
+            <div class="card-head">
+              <h3>Quota position</h3>
+              <span class="small muted" id="quota-order"></span>
+            </div>
+            <div class="bar" id="quota-bar"><div style="width:0"></div></div>
+            <div class="small" style="display:flex;justify-content:space-between;gap:8px"><span id="quota-left"></span><span id="quota-areas"></span></div>
+            <p class="small muted" id="quota-basis" style="margin:10px 0 0"></p>
+            <p class="notice notice-warn" id="quota-warn" hidden></p>
+          </section>
+
+          <section class="card" id="checks-card" hidden>
+            <h3>Checks before you buy</h3>
+            <ul class="checks" id="checks"></ul>
+          </section>
+
+          <p class="small muted" id="snapshot"></p>
+          <p class="disclaimer">Estimates only — not customs advice.</p>
+        </aside>
+      </div>
     </main>
+    </div>
 
     <script src="steel-commodities.js"></script>
     <script src="steel-trade-measure.js"></script>
-    <script src="steel-quotas.js"></script>
-    <script src="app.js"></script>
-      <script src="nav-menu.js"></script>
+    <script src="order-common.js"></script>
+    <script src="order-tool.js"></script>
+    <script src="nav-menu.js"></script>
   </body>
 </html>
