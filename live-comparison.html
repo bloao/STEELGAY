@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <title>Live comparison · Datafab AGX</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="live-comparison.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="index.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="index.html">Dashboard</a>
+        <a class="site-nav__link" href="industry-primer.html">Industry primer</a>
+        <div class="site-nav__dropdown">
+          <button type="button" class="site-nav__link site-nav__link--menu">Supply routes</button>
+          <div class="site-nav__menu" role="menu">
+            <p class="site-nav__menu-heading">PHYSICAL ROUTES</p>
+            <a href="sea-freight.html">Sea freight</a>
+            <a href="road-freight.html">Road / RoRo</a>
+            <a href="rail-freight.html">Rail &amp; intermodal</a>
+            <a href="air-freight.html">Air freight</a>
+            <a href="inland-waterway.html">Inland waterway</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">CUSTOMS PROCEDURE</p>
+            <a href="customs-warehouse.html">Customs / bonded warehouse</a>
+            <div class="site-nav__menu-divider"></div>
+            <p class="site-nav__menu-heading">COMMERCIAL CHANNELS</p>
+            <a href="direct-mill.html">Direct mill purchase</a>
+            <a href="trader-agent.html">Trader or agent</a>
+            <a href="online-marketplace.html">Online marketplace</a>
+          </div>
+        </div>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link is-active" href="live-comparison.html" aria-current="page">Live comparison</a>
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="order-tool.html">Order tool</a>
+      </div>
+    </nav>
+
+    <main class="comparison">
+      <header class="comparison__header">
+        <p class="eyebrow">Domestic vs import</p>
+        <h1>Live comparison</h1>
+        <p>
+          Compare a UK domestic buy against EU and Turkey import routes using the current quota feed,
+          simple landed-cost assumptions and working-capital timing.
+        </p>
+      </header>
+
+      <section class="comparison__controls" aria-label="Comparison inputs">
+        <label>
+          Product
+          <select id="product-select"></select>
+        </label>
+        <label>
+          Order tonnes
+          <input id="order-tonnes" type="number" min="1" step="1">
+        </label>
+        <label>
+          Finance rate %
+          <input id="finance-rate" type="number" min="0" step="0.1" value="9">
+        </label>
+        <label>
+          Domestic terms days
+          <input id="domestic-terms" type="number" min="0" step="1" value="30">
+        </label>
+        <label>
+          Import terms days
+          <input id="import-terms" type="number" min="0" step="1" value="90">
+        </label>
+      </section>
+
+      <section class="comparison__grid" aria-label="Cost comparison">
+        <article class="comparison-card">
+          <div>
+            <p class="eyebrow">Domestic</p>
+            <h2>Tata Steel UK</h2>
+          </div>
+          <div class="comparison-card__rows" id="domestic-card"></div>
+        </article>
+
+        <article class="comparison-card">
+          <div>
+            <p class="eyebrow">Import</p>
+            <h2>European Union</h2>
+          </div>
+          <div class="comparison-card__rows" id="eu-card"></div>
+        </article>
+
+        <article class="comparison-card">
+          <div>
+            <p class="eyebrow">Import</p>
+            <h2>Turkey</h2>
+          </div>
+          <div class="comparison-card__rows" id="turkey-card"></div>
+        </article>
+      </section>
+
+      <section class="quota-panel">
+        <div>
+          <p class="eyebrow">Quota feed</p>
+          <h2>Matched quota rows</h2>
+        </div>
+        <p id="quota-status">Loading quota data...</p>
+        <div class="quota-table-wrap">
+          <table class="quota-table">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Order</th>
+                <th>Status</th>
+                <th>Period</th>
+                <th>Balance</th>
+                <th>Fill rate</th>
+                <th>Last allocation</th>
+              </tr>
+            </thead>
+            <tbody id="quota-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="nav-menu.js"></script>
+    <script src="live-comparison.js"></script>
+  </body>
+</html>
