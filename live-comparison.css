@@ -1,0 +1,151 @@
+.comparison {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0 64px;
+}
+
+.comparison__header {
+  max-width: 840px;
+  margin-bottom: 24px;
+}
+
+.comparison__header h1 {
+  margin: 0 0 10px;
+  font-family: Manrope, Inter, sans-serif;
+  font-size: clamp(2rem, 5vw, 4.2rem);
+  line-height: 1;
+}
+
+.comparison__header p {
+  color: #52606d;
+  font-size: 1.05rem;
+}
+
+.comparison__controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid #d7dde5;
+  background: #f8fafc;
+}
+
+.comparison__controls label {
+  display: grid;
+  gap: 7px;
+  color: #52606d;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.comparison__controls input,
+.comparison__controls select {
+  min-height: 42px;
+  border: 1px solid #c7d0dc;
+  border-radius: 6px;
+  padding: 0 10px;
+  color: #16202a;
+  background: #fff;
+  font: inherit;
+}
+
+.comparison__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.comparison-card,
+.quota-panel {
+  border: 1px solid #d7dde5;
+  background: #fff;
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 16px 38px rgba(23, 34, 48, 0.07);
+}
+
+.comparison-card h2,
+.quota-panel h2 {
+  margin: 0;
+  font-family: Manrope, Inter, sans-serif;
+  font-size: 1.25rem;
+}
+
+.comparison-card__rows {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.metric-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.metric-row span {
+  color: #52606d;
+  font-size: 0.88rem;
+}
+
+.metric-row strong {
+  color: #16202a;
+  text-align: right;
+}
+
+.metric-row--total {
+  margin-top: 4px;
+  padding: 12px;
+  border: 0;
+  background: #102238;
+  color: #fff;
+}
+
+.metric-row--total span,
+.metric-row--total strong {
+  color: #fff;
+}
+
+.quota-panel {
+  margin-top: 16px;
+}
+
+.quota-panel > p {
+  color: #52606d;
+}
+
+.quota-table-wrap {
+  overflow-x: auto;
+}
+
+.quota-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+}
+
+.quota-table th,
+.quota-table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid #edf1f5;
+  text-align: left;
+  vertical-align: top;
+}
+
+.quota-table th {
+  color: #52606d;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .comparison__controls,
+  .comparison__grid {
+    grid-template-columns: 1fr;
+  }
+}
