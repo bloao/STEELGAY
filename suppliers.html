@@ -9,6 +9,15 @@
     <title>Suppliers · Datafab AGX</title>
     <link rel="stylesheet" href="order-tool.css">
     <link rel="stylesheet" href="nav.css">
+    <style>
+      .supplier-table { min-width: 2350px !important; }
+      .supplier-table th:first-child, .supplier-table td:first-child { position: sticky; left: 0; min-width: 145px; background: var(--surface, #fff); z-index: 1; box-shadow: 1px 0 var(--line); }
+      .supplier-table th:first-child { background: var(--surface-alt); z-index: 2; }
+      .supplier-table th { white-space: nowrap; }
+      .supplier-table td:nth-child(4) { min-width: 235px; }
+      .supplier-table td:last-child { min-width: 275px; }
+      .supplier-table td:nth-child(5) { white-space: nowrap; }
+    </style>
   </head>
   <body>
     <nav class="site-nav" aria-label="Primary">
@@ -32,27 +41,22 @@
         <div>
           <p class="eyebrow">Steel procurement</p>
           <h1>Suppliers</h1>
-          <p class="muted" style="margin:6px 0 0;max-width:640px">Every supplier, trader and mill you have quoted with — where they ship from, what they offer and how their prices land.</p>
+          <p class="muted" style="margin:6px 0 0;max-width:720px">Supplier quotes, delivery terms, reliability and quota exposure from Hall and Pickles.</p>
         </div>
         <div class="actions"><a class="btn btn-primary" href="order-tool.html">New scenario</a></div>
       </div>
       <section class="table-card">
-        <div class="toolbar"><strong>From your saved scenarios</strong><span class="small muted" id="count"></span></div>
-        <div class="table-scroll">
-          <table class="data">
-            <thead><tr><th>Supplier</th><th>Mills</th><th>Origins</th><th>Incoterms</th><th class="num">Scenarios</th><th class="num">Best expected landed</th><th>Latest quote</th></tr></thead>
+        <div class="toolbar"><strong>Supplier options from workbook</strong><span class="small muted" id="count"></span></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Supplier comparison, scroll horizontally for all columns">
+          <table class="data supplier-table">
+            <thead><tr><th scope="col">Supplier</th><th scope="col">Category</th><th scope="col">Sourcing origin</th><th scope="col">Pricing source</th><th scope="col" class="num">Quoted price (£/t)</th><th scope="col">Currency</th><th scope="col">Price basis</th><th scope="col">Price covers</th><th scope="col">Transport costs</th><th scope="col">Duty costs</th><th scope="col">Other duty</th><th scope="col">MOQ (tonnes)</th><th scope="col">On-time delivery</th><th scope="col">DDP available</th><th scope="col">Lead time</th><th scope="col">Payment terms</th><th scope="col">Duty risk (quota dependent)</th></tr></thead>
             <tbody id="rows"></tbody>
           </table>
         </div>
-        <div class="empty" id="empty" hidden>No suppliers yet — they appear here once a scenario names one.</div>
+        <div class="empty" id="empty" hidden>No suppliers found in the workbook.</div>
       </section>
-      <h2 style="font-size:18px;margin-top:8px">Planned for this page</h2>
-      <section class="placeholder">
-        <div class="card"><span class="coming">Coming next</span><h3>Supplier profiles</h3><p>Contacts, approved status, payment terms, certifications and the mills each trader represents.</p></div>
-        <div class="card"><span class="coming">Coming next</span><h3>Price history</h3><p>Every quote over time against the MEPS benchmark, so you can see who is drifting above market.</p></div>
-        <div class="card"><span class="coming">Coming next</span><h3>Reliability</h3><p>On-time delivery, quality claims and how often quotes are honoured.</p></div>
-        <div class="card"><span class="coming">Coming next</span><h3>Risk checks</h3><p>Sanctions screening, credit checks and origin-evidence status per supplier.</p></div>
-      </section>
+      <p class="small muted">Source: Hall and Pickles Data Sourcing, Supplier Options and Georges working supplier list. Quotes are supplied workbook values; quote dates and validity are not provided. Scroll horizontally to view every column.</p>
+      <p class="small muted">A dash means not supplied. n.a. means the workbook marks the field as not applicable. Merchant bar is the category heading in Supplier Options. Tata's on-time figure is entered as 70; interpreted as 70% pending confirmation. 7 Steel's payment terms may change from 60 to 30 days.</p>
     </main>
     </div>
 
