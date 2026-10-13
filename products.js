@@ -114,12 +114,8 @@
   }
 
   function renderSummary() {
-    $("kpi-count").textContent = products.length;
-    $("kpi-stock").textContent = t(products.reduce((s, p) => s + p.metrics.stockNowT, 0));
-    $("kpi-value").textContent = fmt.money(products.reduce((s, p) => s + p.metrics.stockValue, 0));
+
     const urgent = products.filter(needsOrder).sort((a, b) => (a.metrics.stockOutDate || "9999").localeCompare(b.metrics.stockOutDate || "9999"));
-    $("kpi-order").textContent = urgent.length;
-    $("kpi-order").parentElement.classList.toggle("is-zero", urgent.length === 0);
     $("attention").hidden = urgent.length === 0;
     $("attention-list").replaceChildren(...urgent.map((p) => {
       const m = p.metrics;

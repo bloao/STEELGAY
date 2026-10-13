@@ -12,15 +12,9 @@
   const selected = new Set();
   let all = [];
 
-  function renderKpis() {
-    const today = new Date().toISOString().slice(0, 10);
-    const week = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    const open = all.filter((s) => ["draft", "submitted", "rejected"].includes(s.status));
-    document.getElementById("kpi-open").textContent = open.length;
-    document.getElementById("kpi-submitted").textContent = all.filter((s) => s.status === "submitted").length;
-    document.getElementById("kpi-risk").textContent = open.filter((s) => s.quotaProbability >= 0.5).length;
-    document.getElementById("kpi-expiring").textContent = open.filter((s) => s.quoteValidUntil && s.quoteValidUntil >= today && s.quoteValidUntil <= week).length;
-  }
+  // The summary boxes were removed from the page; kept as a no-op so
+  // existing calls still work.
+  function renderKpis() {}
 
   function render() {
     const q = search.value.trim().toLowerCase();

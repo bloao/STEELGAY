@@ -95,10 +95,6 @@
 
   function renderSummary() {
     const found = data.lines.filter((l) => l.found);
-    $("kpi-lines").textContent = `${found.length} / ${data.lines.length}`;
-    $("kpi-critical").textContent = data.lines.filter((l) => l.risk === "critical").length;
-    $("kpi-watch").textContent = data.lines.filter((l) => l.risk === "watch").length;
-    $("kpi-exhausted").textContent = data.lines.filter((l) => l.risk === "exhausted").length;
 
     const tariffLines = data.sources.tariff.lines;
     const status = $("feed-status");

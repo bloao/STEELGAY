@@ -129,15 +129,6 @@
   }
 
   function renderSummary() {
-    $("kpi-count").textContent = suppliers.length;
-    const allIn = suppliers.filter((s) => !s.metrics.dutyExposed && !s.metrics.dutyUnknown && Number.isFinite(s.metrics.pricePerT));
-    const best = allIn.sort((a, b) => a.metrics.pricePerT - b.metrics.pricePerT)[0];
-    $("kpi-best").replaceChildren(best ? perT(best.metrics.pricePerT, best.metrics.currency) : "—", best ? el("small", { class: "stat-sub", text: best.name }) : "");
-    const on = suppliers.map((s) => s.onTimePct).filter(Number.isFinite);
-    $("kpi-ontime").textContent = on.length ? `${Math.round(on.reduce((a, b) => a + b, 0) / on.length)}%` : "—";
-    const waiting = suppliers.filter((s) => s.metrics.awaitingQuote).length;
-    $("kpi-waiting").textContent = waiting;
-    $("kpi-waiting").parentElement.classList.toggle("is-zero", waiting === 0);
     const groups = [...new Set(suppliers.flatMap((s) => s.supplies || []))].sort();
     const cur = $("flt-supplies").value;
     $("flt-supplies").replaceChildren(el("option", { value: "", text: "Everything they supply" }), ...groups.map((g) => el("option", { value: g, text: g })));
