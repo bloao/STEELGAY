@@ -682,3 +682,51 @@ body.drawer-open { overflow: hidden; }
 .fact { box-shadow: 1px 0 0 var(--line), 0 1px 0 var(--line); }
 .facts { border-width: 1px 0 0 1px; }
 .fact { box-shadow: inset -1px -1px 0 var(--line); }
+
+/* ---- compact toolbar (search + filter icons) ---- */
+.toolbar.toolbar-compact { justify-content: space-between; flex-wrap: nowrap; gap: 12px; padding: 10px 12px 10px 16px; min-height: 60px; }
+.tb-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; }
+.tb-tools { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.tb-icon { position: relative; width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: 0 0 auto; }
+.tb-icon:hover { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+.tb-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tb-icon[aria-expanded="true"], .tb-icon.is-active { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
+.tb-badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.tb-badge[hidden] { display: none; }
+.tb-search { display: flex; align-items: center; }
+.tb-search-box { position: relative; width: 0; overflow: hidden; opacity: 0; transition: width 0.18s ease, opacity 0.12s ease, margin 0.18s ease; }
+.tb-search.is-open .tb-search-box { width: 280px; opacity: 1; margin-left: 6px; overflow: visible; }
+.tb-search.is-open .tb-icon { border-color: var(--accent); color: var(--accent-ink); }
+.toolbar .tb-search-box input { width: 100%; height: 40px; padding: 0 34px 0 12px; }
+.tb-search-box input::-webkit-search-cancel-button { display: none; }
+.tb-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.tb-clear:hover { background: var(--neutral-bg); color: var(--ink); }
+.tb-clear[hidden] { display: none; }
+.tb-filter { position: relative; }
+.tb-panel { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: 300px; padding: 14px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 16px 40px rgba(12, 14, 18, 0.16); display: flex; flex-direction: column; gap: 14px; }
+.tb-panel[hidden] { display: none; }
+.tb-group { display: flex; flex-direction: column; gap: 10px; }
+.tb-group + .tb-group { border-top: 1px solid var(--line); padding-top: 12px; }
+.tb-group-title { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tb-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.toolbar .tb-field select { width: 100%; max-width: none; }
+.tb-panel-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.tb-panel-foot .link-btn[hidden] { visibility: hidden; display: inline; }
+.tb-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 10px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent-ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 100%; }
+.tb-chip:hover { background: var(--surface); }
+.tb-chip-k { font-weight: 500; color: var(--ink-soft); }
+.tb-sort-note { font-size: 12px; color: var(--muted); margin-left: 4px; }
+@media (max-width: 600px) {
+  .toolbar.toolbar-compact { flex-wrap: wrap; }
+  .tb-tools { margin-left: auto; }
+  .tb-search.is-open .tb-search-box { width: min(200px, 52vw); }
+  .tb-panel { width: min(300px, calc(100vw - 32px)); }
+}
+.toolbar .tb-field select { flex: none; height: 40px; }
+.tb-search-box { visibility: hidden; }
+.tb-search.is-open .tb-search-box { visibility: visible; }
+@media (max-width: 600px) {
+  .tb-tools { flex: 1 1 auto; justify-content: flex-end; }
+  .tb-search.is-open { flex: 1 1 auto; }
+  .tb-search.is-open .tb-search-box { width: 100%; flex: 1 1 auto; }
+}
