@@ -121,23 +121,51 @@
         <form class="drawer-body" id="view-form" novalidate hidden>
           <fieldset>
             <legend>Product</legend>
-            <label class="field" data-field="name"><span class="label-text">Description<span class="req" aria-hidden="true"> *</span></span>
+            <div class="field" data-field="picker">
+              <span class="label-text" id="picker-label">Find product<span class="req" aria-hidden="true"> *</span></span>
+              <div class="combo">
+                <svg class="combo-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input id="picker-q" type="text" role="combobox" aria-expanded="false" aria-controls="picker-list" aria-autocomplete="list" aria-labelledby="picker-label" aria-describedby="picker-hint" placeholder="Search, e.g. 40x40x3 angle · 203 UB · 10mm plate" autocomplete="off" spellcheck="false">
+                <ul id="picker-list" class="combo-list" role="listbox" aria-label="Steel products" hidden></ul>
+              </div>
+              <span class="hint" id="picker-hint">Search by size or product, or open the list to browse every steel product.</span>
+              <span class="error"></span>
+            </div>
+
+            <div class="picked" id="picked" hidden>
+              <div class="picked-head">
+                <span class="picked-group" id="picked-group"></span>
+                <strong id="picked-family"></strong>
+                <button class="link-btn" type="button" id="picked-change">Change product</button>
+              </div>
+              <div class="grid-2" id="picked-fields"></div>
+            </div>
+
+            <dl class="resolved" id="resolved" hidden>
+              <div><dt>Description</dt><dd><span id="r-name">—</span> <button class="link-btn" type="button" id="rename-btn">Rename</button></dd></div>
+              <div><dt>Specification</dt><dd id="r-spec">—</dd></div>
+              <div><dt>Commodity code</dt><dd><span id="r-code">—</span> <button class="link-btn" type="button" id="code-btn">Change code</button></dd></div>
+              <div><dt>Steel quota</dt><dd id="r-cat">—</dd></div>
+            </dl>
+
+            <label class="field" data-field="name" id="name-field" hidden><span class="label-text">Description<span class="req" aria-hidden="true"> *</span></span>
               <input name="name" maxlength="120" placeholder="e.g. 50×40×5 Angle" autocomplete="off" required><span class="error"></span>
             </label>
-            <div class="grid-2">
-              <label class="field" data-field="category">Category
-                <input name="category" maxlength="80" list="category-list" placeholder="e.g. Merchant Bar"><span class="error"></span>
-              </label>
-              <label class="field" data-field="spec">Specification
-                <input name="spec" maxlength="160" placeholder="Grade, length, finish"><span class="error"></span>
-              </label>
-            </div>
-            <datalist id="category-list"></datalist>
-            <label class="field" data-field="commodityCode"><span class="label-text">Commodity code<span class="req" aria-hidden="true"> *</span></span>
+            <label class="field" data-field="spec" id="spec-field" hidden>Specification
+              <input name="spec" maxlength="160" placeholder="Grade, length, finish"><span class="error"></span>
+            </label>
+            <label class="field" id="choose-field" hidden><span class="label-text">Which tariff line?<span class="req" aria-hidden="true"> *</span></span>
+              <select id="code-choose"></select>
+              <span class="hint">The tariff splits this product further — pick the line that matches your supplier's paperwork.</span>
+            </label>
+            <label class="field" data-field="commodityCode" id="code-field" hidden><span class="label-text">Commodity code<span class="req" aria-hidden="true"> *</span></span>
               <input name="commodityCode" list="code-list" inputmode="numeric" autocomplete="off" placeholder="Type a code or a product word, e.g. angle" required>
               <span class="hint" id="code-hint">10-digit UK tariff code — sets the steel quota category.</span><span class="error"></span>
             </label>
             <datalist id="code-list"></datalist>
+            <label class="field" data-field="category">Category
+              <select name="category" id="category-select"></select><span class="error"></span>
+            </label>
           </fieldset>
 
           <fieldset>
@@ -158,19 +186,23 @@
           <fieldset>
             <legend>Buying rules</legend>
             <div class="grid-2">
-              <label class="field" data-field="leadTimeWeeks">Lead time
-                <span class="input-unit"><input name="leadTimeWeeks" type="number" min="0" max="104" step="1" placeholder="Optional"><span>weeks</span></span>
+              <div class="field" data-field="leadTimeWeeks"><label for="pre-leadTimeWeeks">Lead time</label>
+                <select class="preset" id="pre-leadTimeWeeks" data-for="leadTimeWeeks" data-unit="weeks" data-empty="Not set" data-options="1,2,3,4,5,6,7,8,9,10,11,12,14,16,18,20,26"></select>
+                <span class="input-unit" hidden><input name="leadTimeWeeks" type="number" min="0" max="104" step="1" aria-label="Lead time in weeks"><span>weeks</span></span>
                 <span class="hint">Sets the reorder point and order-by date.</span><span class="error"></span>
-              </label>
-              <label class="field" data-field="moqT">Minimum order (MOQ)
-                <span class="input-unit"><input name="moqT" type="number" min="0" step="0.001" placeholder="Optional"><span>t</span></span><span class="error"></span>
-              </label>
-              <label class="field" data-field="safetyStockT">Safety stock
-                <span class="input-unit"><input name="safetyStockT" type="number" min="0" step="0.001" placeholder="0"><span>t</span></span><span class="error"></span>
-              </label>
-              <label class="field" data-field="targetCoverMonths">Cover after delivery
-                <span class="input-unit"><input name="targetCoverMonths" type="number" min="0.5" max="36" step="0.5" placeholder="3"><span>months</span></span><span class="error"></span>
-              </label>
+              </div>
+              <div class="field" data-field="moqT"><label for="pre-moqT">Minimum order (MOQ)</label>
+                <select class="preset" id="pre-moqT" data-for="moqT" data-unit="t" data-empty="None" data-options="1,2,3,5,10,15,20,25,30,40,50,75,100,200"></select>
+                <span class="input-unit" hidden><input name="moqT" type="number" min="0" step="0.001" aria-label="Minimum order in tonnes"><span>t</span></span><span class="error"></span>
+              </div>
+              <div class="field" data-field="safetyStockT"><label for="pre-safetyStockT">Safety stock</label>
+                <select class="preset" id="pre-safetyStockT" data-for="safetyStockT" data-unit="t" data-empty="None" data-options="0.5,1,2,3,5,10,15,20,25,50"></select>
+                <span class="input-unit" hidden><input name="safetyStockT" type="number" min="0" step="0.001" aria-label="Safety stock in tonnes"><span>t</span></span><span class="error"></span>
+              </div>
+              <div class="field" data-field="targetCoverMonths"><label for="pre-targetCoverMonths">Cover after delivery</label>
+                <select class="preset" id="pre-targetCoverMonths" data-for="targetCoverMonths" data-unit="months" data-options="1,1.5,2,3,4,5,6,9,12"></select>
+                <span class="input-unit" hidden><input name="targetCoverMonths" type="number" min="0.5" max="36" step="0.5" aria-label="Cover after delivery in months"><span>months</span></span><span class="error"></span>
+              </div>
             </div>
           </fieldset>
 
@@ -229,6 +261,7 @@
 
     <script src="steel-trade-measure.js"></script>
     <script src="steel-commodities.js" defer></script>
+    <script src="steel-catalogue.js"></script>
     <script src="order-common.js"></script>
     <script src="products.js"></script>
     <script src="nav-menu.js"></script>

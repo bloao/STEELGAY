@@ -430,3 +430,66 @@ body.drawer-open { overflow: hidden; }
 .timeline .t-changes del { color: var(--muted); }
 .timeline .t-note { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
 @media (max-width: 600px) { .audit-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .drawer.is-large { width: 100vw; top: 0; bottom: 0; right: 0; border-radius: 0; } }
+
+/* ---- product picker (Add product) ---- */
+.combo { position: relative; }
+.combo-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.field .combo input { width: 100%; padding-left: 36px; }
+.combo-list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); max-height: 340px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 12px 32px rgba(12, 14, 18, 0.14); font-weight: 400; }
+.combo-group { padding: 8px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.combo-option { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--ink); }
+.combo-option:hover, .combo-option.is-active { background: var(--accent-soft); }
+.combo-option.is-family .combo-label { font-weight: 600; }
+.combo-option.is-custom .combo-label { color: var(--accent-ink); font-weight: 600; }
+.combo-sub { flex: 0 0 auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.picked { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--surface-alt); display: flex; flex-direction: column; gap: 12px; }
+.picked-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.picked-head strong { font-size: 15px; }
+.picked-head .link-btn { margin-left: auto; }
+.picked-group { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.picked .field-size { grid-column: 1 / -1; }
+.link-btn { border: 0; background: none; padding: 0; font: inherit; font-size: 13px; font-weight: 600; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link-btn:hover { color: var(--ink); }
+.link-btn[hidden] { display: none; }
+.resolved { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; font-size: 13px; }
+.resolved > div { display: contents; }
+.resolved dt { color: var(--muted); font-weight: 500; }
+.resolved dd { margin: 0; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.resolved dd .link-btn { margin-left: 6px; font-size: 12px; }
+.resolved[hidden] { display: none; }
+.quota-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 600; }
+.field .input-unit[hidden] { display: none; }
+.field select.preset + .input-unit { margin-top: 6px; }
+
+/* ---- sidebar footer (Settings) ---- */
+.sidebar { display: flex; flex-direction: column; position: sticky; top: 80px; align-self: flex-start; height: calc(100vh - 80px); overflow-y: auto; }
+.sidebar__nav { flex: 1 0 auto; }
+.sidebar__foot { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 16px; }
+@media (max-width: 900px) {
+  .sidebar { position: static; height: auto; flex-direction: row; align-items: center; gap: 4px; overflow-x: auto; }
+  .sidebar__nav { flex: 1 1 auto; min-width: 0; }
+  .sidebar__foot { border-top: 0; border-left: 1px solid var(--line); margin: 0; padding: 0 0 0 4px; }
+}
+
+/* ---- settings page ---- */
+.settings-page .card { margin-bottom: 18px; }
+.settings-section { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); gap: 24px; padding: 22px 0; border-top: 1px solid var(--line); }
+.settings-section:first-of-type { border-top: 0; padding-top: 4px; }
+.settings-section h2 { font-size: 16px; margin: 0 0 4px; }
+.settings-section > div:first-child p { margin: 0; color: var(--muted); font-size: 13px; }
+.settings-fields { display: flex; flex-direction: column; gap: 14px; }
+.check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.check { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-weight: 500; font-size: 14px; cursor: pointer; background: var(--surface); }
+.check:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.check small { margin-left: auto; color: var(--muted); font-size: 12px; }
+.conn { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; }
+.conn strong { display: block; font-size: 14px; }
+.conn span.small { color: var(--muted); }
+.conn .status-dot { margin-left: auto; white-space: nowrap; }
+.settings-actions { position: sticky; bottom: 0; display: flex; gap: 10px; justify-content: flex-end; align-items: center; padding: 14px 0; background: linear-gradient(to top, var(--bg, #f6f8fa) 70%, transparent); }
+.settings-actions .muted { margin-right: auto; font-size: 13px; }
+@media (max-width: 760px) {
+  .settings-section { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .check-grid { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Settings · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="settings"></aside>
+      <script src="app-sidebar.js"></script>
+      <main class="page settings-page">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Workspace</p>
+            <h1>Settings</h1>
+            <p class="muted lede">Defaults for new products, which steel products appear when adding one, and the data connections.</p>
+          </div>
+        </div>
+
+        <form class="card" id="settings-form" novalidate>
+          <section class="settings-section">
+            <div>
+              <h2>Organisation</h2>
+              <p>Your company name, saved with backups.</p>
+            </div>
+            <div class="settings-fields">
+              <label class="field" data-field="companyName">Company name
+                <input name="companyName" maxlength="80" placeholder="e.g. Acme Steel Ltd" autocomplete="organization"><span class="error"></span>
+              </label>
+              <p class="small muted" id="signed-in" style="margin:0"></p>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div>
+              <h2>New product defaults</h2>
+              <p>Pre-filled when you add a product. You can still change them per product.</p>
+            </div>
+            <div class="settings-fields">
+              <div class="grid-2">
+                <label class="field" data-field="defaultCategory">Default category
+                  <select name="defaultCategory" id="s-category"></select><span class="error"></span>
+                </label>
+                <label class="field" data-field="defaultLeadTimeWeeks">Lead time
+                  <select name="defaultLeadTimeWeeks" data-unit="weeks" data-empty="Not set" data-options="1,2,3,4,5,6,7,8,9,10,11,12,14,16,18,20,26"></select><span class="error"></span>
+                </label>
+                <label class="field" data-field="defaultMoqT">Minimum order (MOQ)
+                  <select name="defaultMoqT" data-unit="t" data-empty="None" data-options="1,2,3,5,10,15,20,25,30,40,50,75,100,200"></select><span class="error"></span>
+                </label>
+                <label class="field" data-field="defaultSafetyStockT">Safety stock
+                  <select name="defaultSafetyStockT" data-unit="t" data-empty="None" data-options="0.5,1,2,3,5,10,15,20,25,50"></select><span class="error"></span>
+                </label>
+                <label class="field" data-field="defaultTargetCoverMonths">Cover after delivery
+                  <select name="defaultTargetCoverMonths" data-unit="months" data-options="1,1.5,2,3,4,5,6,9,12"></select><span class="error"></span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div>
+              <h2>Product catalogue</h2>
+              <p>Which product groups show up in the search when adding a product. "Other steel product" is always available.</p>
+            </div>
+            <div class="settings-fields">
+              <fieldset class="field" data-field="catalogueGroups" style="border:0;padding:0;margin:0">
+                <legend class="sr-only">Product groups</legend>
+                <div class="check-grid" id="groups"></div>
+                <span class="error"></span>
+              </fieldset>
+              <div><button class="link-btn" type="button" id="groups-all">Select all</button></div>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div>
+              <h2>Connections</h2>
+              <p>Live data the tool relies on. Credentials live in the server's <code>.env</code> file, not here.</p>
+            </div>
+            <div class="settings-fields" id="connections">
+              <div class="conn"><div><strong>HMRC Trade Tariff</strong><span class="small">Live steel quota balances</span></div><span class="status-dot is-muted" id="conn-hmrc">Checking…</span></div>
+              <div class="conn"><div><strong>Claude assistant</strong><span class="small" id="conn-claude-model">Answers questions in the Assistant tab</span></div><span class="status-dot is-muted" id="conn-claude">Checking…</span></div>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div>
+              <h2>Data</h2>
+              <p>Download everything — products, saved quotes and these settings — as one JSON file.</p>
+            </div>
+            <div class="settings-fields">
+              <div><a class="btn" id="backup" href="/api/backup" download>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+                Download backup</a></div>
+              <p class="small muted" id="updated" style="margin:0"></p>
+            </div>
+          </section>
+
+          <div class="settings-actions">
+            <span class="muted" id="save-state" aria-live="polite"></span>
+            <button class="btn" type="button" id="reset">Undo changes</button>
+            <button class="btn btn-primary" type="submit" id="save">Save settings</button>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <script src="steel-catalogue.js"></script>
+    <script src="order-common.js"></script>
+    <script src="settings.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

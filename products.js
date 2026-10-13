@@ -133,7 +133,6 @@
     const current = $("f-category").value;
     $("f-category").replaceChildren(el("option", { value: "", text: "All categories" }), ...cats.map((c) => el("option", { value: c, text: c })));
     $("f-category").value = cats.includes(current) ? current : "";
-    $("category-list").replaceChildren(...cats.map((c) => el("option", { value: c })));
   }
 
   function renderQuota() {
@@ -452,6 +451,13 @@
 
   // ---------------------------------------------------------------- form
 
+  const CAT = window.STEEL_CATALOGUE;
+  let settings = null; // workspace defaults (Settings page)
+  let pick = null; // { family, values } from the catalogue, or null
+  let customMode = false; // "Other steel product" — typed by hand
+  let comboItems = [];
+  let comboActive = -1;
+
   let codesLoaded = false;
   function loadCodeList() {
     if (codesLoaded || !window.STEEL_COMMODITIES) return;
@@ -463,11 +469,13 @@
     $("code-list").replaceChildren(frag);
   }
 
+  const tariffLine = (code) => window.STEEL_COMMODITIES && window.STEEL_COMMODITIES.commodities.find((c) => c.code === code);
+
   function codeHint() {
     let code = field("commodityCode").value.replace(/[\s.]/g, "");
     if (/^\d{8}$/.test(code)) code += "00";
     const hint = $("code-hint");
-    const known = window.STEEL_COMMODITIES && window.STEEL_COMMODITIES.commodities.find((c) => c.code === code);
+    const known = tariffLine(code);
     const cat = categoryFor(code);
     if (!field("commodityCode").value.trim()) {
       hint.textContent = "10-digit UK tariff code — sets the steel quota category.";
@@ -479,25 +487,252 @@
       hint.textContent = "Keep typing — codes are 8 or 10 digits.";
       hint.classList.remove("is-match");
     }
+    renderResolved();
+  }
+
+  // ---- preset dropdowns (lead time, MOQ, safety stock, cover)
+  function buildPresets() {
+    form.querySelectorAll("select.preset").forEach((sel) => {
+      const unit = sel.dataset.unit;
+      const opts = [];
+      if (sel.dataset.empty) opts.push(el("option", { value: "", text: sel.dataset.empty }));
+      for (const v of sel.dataset.options.split(",")) opts.push(el("option", { value: v, text: `${v} ${Number(v) === 1 && unit !== "t" ? unit.replace(/s$/, "") : unit}` }));
+      opts.push(el("option", { value: "other", text: "Other…" }));
+      sel.replaceChildren(...opts);
+      sel.addEventListener("change", () => {
+        const input = field(sel.dataset.for);
+        const box = input.closest(".input-unit");
+        if (sel.value === "other") {
+          box.hidden = false;
+          input.focus();
+        } else {
+          box.hidden = true;
+          input.value = sel.value;
+          input.dataset.touched = "1";
+          delete serverErrors[input.name];
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+    });
+  }
+
+  function setPreset(name, value) {
+    const input = field(name);
+    const sel = form.querySelector(`select.preset[data-for="${name}"]`);
+    const v = value === null || value === undefined ? "" : String(value);
+    input.value = v;
+    if (!sel) return;
+    const has = [...sel.options].some((o) => o.value === v && o.value !== "other");
+    sel.value = has ? v : "other";
+    input.closest(".input-unit").hidden = has;
+  }
+
+  // ---- category dropdown
+  function fillCategories(selected) {
+    const groups = CAT ? CAT.groups : [];
+    const mine = products.map((p) => p.category);
+    const all = [...new Set([...groups, ...mine, selected].filter(Boolean))];
+    const sel = $("category-select");
+    sel.replaceChildren(
+      el("option", { value: "", text: "Choose a category" }),
+      ...all.map((c) => el("option", { value: c, text: c })),
+      el("option", { value: "Uncategorised", text: "Uncategorised" }),
+    );
+    sel.value = selected || "";
+  }
+
+  // ---- product picker (combobox over the catalogue)
+  const allowedGroups = () => (settings && settings.catalogueGroups && settings.catalogueGroups.length ? settings.catalogueGroups : null);
+
+  function comboOpen(open) {
+    $("picker-list").hidden = !open;
+    $("picker-q").setAttribute("aria-expanded", String(open));
+    if (!open) { comboActive = -1; $("picker-q").removeAttribute("aria-activedescendant"); }
+  }
+
+  function renderCombo() {
+    if (!CAT) return;
+    const q = $("picker-q").value;
+    const hits = CAT.search(q, { limit: 60, groups: allowedGroups() });
+    comboItems = [...hits, { custom: true }];
+    const list = $("picker-list");
+    const frag = document.createDocumentFragment();
+    let lastGroup = null;
+    comboItems.forEach((item, i) => {
+      if (item.custom) {
+        frag.append(el("li", { class: "combo-group", role: "presentation", text: hits.length ? "Not listed?" : "No match" }));
+      } else if (item.group !== lastGroup) {
+        lastGroup = item.group;
+        frag.append(el("li", { class: "combo-group", role: "presentation", text: item.group }));
+      }
+      let sub = "";
+      if (item.custom) sub = "Type the description and commodity code yourself";
+      else if (item.size) {
+        const r = CAT.resolve(item.family, { size: item.size });
+        const cat = r && r.commodityCode ? categoryFor(r.commodityCode) : null;
+        sub = r && r.commodityCode ? `${fmtCode(r.commodityCode)}${cat ? ` · Cat ${cat.id}` : ""}` : "Pick tariff line after";
+      } else {
+        const fam = CAT.familyById(item.family);
+        sub = `${fam.fields[0].values.length} sizes`;
+      }
+      const li = el("li", { class: `combo-option${item.size ? "" : " is-family"}${item.custom ? " is-custom" : ""}`, role: "option", id: `combo-${i}`, "aria-selected": "false", "data-i": String(i) },
+        el("span", { class: "combo-label", text: item.custom ? "Other steel product" : item.label }),
+        el("span", { class: "combo-sub", text: sub }));
+      li.addEventListener("mousedown", (e) => e.preventDefault()); // keep focus in the input
+      li.addEventListener("click", () => chooseItem(item));
+      frag.append(li);
+    });
+    list.replaceChildren(frag);
+    comboActive = -1;
+    comboOpen(true);
+  }
+
+  function moveActive(delta) {
+    if ($("picker-list").hidden) renderCombo();
+    const n = comboItems.length;
+    if (!n) return;
+    comboActive = (comboActive + delta + n) % n;
+    $("picker-list").querySelectorAll(".combo-option").forEach((li) => {
+      const on = Number(li.dataset.i) === comboActive;
+      li.setAttribute("aria-selected", String(on));
+      li.classList.toggle("is-active", on);
+      if (on) li.scrollIntoView({ block: "nearest" });
+    });
+    $("picker-q").setAttribute("aria-activedescendant", `combo-${comboActive}`);
+  }
+
+  function chooseItem(item) {
+    comboOpen(false);
+    dirty = true;
+    if (item.custom) { setCustom(true); field("name").focus(); return; }
+    setPick(item.family, { size: item.size || "" });
+    if (!item.size) { const s = $("picked-fields").querySelector("select"); if (s) s.focus(); }
+  }
+
+  function setCustom(on) {
+    customMode = on;
+    if (on) pick = null;
+    $("picked").hidden = true;
+    $("resolved").hidden = on || !pick;
+    $("name-field").hidden = !on;
+    $("spec-field").hidden = !on;
+    $("code-field").hidden = !on;
+    $("choose-field").hidden = true;
+    $("picker-q").closest(".field").hidden = on && Boolean(editing && !pick);
+    $("picker-q").value = on ? "Other steel product" : "";
+    $("picker-hint").textContent = on ? "Fill in the description and commodity code below — or search again to pick from the list." : "Search by size or product, or open the list to browse every steel product.";
+    loadCodeList();
+    codeHint();
+  }
+
+  // Show the dropdowns for one catalogue family and apply its result.
+  function setPick(familyId, values, { initial = false } = {}) {
+    const fam = CAT && CAT.familyById(familyId);
+    if (!fam) return;
+    customMode = false;
+    const defaults = CAT.defaults(fam);
+    pick = { family: fam.id, values: { ...defaults, ...(values || {}) } };
+    $("picker-q").closest(".field").hidden = false;
+    $("picker-q").value = "";
+    $("picker-hint").textContent = "Search again to switch to a different product.";
+    $("picked").hidden = false;
+    $("picked-group").textContent = fam.group;
+    $("picked-family").textContent = fam.label;
+    $("picked-fields").replaceChildren(...fam.fields.map((f) => {
+      const id = `pf-${f.key}`;
+      const sel = el("select", { id, "data-key": f.key }, ...(f.key === "size" ? [el("option", { value: "", text: `Choose ${f.label.toLowerCase().replace(/ \(mm\)$/, "")}` })] : []), ...f.values.map((v) => el("option", { value: v, text: v })));
+      const current = pick.values[f.key];
+      if (current && !f.values.includes(current)) sel.append(el("option", { value: current, text: current }));
+      sel.value = current || "";
+      sel.addEventListener("change", () => {
+        pick.values[f.key] = sel.value;
+        applyResolved(false);
+      });
+      const wrap = el("label", { class: `field${f.key === "size" ? " field-size" : ""}`, for: id }, el("span", { class: "label-text", text: f.label }), sel);
+      return wrap;
+    }));
+    applyResolved(initial);
+  }
+
+  function applyResolved(initial) {
+    const r = pick ? CAT.resolve(pick.family, pick.values) : null;
+    $("name-field").hidden = !customMode && !$("name-field").dataset.renamed;
+    $("spec-field").hidden = !customMode;
+    if (!r) {
+      $("resolved").hidden = true;
+      $("choose-field").hidden = true;
+      if (!initial) { field("name").value = ""; field("commodityCode").value = ""; }
+      codeHint();
+      schedulePreview();
+      return;
+    }
+    if (!initial) {
+      if (!$("name-field").dataset.renamed) field("name").value = r.name;
+      field("spec").value = r.spec;
+      if (r.category) { fillCategories(r.category); }
+      delete serverErrors.name;
+      delete serverErrors.commodityCode;
+    }
+    // Ambiguous tariff split: ask which line.
+    if (r.choosePrefix) {
+      const lines = window.STEEL_COMMODITIES ? window.STEEL_COMMODITIES.commodities.filter((c) => c.code.startsWith(r.choosePrefix)) : [];
+      const sel = $("code-choose");
+      const keep = field("commodityCode").value;
+      sel.replaceChildren(el("option", { value: "", text: "Choose the tariff line" }), ...lines.map((c) => el("option", { value: c.code, text: `${fmtCode(c.code)} — ${c.description.length > 90 ? `${c.description.slice(0, 88)}…` : c.description}`, title: c.description })));
+      sel.value = lines.some((c) => c.code === keep) ? keep : "";
+      if (!initial && !sel.value) field("commodityCode").value = "";
+      $("choose-field").hidden = false;
+    } else {
+      $("choose-field").hidden = true;
+      if (!initial || !field("commodityCode").value) field("commodityCode").value = r.commodityCode;
+    }
+    $("resolved").hidden = false;
+    codeHint();
+    if (!initial) schedulePreview();
+  }
+
+  function renderResolved() {
+    if ($("resolved").hidden) return;
+    const code = field("commodityCode").value.trim();
+    $("r-name").textContent = field("name").value || "—";
+    $("r-spec").textContent = field("spec").value || "—";
+    const line = tariffLine(code);
+    const desc = line ? (/^other$/i.test(line.description) ? line.headingDescription : line.description) : "";
+    $("r-code").textContent = code ? `${fmtCode(code)}${desc ? ` · ${desc.slice(0, 60)}${desc.length > 60 ? "…" : ""}` : ""}` : "Choose the tariff line above";
+    const cat = categoryFor(code);
+    $("r-cat").replaceChildren(code
+      ? (cat ? el("span", { class: "quota-pill", text: `Category ${cat.id} — ${cat.name}` }) : el("span", { class: "muted", text: "Not in a quota category — ordinary duty only" }))
+      : "—");
+    $("rename-btn").hidden = !$("name-field").hidden;
+    $("code-btn").hidden = !$("code-field").hidden;
   }
 
   function readForm() {
     const body = {};
     for (const f of FIELDS) body[f] = field(f).value;
+    if (pick) body.catalog = { family: pick.family, values: pick.values };
+    else if (editing && editing.catalog) body.catalog = null;
     return body;
   }
 
   function showErrors(errors = {}, onlyTouched) {
+    // Name and code live behind the picker until there's a problem with them.
+    const pickerErr = errors.name && $("name-field").hidden ? (pick ? errors.name : "Search for and pick a product.") : null;
+    if (errors.name && pick && $("name-field").hidden && /already/.test(errors.name)) { $("name-field").hidden = false; $("name-field").dataset.renamed = "1"; }
+    const all = { ...errors, picker: pickerErr && !/already/.test(errors.name) ? pickerErr : null };
+    if (errors.commodityCode && !$("choose-field").hidden) all.picker = all.picker || "Choose the tariff line for this product.";
     form.querySelectorAll("[data-field]").forEach((f) => {
       const key = f.dataset.field;
-      const input = field(key);
-      const msg = errors[key];
-      const show = msg && (!onlyTouched || (input && input.dataset.touched));
+      const input = key === "picker" ? $("picker-q") : field(key);
+      const msg = all[key];
+      const touched = key === "picker" ? !onlyTouched : input && input.dataset.touched;
+      const show = msg && (!onlyTouched || touched);
       f.classList.toggle("has-error", Boolean(show));
-      const slot = f.querySelector(".error");
+      const slot = f.querySelector(":scope > .error");
       if (slot) slot.textContent = show ? msg : "";
       if (input) input.setAttribute("aria-invalid", show ? "true" : "false");
     });
+    renderResolved();
   }
 
   function schedulePreview() {
@@ -524,29 +759,56 @@
     editing = p || null;
     dirty = false;
     serverErrors = {};
-    loadCodeList();
+    pick = null;
+    customMode = false;
+    delete $("name-field").dataset.renamed;
     showDrawer("form", p ? `Edit ${p.name}` : "Add product", p ? p.category : "New product");
     form.reset();
-    form.querySelectorAll("input, textarea").forEach((i) => { delete i.dataset.touched; });
-    const values = p || { category: $("f-category").value || (products[0] ? products[0].category : ""), stockAsOf: todayIso(), targetCoverMonths: 3 };
+    form.querySelectorAll("input, textarea, select").forEach((i) => { delete i.dataset.touched; });
+    const s = settings || {};
+    const values = p || {
+      stockAsOf: todayIso(),
+      leadTimeWeeks: s.defaultLeadTimeWeeks ?? null,
+      moqT: s.defaultMoqT ?? null,
+      safetyStockT: s.defaultSafetyStockT || null,
+      targetCoverMonths: s.defaultTargetCoverMonths || 3,
+    };
     for (const f of FIELDS) {
       let v = values[f];
       if (f === "safetyStockT" && !v) v = "";
       field(f).value = v === null || v === undefined ? "" : v;
     }
+    ["leadTimeWeeks", "moqT", "safetyStockT", "targetCoverMonths"].forEach((n) => setPreset(n, field(n).value));
+    fillCategories(p ? p.category : (s.defaultCategory || ""));
     field("stockAsOf").max = todayIso();
+    $("picked").hidden = true;
+    $("resolved").hidden = true;
+    $("choose-field").hidden = true;
+    $("name-field").hidden = true;
+    $("spec-field").hidden = true;
+    $("code-field").hidden = true;
+    $("picker-q").closest(".field").hidden = false;
+    $("picker-q").value = "";
+    comboOpen(false);
+    if (p) {
+      const link = (p.catalog && CAT && CAT.familyById(p.catalog.family)) ? p.catalog : (CAT ? CAT.match(p.name, p.commodityCode) : null);
+      if (link) setPick(link.family, link.values, { initial: true });
+      else { setCustom(true); $("picker-q").closest(".field").hidden = false; $("picker-q").value = ""; }
+      $("name-field").hidden = !customMode;
+    }
     showErrors({});
     codeHint();
     runPreview();
     const cancel = el("button", { class: "btn", type: "button", "data-cancel": "", text: "Cancel", onclick: () => closeDrawer() });
     const save = el("button", { class: "btn btn-primary", type: "submit", form: "view-form", id: "form-save", text: p ? "Save changes" : "Add product" });
     footer(el("span", { class: "spacer" }), cancel, save);
-    field("name").focus();
+    if (p) field("stockT").focus();
+    else $("picker-q").focus();
   }
 
   async function submitForm(event) {
     event.preventDefault();
-    form.querySelectorAll("input, textarea").forEach((i) => { i.dataset.touched = "1"; });
+    form.querySelectorAll("input, textarea, select").forEach((i) => { i.dataset.touched = "1"; });
     const body = readForm();
     if (editing && body.stockT !== String(editing.stockT) && body.stockAsOf === editing.stockAsOf) body.stockAsOf = todayIso();
     const btn = $("form-save");
@@ -567,7 +829,7 @@
       serverErrors = errors;
       clearTimeout(previewTimer);
       showErrors(errors);
-      const first = form.querySelector(".has-error input, .has-error textarea");
+      const first = form.querySelector(".has-error input:not([hidden]), .has-error select, .has-error textarea");
       if (first) first.focus();
       toast(Object.keys(errors).length ? "Check the highlighted fields" : error.message, true);
     } finally {
@@ -681,11 +943,37 @@
     dirty = true;
     if (e.target.name) { e.target.dataset.touched = "1"; delete serverErrors[e.target.name]; }
     if (e.target.name === "commodityCode") codeHint();
+    if (e.target.name === "name" || e.target.name === "spec") renderResolved();
     const cancel = $("drawer-foot").querySelector("[data-cancel]");
     if (cancel && cancel.dataset.confirm) { delete cancel.dataset.confirm; cancel.textContent = "Cancel"; cancel.classList.remove("btn-danger"); }
     schedulePreview();
   });
   form.addEventListener("focusin", () => loadCodeList(), { once: true });
+  buildPresets();
+  const pq = $("picker-q");
+  pq.addEventListener("input", (e) => { e.stopPropagation(); renderCombo(); });
+  pq.addEventListener("focus", () => renderCombo());
+  pq.addEventListener("click", () => { if ($("picker-list").hidden) renderCombo(); });
+  pq.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== pq) comboOpen(false); }, 120));
+  pq.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); moveActive(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveActive(-1); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if ($("picker-list").hidden) return renderCombo();
+      const item = comboItems[comboActive >= 0 ? comboActive : 0];
+      if (item) chooseItem(item);
+    } else if (e.key === "Escape" && !$("picker-list").hidden) { e.preventDefault(); e.stopPropagation(); comboOpen(false); }
+  });
+  $("picked-change").addEventListener("click", () => { pq.value = ""; pq.focus(); renderCombo(); });
+  $("rename-btn").addEventListener("click", () => { $("name-field").hidden = false; $("name-field").dataset.renamed = "1"; renderResolved(); field("name").focus(); });
+  $("code-btn").addEventListener("click", () => { loadCodeList(); $("code-field").hidden = false; $("choose-field").hidden = true; renderResolved(); field("commodityCode").focus(); });
+  $("code-choose").addEventListener("change", (e) => {
+    field("commodityCode").value = e.target.value;
+    field("commodityCode").dataset.touched = "1";
+    delete serverErrors.commodityCode;
+    codeHint();
+  });
   $("add-btn").addEventListener("click", () => openForm(null));
   $("import-btn").addEventListener("click", openImport);
   $("drawer-close").addEventListener("click", () => closeDrawer());
@@ -708,6 +996,7 @@
   });
   ["q", "f-category", "f-status"].forEach((id) => $(id).addEventListener("input", renderTable));
 
+  api("/api/settings").then((r) => { settings = r.settings; }).catch(() => { /* defaults */ });
   loadMe().then((m) => {
     me = m;
     if (!me.canEdit) { $("add-btn").hidden = true; $("import-btn").hidden = true; }

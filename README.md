@@ -114,7 +114,13 @@ Calculated per product: estimated stock today (recorded stock less usage since t
 
 API: `GET/POST /api/products`, `GET/PUT /api/products/:id`, `POST /api/products/:id/archive`, `POST /api/products/preview`, `POST /api/products/import` (`{ text, commit }`).
 
-### Settings (environment variables)
+**Adding a product** is pick-from-a-list: search the steel catalogue (`steel-catalogue.js` — 35 product types across merchant bar, structural sections, hollow sections, plate & sheet, bright bar, reinforcing, wire & rod and stainless, each with its standard sizes, grades and lengths), then choose size / grade / length from dropdowns. The description, specification and 10-digit commodity code are filled in automatically, so the quota category follows. Where the tariff splits a product on something a size can't tell (galvanised and pre-painted sheet, rebar) the form lists the tariff lines to choose from. "Other steel product" keeps the manual route. `tests/catalogue.test.mjs` checks every combination resolves to a real code in `steel-commodities.js`. Lead time, MOQ, safety stock and cover are dropdowns too ("Other…" for anything else).
+
+### Workspace settings (`/settings.html`)
+
+Saved in `var/settings.json`: defaults for new products (category, lead time, MOQ, safety stock, cover), which product groups appear in the Add product search, company name, plus connection status (HMRC, Claude) and a one-click JSON backup of products, quotes and settings. API: `GET/PUT /api/settings`, `GET /api/backup`.
+
+### Environment variables
 
 | Variable | Purpose |
 | --- | --- |

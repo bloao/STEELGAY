@@ -11,6 +11,7 @@ import { buildSampleRecords } from "./lib/demo.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
+import { createSettingsStore, validateSettings, CATALOGUE_GROUPS } from "./lib/settings.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -19,6 +20,7 @@ const port = Number(process.env.PORT || 3000);
 const root = process.cwd();
 const STARTED_AT = new Date().toISOString();
 const store = createStore(process.env.DATA_DIR || join(root, "var"));
+const settingsStore = createSettingsStore(process.env.DATA_DIR || join(root, "var"));
 const productStore = createStore(process.env.DATA_DIR || join(root, "var"), "products.json", () => SEED_PRODUCTS.map((p) => validateProduct(p).product));
 const allowedOrigin = process.env.ALLOWED_ORIGIN || ""; // e.g. https://app.example.com; empty = same-origin only
 const tariffApiBase = "https://www.trade-tariff.service.gov.uk/uk/api";
@@ -1514,7 +1516,12 @@ async function handleProductApi(request, response, url) {
     if (clash) errors.name = "Another product already has this description.";
     if (!valid || clash) return sendJson(response, 422, { ok: false, errors });
     const changes = productChanges(existing, product);
-    if (!changes.length) return sendJson(response, 200, await productView(existing));
+    const catalogChanged = "catalog" in product && JSON.stringify(product.catalog ?? null) !== JSON.stringify(existing.catalog ?? null);
+    if (!changes.length && !catalogChanged) return sendJson(response, 200, await productView(existing));
+    if (!changes.length) {
+      const linked = await productStore.update(id, (p) => { p.catalog = product.catalog; }, user.name, "linked to catalogue", product.catalog ? product.catalog.family : "unlinked");
+      return sendJson(response, 200, await productView(linked));
+    }
     const stockOnly = changes.every((c) => ["stockT", "stockAsOf"].includes(c.field));
     const saved = await productStore.update(id, (p) => Object.assign(p, product), user.name,
       stockOnly ? "stock updated" : "edited", changes.map((c) => c.label).join(", "), { changes });
@@ -1526,6 +1533,35 @@ async function handleProductApi(request, response, url) {
     return sendJson(response, 200, { ok: true });
   }
   sendError(response, 405, "Method not allowed");
+}
+
+// ------------------------------------------------------------ settings API
+
+async function handleSettingsApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  if (url.pathname === "/api/settings" && request.method === "GET") {
+    return sendJson(response, 200, { settings: await settingsStore.get(), catalogueGroups: CATALOGUE_GROUPS, canEdit: can(user, "edit") });
+  }
+  if (url.pathname === "/api/settings" && request.method === "PUT") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot change settings.");
+    const { settings, errors, valid } = validateSettings(await readJsonBody(request), await settingsStore.get());
+    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    return sendJson(response, 200, { settings: await settingsStore.save(settings, user.name) });
+  }
+  if (url.pathname === "/api/backup" && request.method === "GET") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot download backups.");
+    const body = JSON.stringify({
+      exportedAt: new Date().toISOString(), exportedBy: user.name,
+      settings: await settingsStore.get(), products: await productStore.list(), scenarios: await store.list(),
+    }, null, 2);
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Disposition": `attachment; filename="agx-order-tool-backup-${new Date().toISOString().slice(0, 10)}.json"`,
+      "Cache-Control": "no-store",
+    });
+    return response.end(body);
+  }
+  sendError(response, 404, "Not found");
 }
 
 // ------------------------------------------------------------ scenario API
@@ -1809,6 +1845,11 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname.startsWith("/api/products")) {
       await handleProductApi(request, response, url);
+      return;
+    }
+
+    if (url.pathname === "/api/settings" || url.pathname === "/api/backup") {
+      await handleSettingsApi(request, response, url);
       return;
     }
 
