@@ -1545,8 +1545,23 @@ const SUPPLIER_LABELS = {
   priceCovers: "Price covers", deliveryTerms: "Delivery terms", onTimePct: "On-time %", moqMinT: "MOQ min (t)", moqMaxT: "MOQ max (t)",
   moqNote: "MOQ note", ddp: "DDP available", paymentDays: "Payment terms (days)", paymentNote: "Payment note", currency: "Currency",
   leadTimeMin: "Lead time min", leadTimeMax: "Lead time max", leadTimeUnit: "Lead time unit", transport: "Transport",
-  dutyRiskNote: "Duty risk note", website: "Website", notes: "Notes",
+  dutyCosts: "Duty costs", otherDuty: "Other duty", dutyRiskNote: "Duty risk note", website: "Website", notes: "Notes",
 };
+
+// Bring suppliers seeded before the latest supplier sheet up to date
+// (fills empty / untouched fields only; each change is in the audit trail).
+async function applySupplierSheet() {
+  for (const sup of await supplierStore.list()) {
+    if (sup.status === "archived") continue;
+    const changes = SUP.sheetUpdates(sup);
+    if (!changes.length) continue;
+    await supplierStore.update(sup.id, (x) => {
+      for (const c of changes) x[c.field] = c.to;
+      x.sheetVersion = SUP.SHEET_VERSION;
+    }, "setup", "updated from supplier sheet", changes.map((c) => SUPPLIER_LABELS[c.field] || c.field).join(", "),
+    { changes: changes.map((c) => ({ ...c, label: SUPPLIER_LABELS[c.field] || c.field })) });
+  }
+}
 
 function supplierChanges(before, after) {
   const norm = (v) => (v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length) ? null : v);
@@ -2007,6 +2022,8 @@ server.on("error", (error) => {
   }
   throw error;
 });
+
+applySupplierSheet().catch((error) => console.error("Supplier sheet update failed:", error.message));
 
 server.listen(port, bindHost, () => {
   console.log(`Steel ARB live app running at http://${bindHost}:${port}`);

@@ -296,12 +296,15 @@
           fieldWrap("paymentDays", "Payment terms", preset("paymentDays", [0, 7, 14, 30, 45, 60, 90, 120], v.paymentDays, "days")),
           fieldWrap("paymentNote", "Payment note", text("paymentNote", v.paymentNote, { maxlength: "120", placeholder: "e.g. may move to 30 days" })))),
       section("Notes",
-        fieldWrap("dutyRiskNote", "Duty / quota risk note", text("dutyRiskNote", v.dutyRiskNote, { maxlength: "300", placeholder: "How they handle quota and duty" })),
+        el("div", { class: "grid-2" },
+          fieldWrap("dutyCosts", "Duty costs", select("dutyCosts", ["Not applicable", "Up to 50%", "50%", "Included in price"], v.dutyCosts, { empty: "Not set" })),
+          fieldWrap("otherDuty", "Other duty", select("otherDuty", ["Not applicable", "0%", "Ordinary duty applies"], v.otherDuty, { empty: "Not set" }))),
+        fieldWrap("dutyRiskNote", "Duty risk (quota dependent)", text("dutyRiskNote", v.dutyRiskNote, { maxlength: "300", placeholder: "How they handle quota and duty" })),
         fieldWrap("notes", "Notes", el("textarea", { id: "f-notes", name: "notes", rows: "3", maxlength: "1000", text: v.notes || "" }))));
     form.onsubmit = (e) => {
       e.preventDefault();
       const body = {};
-      for (const k of ["name", "origin", "type", "standing", "website", "priceCovers", "deliveryTerms", "transport", "ddp", "currency", "moqMinT", "moqMaxT", "leadTimeMin", "leadTimeMax", "leadTimeUnit", "onTimePct", "paymentDays", "paymentNote", "dutyRiskNote", "notes"]) body[k] = field(k).value;
+      for (const k of ["name", "origin", "type", "standing", "website", "priceCovers", "deliveryTerms", "transport", "ddp", "currency", "moqMinT", "moqMaxT", "leadTimeMin", "leadTimeMax", "leadTimeUnit", "onTimePct", "paymentDays", "paymentNote", "dutyCosts", "otherDuty", "dutyRiskNote", "notes"]) body[k] = field(k).value;
       if (body.moqMaxT === "") body.moqMaxT = body.moqMinT;
       if (body.leadTimeMax === "") body.leadTimeMax = body.leadTimeMin;
       body.supplies = checked("supplies");
@@ -632,6 +635,8 @@
         ["DDP", isImport(s) && s.ddp ? choices.ddp[s.ddp] : null],
         ["Payment", s.paymentDays === null ? null : terms(s), s.paymentNote],
         ["Minimum order", s.moqNote || (s.moqMinT !== null ? moq(s) : null)],
+        ["Duty costs", s.dutyCosts || null],
+        ["Other duty", s.otherDuty || null],
         ["Currency", s.currency],
       ]),
         gaps.length && me.canEdit ? el("div", { class: "gaps" }, el("span", { text: `Missing: ${gaps.join(", ")}.` }), el("button", { class: "link-btn", type: "button", text: gaps.includes("a contact") && gaps.length === 1 ? "Add contact" : "Complete profile", onclick: () => (gaps.length === 1 && gaps[0] === "a contact" ? openContactForm(s) : openSupplierForm(s)) })) : null),
@@ -661,7 +666,7 @@
               ? el("a", { class: "tag tag-plain tag-link", href: SOURCE_LINKS[src], target: "_blank", rel: "noopener", text: `${src} ↗` })
               : el("span", { class: "tag tag-plain", text: src }))))
           : el("p", { class: "muted small", text: "Not recorded" })),
-      s.dutyRiskNote ? sec("Quota note", null, el("p", { class: "note-text", text: s.dutyRiskNote })) : null,
+      s.dutyRiskNote ? sec("Duty risk (quota dependent)", null, el("p", { class: "note-text", text: s.dutyRiskNote })) : null,
       s.notes || s.website ? sec("Notes", null,
         s.website ? el("a", { class: "web-link", href: s.website, target: "_blank", rel: "noopener" }, icon(I.web, 14), s.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")) : null,
         s.notes ? el("p", { class: "note-text", text: s.notes }) : null) : null);
@@ -760,7 +765,7 @@
 
   const ACTION = {
     created: ["Added", "is-created"], edited: ["Edited", ""], "quote logged": ["Quote received", "is-quote"], "quote requested": ["Quote requested", "is-stock"],
-    "quote removed": ["Quote removed", ""], "contact added": ["Contact added", ""], "contact updated": ["Contact updated", ""], "contact removed": ["Contact removed", ""], archived: ["Archived", ""],
+    "quote removed": ["Quote removed", ""], "updated from supplier sheet": ["Updated from supplier sheet", ""], "contact added": ["Contact added", ""], "contact updated": ["Contact updated", ""], "contact removed": ["Contact removed", ""], archived: ["Archived", ""],
   };
   const fmtVal = (v) => (v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length) ? "—" : Array.isArray(v) ? v.join(", ") : String(v));
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { seedSuppliers, validateSupplier, validateContact, validateQuote, validateRfq, supplierMetrics, quotaLineFor } from "../lib/suppliers.mjs";
+import { seedSuppliers, sheetUpdates, SHEET_VERSION, validateSupplier, validateContact, validateQuote, validateRfq, supplierMetrics, quotaLineFor } from "../lib/suppliers.mjs";
 import { ORDER_LINES } from "../lib/steel-measure.mjs";
 
 test("seed holds the supplier list as given", () => {
@@ -63,4 +63,29 @@ test("origins map to the right quota line", () => {
   assert.equal(quotaLineFor("Spain", "12B", lines).line.orderNumber, "058622");
   assert.equal(quotaLineFor("Turkey", "12B", lines).line.orderNumber, "058623");
   assert.equal(quotaLineFor("China", "12B", lines).line.orderNumber, "058624");
+});
+
+test("supplier sheet: every column from the Supplier Options sheet is held", () => {
+  const by = Object.fromEntries(seedSuppliers().map((s) => [s.name, s]));
+  const sheet = {
+    "7 Steel": ["Delivered to depot", 755, "included", "Not applicable", "Not applicable", "Zero", 2, 3, "days"],
+    LME: ["DAP", 755, "included", "Up to 50%", "0%", "Medium to high depending on where we are in the quarter, load by load.", 2, 3, "weeks"],
+    Olifer: ["DAP", 800, "included", "Up to 50%", "0%", "Medium to high depending on where we are in the quarter, load by load.", 2, 3, "weeks"],
+    Megasa: ["DDP", 755, "included", "Not applicable", "Not applicable", "Low — but risk of non-delivery if quota critical or exceeded.", 2, 3, "weeks"],
+    Venete: ["DAP", 770, "included", "Up to 50%", "0%", "Shipment via vessel, usually plan for start of quarter. Medium risk.", 5, 6, "weeks"],
+  };
+  for (const [name, row] of Object.entries(sheet)) {
+    const s = by[name];
+    assert.deepEqual([s.deliveryTerms, s.quotes[0].pricePerT, s.transport, s.dutyCosts, s.otherDuty, s.dutyRiskNote, s.leadTimeMin, s.leadTimeMax, s.leadTimeUnit], row, name);
+    assert.deepEqual([s.supplies, s.moqMinT, s.moqMaxT, s.moqNote], [["Merchant Bar"], 25, 28, "25–28 t load"], name);
+  }
+});
+
+test("sheet update fills gaps in older files but never overwrites edits", () => {
+  const old = { name: "LME", dutyRiskNote: "Duty up to 50%. Medium to high depending on quarter position, load by load.", moqNote: "", transport: "included", supplies: ["Merchant Bar"], moqMinT: 25, moqMaxT: 28, deliveryTerms: "DAP", leadTimeMin: 2, leadTimeMax: 3, leadTimeUnit: "weeks" };
+  const fields = sheetUpdates(old).map((c) => c.field).sort();
+  assert.deepEqual(fields, ["dutyCosts", "dutyRiskNote", "moqNote", "otherDuty"]);
+  assert.deepEqual(sheetUpdates({ ...old, dutyRiskNote: "My own note" }).map((c) => c.field).includes("dutyRiskNote"), false);
+  assert.deepEqual(sheetUpdates({ ...old, sheetVersion: SHEET_VERSION }), []);
+  assert.deepEqual(sheetUpdates({ name: "Someone else" }), []);
 });
