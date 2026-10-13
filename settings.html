@@ -94,13 +94,21 @@
             </div>
           </section>
 
-          <section class="settings-section">
+          <section class="settings-section" id="connections">
             <div>
               <h2>Connections</h2>
               <p>Live data the tool relies on. Credentials live in the server's <code>.env</code> file, not here.</p>
             </div>
-            <div class="settings-fields" id="connections">
+            <div class="settings-fields" id="connections-list">
               <div class="conn"><div><strong>HMRC Trade Tariff</strong><span class="small">Live steel quota balances</span></div><span class="status-dot is-muted" id="conn-hmrc">Checking…</span></div>
+              <div class="conn"><div><strong>ONS steel price indices</strong><span class="small">Live market pulse — free, official, no key</span></div><span class="status-dot is-muted" id="conn-ons">Checking…</span></div>
+              <div class="conn conn-key">
+                <div><strong>LME steel prices (Metals-API)</strong><span class="small" id="conn-lme-sub">Daily LME rebar and scrap prices. Get a key at <a href="https://metals-api.com" target="_blank" rel="noopener">metals-api.com</a> and paste it here.</span></div>
+                <span class="status-dot is-muted" id="conn-lme">Checking…</span>
+                <label class="field" data-field="metalsApiKey" style="grid-column:1 / -1">API key
+                  <input name="metalsApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Metals-API access key"><span class="hint" id="metals-hint">Stored on your server only; the browser never sees it again after saving.</span><span class="error"></span>
+                </label>
+              </div>
               <div class="conn"><div><strong>Claude assistant</strong><span class="small" id="conn-claude-model">Answers questions in the Assistant tab</span></div><span class="status-dot is-muted" id="conn-claude">Checking…</span></div>
             </div>
           </section>

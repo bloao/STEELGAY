@@ -130,6 +130,10 @@ API: `GET/POST /api/suppliers`, `GET/PUT /api/suppliers/:id`, `POST /api/supplie
 
 Benchmark price series saved in `var/benchmarks.json`, compared with every supplier's latest quote (matrix + price-history chart).
 
+Live feeds (automatic, pushed to open pages via Server-Sent Events at `/api/benchmarks/events`):
+- **ONS producer price indices** for steel (GHAV domestic, GHCZ imported, EZWP import prices; 2015 = 100) — free, no key, checked daily. Shown in **Market pulse** (1/3/12-month change) and as "Market since quote" against each supplier's quote date.
+- **LME steel via Metals-API** (`STEEL-RE` rebar FOB Turkey, `STEEL-SC` scrap; set `METALS_API_SYMBOLS` to change) — paste a metals-api.com key in Settings → Connections (or `METALS_API_KEY` in `.env`); refreshed every 12 hours. Feed state is kept in `var/feeds.json`.
+
 Ingestion:
 - **Upload / paste** an export — Kallanish Price Analyser → Export to Excel, a MEPS price table, or any CSV. One row per price (Date, Series, Price, Currency) or one column per series both work; title rows, UK dates, month names, Excel date numbers, `1,020` / `£760` are handled. You map each series in the file to a saved series once; later imports match by name.
 - **Market intel**: add a price by hand.

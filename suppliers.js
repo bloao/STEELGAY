@@ -772,6 +772,22 @@
     return `${v < 0 ? "−" : "+"}${a > 0 && a < 1 ? `${SYM[cur] || "£"}${a.toFixed(2)}` : money(a, cur)}`;
   };
 
+  const fmtEq = (x, unit) => (unit === "£/t" ? `£${x.toFixed(2)}` : unit === "t" ? `${(Math.round(x * 100) / 100).toLocaleString("en-GB")} t` : unit === "months" ? `${x.toFixed(2)} mo` : String(Math.round(x * 100) / 100));
+  const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Count a number up from zero (skipped when the user prefers less motion).
+  function countUp(node, to, format, ms = 700, delay = 0) {
+    if (!Number.isFinite(to) || reduceMotion()) { node.textContent = format(to); return; }
+    const start = performance.now() + delay;
+    node.textContent = format(0);
+    const step = (now) => {
+      const t = Math.min(1, Math.max(0, (now - start) / ms));
+      const eased = 1 - Math.pow(1 - t, 3);
+      node.textContent = format(to * eased);
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
   async function loadBreakdown(s, opts) {
     bd.key = s.id;
     bd.opts = { ...opts };
@@ -914,44 +930,97 @@
     const answer = el("div", { class: "bd2-answer" },
       el("div", { class: "bd2-answer-main" },
         el("span", { class: "bd2-k", text: "Effective cost" }),
-        el("strong", { class: "bd2-big", text: perT(d.effectivePerT) }),
+        (() => { const n = el("strong", { class: "bd2-big", text: perT(d.effectivePerT) }); if (bd.animatedFor !== `${s.id}:${d.effectivePerT}`) { bd.animatedFor = `${s.id}:${d.effectivePerT}`; countUp(n, d.effectivePerT, (x) => `£${Math.round(x).toLocaleString("en-GB")}/t`, 800); } return n; })(),
         el("span", { class: "bd2-k2", text: `${money(d.effectivePerT * d.inputs.tonnage)} for ${d.inputs.tonnage} t · quoted ${perT(d.inputs.quotedPerT, cur)}` })),
       span > 0.5
         ? el("div", { class: "bd2-range", role: "img", "aria-label": `Best case ${perT(d.bestPerT)}, worst case ${perT(d.worstPerT)}` },
-            el("div", { class: "bd2-track" }, el("span", { class: "bd2-fill", style: `width:${pos}%` }), el("span", { class: "bd2-marker", style: `left:${pos}%` })),
+            (() => {
+              const fill = el("span", { class: "bd2-fill", style: "width:0%" });
+              const marker = el("span", { class: "bd2-marker", style: "left:0%" });
+              requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = `${pos}%`; marker.style.left = `${pos}%`; }));
+              return el("div", { class: "bd2-track" }, fill, marker);
+            })(),
             el("div", { class: "bd2-range-labels" }, el("span", {}, el("b", { text: perT(d.bestPerT) }), " if quota holds"), el("span", {}, el("b", { class: "is-bad", text: perT(d.worstPerT) }), " if it runs out")),
             el("p", { class: "bd2-range-note", text: prob === null ? "" : `${pctFmt(prob)} chance the quota runs out before ${fmt.date(d.inputs.importDate)}.` }))
         : el("div", { class: "bd2-range is-flat" }, el("span", { class: "status-dot", text: s.origin === "UK" ? "UK steel — no quota or steel duty" : !e.buyerImports ? "Supplier pays the duty — price is fixed" : "No steel-measure duty on this product" })));
 
-    // ---- 3. how the price is built, with the working shown on request
-    const quotaLine = e.lines.find((l) => l.key === "quota");
-    const engineWorking = (l) => {
-      if (l.key === "quota" && e.quota) return `${pctFmt(e.quota.probability)} chance × 50% duty × £${Math.round(e.customsValuePerT)} customs value = £${l.perTonne} per tonne expected. ${e.quota.basis || ""}`;
-      if (l.key === "duty") return `${l.source}.`;
-      return l.source;
+    // ---- 3. how the price is built — every line is an equation whose inputs
+    // show their value and where the number comes from.
+    const cv = e.customsValuePerT;
+    const ev = (label, value, kind, source) => ({ t: "v", label, value, kind, source });
+    const eop = (o) => ({ t: "op", o });
+    const engineEquations = (l) => {
+      if (l.key === "quota" && e.quota) return [{ parts: [
+        ev("Chance quota runs out", pctFmt(e.quota.probability), "live", `HMRC live quota${e.quota.orderNumber ? ` · ${String(e.quota.orderNumber).replace(/^.*order /, "line ")}` : ""}`), eop("×"),
+        ev("Steel-measure duty", "50%", "fixed", "UK steel measure"), eop("×"),
+        ev("Customs value", `£${Math.round(cv)}/t`, "calc", "Price + freight + insurance")],
+        result: { label: "Expected duty", value: l.perTonne, unit: "£/t" } }];
+      if (l.key === "duty" && cv) return [{ parts: [ev("Customs value", `£${Math.round(cv)}/t`, "calc", "Price + freight + insurance"), eop("×"), ev("Import duty rate", `${((l.perTonne / cv) * 100).toFixed(1)}%`, "live", l.source)], result: { label: "Duty", value: l.perTonne, unit: "£/t" } }];
+      return [{ parts: [ev(l.label, `£${l.perTonne}/t`, l.source && /entered/i.test(l.source) ? "you" : "live", l.source)], result: { label: l.label, value: l.perTonne, unit: "£/t" } }];
     };
     const steps = [
-      ...e.lines.filter((l) => l.key !== "price" && (l.perTonne || 0) !== 0).map((l) => ({ label: l.key === "quota" ? "Expected steel-measure duty" : l.label, perTonne: l.perTonne, working: engineWorking(l), why: l.key === "quota" ? "Within quota there's no steel duty; once the origin's line is used up, 50% applies. This is the probability-weighted cost." : null })),
-      ...d.adjustments.map((a) => ({ label: a.label, perTonne: a.perTonne, working: a.working || a.formula, why: a.why })),
+      ...e.lines.filter((l) => l.key !== "price" && (l.perTonne || 0) !== 0).map((l) => ({ label: l.key === "quota" ? "Expected steel-measure duty" : l.label, perTonne: l.perTonne, equations: engineEquations(l),
+        why: l.key === "quota" ? (e.quota && e.quota.basis ? `Within quota there's no steel duty; once the origin's line is used up, 50% applies. ${e.quota.basis}` : null) : null })),
+      ...d.adjustments.map((a) => ({ label: a.label, perTonne: a.perTonne, equations: a.equations || [], why: a.why })),
     ];
     const inPrice = [...new Set(e.lines.filter((l) => l.status === "in-price").map((l) => l.label.toLowerCase()))];
     const supplierCarries = e.lines.some((l) => l.status === "supplier");
-    const stepRow = (st) => {
-      const row = el("li", { class: `bd2-step ${st.perTonne < 0 ? "is-down" : "is-up"}` });
+    const KIND = { quote: "Quote", supplier: "Supplier", product: "Product", you: "Your choice", live: "Live data", fixed: "Fixed", calc: "Earlier step" };
+    const renderEq = (eq, n, total) => {
+      let i = 0;
+      const tok = (p) => {
+        const style = `--i:${i++}`;
+        if (p.t === "op") return el("span", { class: "eq-op", style, "aria-hidden": "true", text: p.o });
+        return el("div", { class: `eq-v k-${p.kind}`, style },
+          el("span", { class: "eq-l", text: p.label }),
+          el("strong", { class: "eq-n", text: p.value }),
+          el("span", { class: "eq-s", title: p.source || "" }, el("span", { class: "eq-k", text: KIND[p.kind] || "" }), p.source && p.source !== KIND[p.kind] ? ` · ${p.source}` : ""));
+      };
+      const res = eq.result;
+      const resVal = el("strong", { class: "eq-n", "data-count": String(Math.abs(res.value)), "data-unit": res.unit, text: fmtEq(Math.abs(res.value), res.unit) });
+      return el("div", { class: "eq" },
+        total > 1 ? el("span", { class: "eq-step", text: `Step ${n + 1}` }) : null,
+        el("div", { class: "eq-row", role: "math", "aria-label": `${eq.parts.map((p) => (p.t === "op" ? p.o : `${p.label} ${p.value}`)).join(" ")} equals ${res.label} ${fmtEq(Math.abs(res.value), res.unit)}` },
+          ...eq.parts.map(tok),
+          el("span", { class: "eq-op is-eq", style: `--i:${i++}`, "aria-hidden": "true", text: "=" }),
+          el("div", { class: `eq-r${res.sign < 0 ? " is-saving" : ""}`, style: `--i:${i++}` }, el("span", { class: "eq-l", text: res.label }), resVal)));
+    };
+    const openWork = (row, btn, work, open) => {
+      work.classList.toggle("is-open", open);
+      btn.setAttribute("aria-expanded", String(open));
+      if (open) work.querySelectorAll("[data-count]").forEach((n) => countUp(n, Number(n.dataset.count), (x) => fmtEq(x, n.dataset.unit), 650, 260));
+    };
+    const stepRow = (st, idx) => {
+      const row = el("li", { class: `bd2-step ${st.perTonne < 0 ? "is-down" : "is-up"}`, style: `--i:${idx}` });
       const btn = el("button", { type: "button", class: "bd2-step-btn", "aria-expanded": "false" },
         el("span", { class: "bd2-step-label", text: st.label }),
-        el("span", { class: "bd2-step-val", text: `${signed(st.perTonne, "GBP")}` }),
+        el("span", { class: "bd2-step-val", text: `${st.perTonne < 0 ? "−" : "+"}£${Math.abs(st.perTonne).toFixed(2)}` }),
         icon('<path d="m6 9 6 6 6-6"/>', 14));
-      const work = el("div", { class: "bd2-work", hidden: "" }, el("code", { text: st.working || "" }), st.why ? el("p", { text: st.why }) : null);
-      btn.addEventListener("click", () => { const open = work.hidden; work.hidden = !open; btn.setAttribute("aria-expanded", String(open)); });
+      const work = el("div", { class: "bd2-work" }, el("div", { class: "bd2-work-in" },
+        ...st.equations.map((q, n) => renderEq(q, n, st.equations.length)),
+        st.why ? el("p", { class: "eq-why", text: st.why }) : null));
+      btn.addEventListener("click", () => openWork(row, btn, work, !work.classList.contains("is-open")));
       row.append(btn, work);
       return row;
     };
+    const stepEls = steps.map(stepRow);
+    const allBtn = steps.length ? el("button", { class: "link-btn", type: "button", text: "Show all working", onclick: (ev) => {
+      const open = ev.currentTarget.textContent.startsWith("Show");
+      ev.currentTarget.textContent = open ? "Hide working" : "Show all working";
+      stepEls.forEach((r) => openWork(r, r.querySelector(".bd2-step-btn"), r.querySelector(".bd2-work"), open));
+    } }) : null;
+    const legend = el("div", { class: "eq-legend", "aria-label": "Where the numbers come from" },
+      ...["quote", "supplier", "product", "you", "live", "fixed", "calc"].map((k) => el("span", { class: `eq-chip k-${k}`, text: KIND[k] })));
     const build = el("div", { class: "bd2-build" },
-      el("div", { class: "bd2-line is-base" }, el("span", { text: cur === "GBP" ? "Quoted price" : `Quoted price (${d.inputs.quotedPerT} ${cur} × ${e.fx.rate})` }), el("strong", { text: perT(e.lines.find((l) => l.key === "price").perTonne) })),
-      steps.length ? el("ul", { class: "bd2-steps" }, ...steps.map(stepRow)) : null,
+      el("div", { class: "bd2-line is-base" }, el("span", {}, cur === "GBP" ? "Quoted price" : `Quoted price (${d.inputs.quotedPerT} ${cur} × ${e.fx.rate})`, el("small", { class: "bd2-line-src", text: d.inputs.quoteChannel === "list" ? "supplier list" : `quote of ${fmt.date(d.inputs.quoteDate)}` })), el("strong", { text: perT(e.lines.find((l) => l.key === "price").perTonne) })),
+      steps.length ? el("ul", { class: "bd2-steps" }, ...stepEls) : null,
       el("div", { class: "bd2-line is-total" }, el("span", { text: "Effective cost" }), el("strong", { text: perT(d.effectivePerT) })),
-      el("p", { class: "bd2-foot" }, steps.length ? "Tap a line to see the working. " : "", inPrice.length ? `Already in their price: ${inPrice.join(", ")}.` : "", supplierCarries ? " Duty and customs are theirs." : ""));
+      el("p", { class: "bd2-foot" }, inPrice.length ? `Already in their price: ${inPrice.join(", ")}.` : "", supplierCarries ? " Duty and customs are theirs." : ""));
+    // open the biggest line by default so the working is visible straight away
+    if (stepEls.length) {
+      const biggest = steps.reduce((bi, st, i) => (Math.abs(st.perTonne) > Math.abs(steps[bi].perTonne) ? i : bi), 0);
+      requestAnimationFrame(() => { const r = stepEls[biggest]; openWork(r, r.querySelector(".bd2-step-btn"), r.querySelector(".bd2-work"), true); });
+    }
 
     // ---- 4. what to weigh up — a compact checklist, most important first
     const order = { risk: 0, watch: 1, muted: 2, good: 3 };
@@ -999,7 +1068,7 @@
         counts.watch ? el("span", { class: "is-watch", text: `${counts.watch} to watch` }) : null,
         counts.muted ? el("span", { class: "is-muted", text: `${counts.muted} missing` }) : null,
         el("span", { class: "is-good", text: `${counts.good} good` })), checklist),
-      sec("How the price is built", el("span", { class: "small muted", text: "per tonne" }), build),
+      sec("How the price is built", allBtn, legend, build),
       compare ? sec("Same order from each supplier", el("span", { class: "small muted", text: "effective £/t, each at their own lead time" }), compare) : null,
       (e.checks || []).length || (e.warnings || []).length ? sec("Before you order", null, el("ul", { class: "bd2-todo" }, ...[...(e.warnings || []), ...(e.checks || [])].map((c) => el("li", { text: c })))) : null,
       el("div", { class: "bd2-actions" }, el("p", { class: "small muted", text: "Estimates only — not customs advice." }), save),
@@ -1163,6 +1232,8 @@
     });
   });
   if (location.hash === "#market") showPane("market", { push: false });
+  // Live push from the server (new quotes / prices) — refresh unless you're mid-edit.
+  window.addEventListener("agx:live", () => { if (mode !== "form") load(); });
 
   Promise.all([load(), api("/api/products").then((r) => { products = r.products.sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true })); }).catch(() => {})]).then(() => {
     const params = new URLSearchParams(window.location.search);

@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
-import { readFile, mkdtemp, rm } from "node:fs/promises";
+import { readFile, writeFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import { randomBytes, timingSafeEqual } from "node:crypto";
@@ -11,7 +11,8 @@ import { buildSampleRecords } from "./lib/demo.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
-import { createSettingsStore, validateSettings, CATALOGUE_GROUPS } from "./lib/settings.mjs";
+import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS } from "./lib/settings.mjs";
+import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
 import * as BM from "./lib/benchmarks.mjs";
 import { feedConfig, fetchFeed, FEED_SOURCES } from "./lib/benchmark-feed.mjs";
@@ -1623,12 +1624,22 @@ async function supplierBreakdown(s, opts = {}) {
   const rate = ratePct / 100;
   const usage = product.monthlyUsageT || 0;
   const adjustments = [];
+  // Equation building blocks: every number carries where it came from, so the
+  // page can show each data point (quote, supplier profile, product, your
+  // choices, live HMRC data, fixed constants, or an earlier step).
+  const v = (label, value, kind, source, raw) => ({ t: "v", label, value, kind, source, raw });
+  const op = (o) => ({ t: "op", o });
+  const quoteSrc = latest.channel === "list" ? "Supplier list price" : `Quote of ${latest.date}`;
+  const priceV = v("Price", `£${round2(pricePerT)}/t`, "quote", quoteSrc, pricePerT);
+  const rateV = v("Cost of capital", `${ratePct}%`, "you", "Set above (default in Settings)", rate);
   // Credit terms are worth money: paying in N days instead of on delivery.
   if (s.paymentDays !== null && s.paymentDays !== undefined) {
     adjustments.push({ key: "terms", label: `Payment terms credit (${s.paymentDays} days)`, perTonne: -round2(pricePerT * rate * (s.paymentDays / 365)),
       formula: `price × ${ratePct}% cost of capital × ${s.paymentDays}/365`,
       working: `£${round2(pricePerT)} × ${ratePct}% × ${s.paymentDays} ÷ 365 = £${round2(pricePerT * rate * (s.paymentDays / 365))} saved per tonne`,
-      why: "Paying later keeps cash in the business; this is what that credit is worth at your cost of capital." });
+      why: "Paying later keeps cash in the business; this is what that credit is worth at your cost of capital.",
+      equations: [{ parts: [priceV, op("×"), rateV, op("×"), v("Credit period", `${s.paymentDays} days`, "supplier", "Supplier payment terms", s.paymentDays), op("÷"), v("Days in a year", "365", "fixed", "Constant", 365)],
+        result: { label: "Saved per tonne", value: round2(pricePerT * rate * (s.paymentDays / 365)), unit: "£/t", sign: -1 } }] });
   }
   // Buying above what you need ties up cash until it's used.
   const moqMin = s.moqMinT || 0;
@@ -1638,7 +1649,13 @@ async function supplierBreakdown(s, opts = {}) {
     adjustments.push({ key: "moq", label: `Minimum order: ${round2(extra)} t more than you need`, perTonne: round2((extra * pricePerT * rate * (months / 12)) / tonnage),
       formula: `${round2(extra)} t extra × price × ${ratePct}% × ${round2(months)} months to use it ÷ ${tonnage} t`,
       working: `${round2(extra)} t × £${round2(pricePerT)} × ${ratePct}% × ${round2(months)}/12 months ÷ ${tonnage} t = £${round2((extra * pricePerT * rate * (months / 12)) / tonnage)} per tonne`,
-      why: "Their minimum is more than you need, so the extra sits in stock until you use it." });
+      why: "Their minimum is more than you need, so the extra sits in stock until you use it.",
+      equations: [
+        { parts: [v("Their minimum", `${moqMin} t`, "supplier", "Supplier MOQ", moqMin), op("−"), v("Your order", `${tonnage} t`, "you", "Your choice", tonnage)], result: { label: "Extra stock", value: round2(extra), unit: "t" } },
+        { parts: [v("Extra stock", `${round2(extra)} t`, "calc", "Step 1", extra), op("÷"), v("Monthly usage", usage ? `${round2(usage)} t/month` : "not set", "product", usage ? "Product usage" : "Assumed 6 months", usage)], result: { label: "Months to use it", value: round2(months), unit: "months" } },
+        { parts: [v("Extra stock", `${round2(extra)} t`, "calc", "Step 1", extra), op("×"), priceV, op("×"), rateV, op("×"), v("Time held", `${round2(months)} ÷ 12 yr`, "calc", "Step 2", months / 12), op("÷"), v("Your order", `${tonnage} t`, "you", "Your choice", tonnage)],
+          result: { label: "Cost per tonne", value: round2((extra * pricePerT * rate * (months / 12)) / tonnage), unit: "£/t" } },
+      ] });
   }
   // Late deliveries mean holding extra safety stock.
   if (s.onTimePct !== null && s.onTimePct !== undefined && s.onTimePct < 100 && usage > 0 && leadDays) {
@@ -1647,7 +1664,13 @@ async function supplierBreakdown(s, opts = {}) {
     adjustments.push({ key: "reliability", label: `Reliability buffer (${s.onTimePct}% on time)`, perTonne: round2((bufferT * pricePerT * rate) / (usage * 12)),
       formula: `${Math.round(late * 100)}% late × cover for half the lead time (${round2(bufferT)} t) × price × ${ratePct}% ÷ ${round2(usage * 12)} t a year`,
       working: `${Math.round(late * 100)}% × ${round2(usage)} t/month × ${round2(leadDays / 2)} days ÷ 30.4 = ${round2(bufferT)} t extra safety stock; ${round2(bufferT)} t × £${round2(pricePerT)} × ${ratePct}% ÷ ${round2(usage * 12)} t a year = £${round2((bufferT * pricePerT * rate) / (usage * 12))} per tonne`,
-      why: "Late loads mean holding more safety stock; this is the cost of carrying it, spread over a year's purchases." });
+      why: "Late loads mean holding more safety stock; this is the cost of carrying it, spread over a year's purchases.",
+      equations: [
+        { parts: [v("Late loads", `${Math.round(late * 100)}%`, "supplier", `100% − ${s.onTimePct}% on time`, late), op("×"), v("Monthly usage", `${round2(usage)} t`, "product", "Product usage", usage), op("×"), v("Half the lead time", `${round2(leadDays / 2)} days ÷ 30.4`, "supplier", `Lead time ${s.leadTimeMax ?? s.leadTimeMin} ${s.leadTimeUnit}`, leadDays / 2 / 30.44)],
+          result: { label: "Extra safety stock", value: round2(bufferT), unit: "t" } },
+        { parts: [v("Extra safety stock", `${round2(bufferT)} t`, "calc", "Step 1", bufferT), op("×"), priceV, op("×"), rateV, op("÷"), v("Bought per year", `${round2(usage * 12)} t`, "product", "Usage × 12", usage * 12)],
+          result: { label: "Cost per tonne", value: round2((bufferT * pricePerT * rate) / (usage * 12)), unit: "£/t" } },
+      ] });
   }
   const quotaLine = engine.lines.find((l) => l.key === "quota");
   const quotaApplies = engine.buyerImports && engine.quota;
@@ -1729,6 +1752,7 @@ async function handleSupplierApi(request, response, url) {
     return done(await supplierStore.update(id, (x) => {
       x.quotes = [...(x.quotes || []), entry];
       for (const r of x.rfqs || []) if (r.status === "open") { r.status = "answered"; r.answeredAt = entry.at; r.quoteId = entry.id; }
+      setTimeout(() => broadcast("quotes", { supplierId: id }), 0);
     }, user.name, "quote logged", `${sym}${quote.pricePerT}/t${product ? ` · ${product.name}` : ""}${quote.tonnage ? ` · ${quote.tonnage} t` : ""} · ${SUP.QUOTE_CHANNELS[quote.channel]}${answered ? " · answers quote request" : ""}`, { quoteId: entry.id }), 201);
   }
   if (sub === "quotes" && subId && method === "DELETE") {
@@ -1769,6 +1793,97 @@ async function handleSupplierApi(request, response, url) {
       `${rfq.lines.length} product${rfq.lines.length === 1 ? "" : "s"}${total ? ` · ${total} t` : ""}${contact ? ` · to ${contact.name}` : ""} · ${rfq.channel === "copy" ? "copied" : "email"}`, { rfqId: entry.id }), 201);
   }
   sendError(response, 405, "Method not allowed");
+}
+
+
+// ------------------------------------------------------------ live market feeds
+
+// Browsers listening for changes (Server-Sent Events) — Market prices and
+// supplier pages refresh themselves when new prices or quotes arrive.
+const listeners = new Set();
+function broadcast(event, data = {}) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify({ at: new Date().toISOString(), ...data })}\n\n`;
+  for (const res of listeners) { try { res.write(msg); } catch { listeners.delete(res); } }
+}
+setInterval(() => { for (const res of listeners) { try { res.write(": ping\n\n"); } catch { listeners.delete(res); } } }, 25_000).unref?.();
+
+// Last run per live source, kept on disk so a restart doesn't re-fetch.
+const feedStateFile = join(process.env.DATA_DIR || join(root, "var"), "feeds.json");
+let feedState = null;
+async function getFeedState() {
+  if (feedState) return feedState;
+  try { feedState = JSON.parse(await readFile(feedStateFile, "utf8")); } catch { feedState = { runs: {} }; }
+  return feedState;
+}
+async function saveFeedState() {
+  await mkdir(dirname(feedStateFile), { recursive: true });
+  await writeFile(feedStateFile, JSON.stringify(feedState, null, 2));
+}
+
+const LIVE_INTERVAL_H = { ONS: 24, LME: 12 };
+const metalsKey = async () => process.env.METALS_API_KEY || (await settingsStore.get()).metalsApiKey || "";
+const metalsSymbols = () => (process.env.METALS_API_SYMBOLS || LIVE.METALS_DEFAULT_SYMBOLS.join(",")).split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
+
+// Create the series the first time, then merge new points into it.
+async function upsertFeedSeries(feedKey, def, points, by) {
+  let series = (await benchmarkStore.list()).find((x) => x.feedKey === feedKey && x.status !== "archived");
+  if (!series) {
+    series = await benchmarkStore.create({ ...def, feedKey, keys: [BM.normKey(def.name)], status: "active", points: [] }, by);
+  }
+  const before = new Set((series.points || []).map((p) => `${p.date}:${p.price}`));
+  const fresh = points.filter((p) => !before.has(`${p.date}:${p.price}`));
+  if (!fresh.length) return 0;
+  const at = new Date().toISOString();
+  await benchmarkStore.update(series.id, (x) => { x.points = BM.mergePoints(x.points || [], fresh.map((p) => ({ date: p.date, price: p.price, via: "feed", by, at }))); },
+    by, "feed update", `${fresh.length} new value${fresh.length === 1 ? "" : "s"} · latest ${fresh[fresh.length - 1].date}`);
+  return fresh.length;
+}
+
+async function runLive(source, { force = false } = {}) {
+  const state = await getFeedState();
+  const last = state.runs[source];
+  if (!force && last && last.ok && Date.now() - Date.parse(last.at) < LIVE_INTERVAL_H[source] * 3_600_000) return last;
+  const at = new Date().toISOString();
+  let result;
+  try {
+    if (source === "ONS") {
+      let added = 0;
+      const errors = [];
+      for (const def of LIVE.ONS_SERIES) {
+        try {
+          const pts = await LIVE.fetchOns(def.id);
+          added += await upsertFeedSeries(`ons:${def.id}`, { name: def.name, source: "ONS", group: "All steel", region: def.region, basis: "Index (2015 = 100)", currency: "GBP", kind: "index", unit: "index", notes: def.note, sourceUrl: `https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/${def.id.toLowerCase()}/ppi` }, pts, "feed:ONS");
+        } catch (error) { errors.push(error.message); }
+      }
+      if (errors.length === LIVE.ONS_SERIES.length) throw new Error(errors[0]);
+      result = { ok: true, at, added, errors };
+    } else if (source === "LME") {
+      const key = await metalsKey();
+      if (!key) return (state.runs.LME = { ok: false, at, error: "No Metals-API key yet — add it in Settings.", needsKey: true });
+      const symbols = metalsSymbols();
+      const since = last && last.ok ? last.at : null;
+      const pts = await LIVE.fetchMetals(key, symbols, { since });
+      let added = 0;
+      for (const sym of symbols) {
+        const meta = LIVE.METALS_SYMBOLS[sym] || { name: `LME ${sym}`, group: "All steel" };
+        added += await upsertFeedSeries(`metals:${sym}`, { name: meta.name, source: "LME", group: meta.group, region: meta.region || "", basis: meta.basis || "", currency: "USD", kind: meta.kind || "price", notes: `${meta.note ? `${meta.note}. ` : ""}Metals-API symbol ${sym}, USD per tonne.` },
+          pts.filter((p) => p.symbol === sym), "feed:LME");
+      }
+      result = { ok: true, at, added };
+    } else throw new Error("Unknown live source");
+  } catch (error) {
+    result = { ok: false, at, error: error.message };
+  }
+  state.runs[source] = result;
+  await saveFeedState().catch(() => {});
+  if (result.ok && result.added) broadcast("prices", { source, added: result.added });
+  return result;
+}
+
+function scheduleLive() {
+  const tick = () => { runLive("ONS").catch(() => {}); runLive("LME").catch(() => {}); };
+  setTimeout(tick, 8_000).unref?.();
+  setInterval(tick, 60 * 60 * 1000).unref?.(); // check hourly; each source runs when it's due
 }
 
 // ------------------------------------------------------------ market prices API
@@ -1832,6 +1947,7 @@ async function runFeed(source) {
     const mapping = Object.fromEntries(plan.filter((g) => !g.seriesId).map((g) => [g.key, { create: { name: g.name, source, group: settings.defaultCategory || "Merchant Bar", currency: g.currency || "GBP" } }]));
     const res = await importBenchmarkRows(parsed.rows, mapping, `feed:${source}`, "feed");
     feedRuns[source] = { ok: true, at: started, rows: parsed.rows.length, ...res, errors: parsed.errors.slice(0, 5) };
+    if (res.added) broadcast("prices", { source });
   } catch (error) {
     feedRuns[source] = { ok: false, at: started, error: error.message };
   }
@@ -1850,7 +1966,7 @@ async function marketView() {
   const series = await liveSeries();
   const suppliers = (await supplierStore.list()).filter((x) => x.status !== "archived");
   const fx = await fxMap([...series.map((x) => x.currency), ...suppliers.flatMap((x) => (x.quotes || []).map((q) => q.currency))]);
-  const groups = [...new Set([...series.map((x) => x.group), ...suppliers.flatMap((x) => x.supplies || [])])].filter(Boolean).sort();
+  const groups = [...new Set([...series.filter((x) => x.kind !== "index" && x.group !== "All steel").map((x) => x.group), ...suppliers.flatMap((x) => x.supplies || [])])].filter(Boolean).sort();
   const competition = groups.flatMap((g) => BM.competitionSeries(suppliers, g, fx));
   const cfg = feedConfig();
   const feeds = Object.keys(BM.SOURCES).map((source) => {
@@ -1861,8 +1977,15 @@ async function marketView() {
       feed: FEED_SOURCES.includes(source) ? { configured: cfg[source].configured, env: cfg[source].envUrl, lastRun: feedRuns[source] || null } : null,
     };
   });
+  const state = await getFeedState();
+  const live = {
+    ONS: { ...(state.runs.ONS || {}), auto: true, series: LIVE.ONS_SERIES.map((d) => d.id) },
+    LME: { ...(state.runs.LME || {}), hasKey: Boolean(await metalsKey()), symbols: metalsSymbols() },
+    listeners: listeners.size,
+  };
   return {
-    series: series.map((x) => ({ ...x, latest: BM.latest(x.points) })),
+    live,
+    series: series.map((x) => ({ ...x, latest: BM.latest(x.points), changes: LIVE.periodChanges(x.points) })),
     competition: competition.map((x) => ({ ...x, latest: BM.latest(x.points) })),
     suppliers: suppliers.map((x) => ({ id: x.id, name: x.name, origin: x.origin, supplies: x.supplies || [], metrics: SUP.supplierMetrics(x), quotes: (x.quotes || []).map(({ date, pricePerT, currency, covers, channel }) => ({ date, pricePerT, currency, covers, channel })) })),
     fx, groups, feeds,
@@ -1874,6 +1997,18 @@ async function handleBenchmarkApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   const method = request.method;
   if (url.pathname === "/api/benchmarks" && method === "GET") return sendJson(response, 200, await marketView());
+  if (url.pathname === "/api/benchmarks/events" && method === "GET") {
+    response.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-accel-buffering": "no" });
+    response.write(`event: hello\ndata: {"listeners":${listeners.size + 1}}\n\n`);
+    listeners.add(response);
+    request.on("close", () => listeners.delete(response));
+    return;
+  }
+  const liveMatch = url.pathname.match(/^\/api\/benchmarks\/live\/(ONS|LME)\/run$/);
+  if (liveMatch && method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot run feeds.");
+    return sendJson(response, 200, await runLive(liveMatch[1], { force: true }));
+  }
   if (method !== "GET" && !can(user, "edit")) return sendError(response, 403, "Your account cannot change market prices.");
   if (url.pathname === "/api/benchmarks" && method === "POST") {
     const body = await readJsonBody(request);
@@ -1888,6 +2023,7 @@ async function handleBenchmarkApi(request, response, url) {
     const parsed = Array.isArray(body.rows) ? BM.parseBenchmarkTable(body.rows, { defaultSeries: body.defaultSeries }) : BM.parseBenchmarkTable(body.text || "", { defaultSeries: body.defaultSeries });
     if (!body.commit) return sendJson(response, 200, { format: parsed.format, count: parsed.rows.length, errors: parsed.errors.slice(0, 20), plan: BM.planImport(parsed.rows, await liveSeries()) });
     const res = await importBenchmarkRows(parsed.rows, body.mapping || {}, user.name, "import");
+    broadcast("prices", { source: "import" });
     return sendJson(response, 200, res);
   }
   const feedMatch = url.pathname.match(/^\/api\/benchmarks\/feeds\/([A-Za-z]+)\/run$/);
@@ -1914,6 +2050,7 @@ async function handleBenchmarkApi(request, response, url) {
     const { point, errors, valid } = BM.validatePoint(await readJsonBody(request));
     if (!valid) return sendJson(response, 422, { ok: false, errors });
     const sym = { GBP: "£", EUR: "€", USD: "$" }[existing.currency];
+    setTimeout(() => broadcast("prices", { source: "manual" }), 0);
     return sendJson(response, 201, await benchmarkStore.update(id, (x) => { x.points = BM.mergePoints(x.points || [], [{ ...point, via: "manual", by: user.name, at: new Date().toISOString() }]); },
       user.name, "price added", `${sym}${point.price}/t on ${point.date}${point.note ? ` · ${point.note}` : ""}`));
   }
@@ -1928,19 +2065,22 @@ async function handleBenchmarkApi(request, response, url) {
 async function handleSettingsApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   if (url.pathname === "/api/settings" && request.method === "GET") {
-    return sendJson(response, 200, { settings: await settingsStore.get(), catalogueGroups: CATALOGUE_GROUPS, canEdit: can(user, "edit") });
+    return sendJson(response, 200, { settings: publicSettings(await settingsStore.get()), catalogueGroups: CATALOGUE_GROUPS, canEdit: can(user, "edit"), metalsKeyFromEnv: Boolean(process.env.METALS_API_KEY) });
   }
   if (url.pathname === "/api/settings" && request.method === "PUT") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot change settings.");
     const { settings, errors, valid } = validateSettings(await readJsonBody(request), await settingsStore.get());
     if (!valid) return sendJson(response, 422, { ok: false, errors });
-    return sendJson(response, 200, { settings: await settingsStore.save(settings, user.name) });
+    const before = await settingsStore.get();
+    const saved = await settingsStore.save(settings, user.name);
+    if (saved.metalsApiKey && saved.metalsApiKey !== before.metalsApiKey) runLive("LME", { force: true }).catch(() => {});
+    return sendJson(response, 200, { settings: publicSettings(saved) });
   }
   if (url.pathname === "/api/backup" && request.method === "GET") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot download backups.");
     const body = JSON.stringify({
       exportedAt: new Date().toISOString(), exportedBy: user.name,
-      settings: await settingsStore.get(), products: await productStore.list(), suppliers: await supplierStore.list(), benchmarks: await benchmarkStore.list(), scenarios: await store.list(),
+      settings: publicSettings(await settingsStore.get()), products: await productStore.list(), suppliers: await supplierStore.list(), benchmarks: await benchmarkStore.list(), scenarios: await store.list(),
     }, null, 2);
     response.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
@@ -2286,6 +2426,7 @@ server.on("error", (error) => {
 });
 
 scheduleFeeds();
+scheduleLive();
 applySupplierSheet().catch((error) => console.error("Supplier sheet update failed:", error.message));
 
 server.listen(port, bindHost, () => {

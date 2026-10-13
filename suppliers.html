@@ -97,8 +97,18 @@
 
       <div id="pane-market" role="tabpanel" aria-labelledby="ptab-market" hidden>
       <section aria-labelledby="feeds-title">
-        <h2 class="sec-title" id="feeds-title">Price sources</h2>
+        <div class="sec-row"><h2 class="sec-title" id="feeds-title">Price sources</h2><span class="live-pill" id="live-pill" hidden></span></div>
         <div class="feed-grid" id="feeds"><p class="muted">Loading…</p></div>
+      </section>
+
+      <section class="card mk-card" aria-labelledby="pulse-title">
+        <div class="card-head">
+          <div>
+            <h2 id="pulse-title">Market pulse</h2>
+            <p class="small muted" style="margin:2px 0 0">Where steel prices are heading — live official indices and exchange prices, updated automatically.</p>
+          </div>
+        </div>
+        <div id="pulse"></div>
       </section>
 
       <div class="group-tabs" id="group-tabs" role="tablist" aria-label="Product group"></div>

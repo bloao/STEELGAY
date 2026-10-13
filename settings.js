@@ -5,7 +5,7 @@
   const form = $("settings-form");
   const field = (n) => form.elements.namedItem(n);
   const CAT = window.STEEL_CATALOGUE;
-  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct"];
+  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "metalsApiKey"];
 
   let saved = null;
   let groups = [];
@@ -96,6 +96,13 @@
       node.className = `status-dot ${ok ? "" : r.mode === "public" ? "is-warn" : "is-bad"}`;
       node.textContent = ok ? "Connected" : r.mode === "public" ? "Public feed (no credentials)" : "Sign-in failed";
     }).catch(() => { $("conn-hmrc").className = "status-dot is-bad"; $("conn-hmrc").textContent = "Unavailable"; });
+    api("/api/benchmarks").then((r) => {
+      const ons = r.live.ONS || {}, lme = r.live.LME || {};
+      const set = (id, cls, txt) => { $(id).className = `status-dot ${cls}`; $(id).textContent = txt; };
+      set("conn-ons", ons.ok ? "" : ons.at ? "is-bad" : "is-muted", ons.ok ? `Live · ${fmt.date(ons.at.slice(0, 10))}` : ons.at ? "Unreachable" : "Starting…");
+      set("conn-lme", !lme.hasKey ? "is-warn" : lme.ok ? "" : "is-bad", !lme.hasKey ? "Needs a key" : lme.ok ? "Live" : lme.at ? "Key not working" : "Connecting…");
+      if (lme.hasKey && lme.error) $("conn-lme-sub").textContent = lme.error;
+    }).catch(() => {});
     api("/api/assistant/status").then((r) => {
       const node = $("conn-claude");
       node.className = `status-dot ${r.configured ? "" : "is-warn"}`;
@@ -113,6 +120,7 @@
 
   api("/api/settings").then((r) => {
     groups = r.catalogueGroups;
+    if (r.metalsKeyFromEnv) $("metals-hint").textContent = "Set in the server's .env (METALS_API_KEY) — that takes priority.";
     canEdit = r.canEdit;
     saved = r.settings;
     fill(saved);

@@ -28,7 +28,8 @@
   const todayIso = () => new Date().toISOString().slice(0, 10);
   const gbp = (price, cur) => (data && data.fx[cur || "GBP"] ? price * data.fx[cur || "GBP"] : null);
   const allSeries = () => (data ? [...data.series, ...data.competition] : []);
-  const groupSeries = () => allSeries().filter((s) => s.group === group);
+  const isPulse = (s) => s.kind === "index" || s.kind === "input";
+  const groupSeries = () => allSeries().filter((s) => s.group === group && !isPulse(s));
   // Colours follow the series, assigned in a fixed order per product group:
   // outside sources first (by name), then the competition series.
   let colorMap = new Map();
@@ -47,8 +48,29 @@
   // ---------------------------------------------------------------- feeds
   function renderFeeds() {
     const quoteCount = data.suppliers.reduce((n, s) => n + s.quotes.length, 0);
-    const show = data.feeds.filter((f) => ["MEPS", "Kallanish", "Market intel"].includes(f.source) || f.series || (f.feed && f.feed.configured));
-    const cards = show.map((f) => {
+    const show = data.feeds.filter((f) => ["MEPS", "Kallanish", "Market intel"].includes(f.source) || ((f.series || (f.feed && f.feed.configured)) && !["ONS", "LME"].includes(f.source)));
+    const liveCard = (key, title, url, sub) => {
+      const run = data.live[key] || {};
+      const f = data.feeds.find((x) => x.source === key) || {};
+      const needsKey = key === "LME" && !run.hasKey;
+      const status = needsKey ? ["Needs a key", "is-muted"] : run.ok ? ["Live", "is-live"] : run.at ? ["Last update failed", "is-warn"] : ["Connecting…", "is-muted"];
+      const go = el("button", { class: "btn btn-sm", type: "button", text: "Update now", onclick: async (e) => {
+        const b = e.currentTarget; b.disabled = true; b.textContent = "Updating…";
+        try { const r = await api(`/api/benchmarks/live/${key}/run`, { method: "POST" }); toast(r.ok ? (r.added ? `${title}: ${r.added} new values` : `${title}: already up to date`) : r.error, !r.ok); await load(); }
+        catch (error) { toast(error.message, true); b.disabled = false; b.textContent = "Update now"; }
+      } });
+      return el("article", { class: `feed-card is-live-card${run.ok ? " is-on" : ""}` },
+        el("div", { class: "feed-head" }, el("strong", { text: title }), url ? el("a", { href: url, target: "_blank", rel: "noopener", class: "small", text: "Source ↗" }) : null),
+        el("span", { class: `feed-status ${status[1]}` }, status[1] === "is-live" ? el("span", { class: "live-dot", "aria-hidden": "true" }) : null, status[0]),
+        el("p", { class: "feed-meta", text: `${f.series || 0} series · ${f.points || 0} values${f.lastDate ? ` · latest ${fmt.date(f.lastDate)}` : ""}` }),
+        run.at ? el("p", { class: `feed-meta ${run.ok ? "" : "is-bad"}`, text: run.ok ? `Checked ${fmt.dateTime(run.at)}${run.added ? ` · ${run.added} new` : ""}` : run.error }) : null,
+        el("p", { class: "feed-how", text: sub }),
+        me.canEdit ? el("div", { class: "feed-actions" }, needsKey ? el("a", { class: "btn btn-sm btn-primary", href: "settings.html#connections", text: "Add API key" }) : go) : null);
+    };
+    const cards = [
+      liveCard("ONS", "ONS steel prices", "https://www.ons.gov.uk/economy/inflationandpriceindices", "Official UK steel price indices (domestic, imported, import prices). Free — pulled automatically every day."),
+      liveCard("LME", "LME steel (daily)", "https://metals-api.com", data.live.LME && data.live.LME.hasKey ? `Daily LME prices (${(data.live.LME.symbols || []).join(", ")}) in USD/t — refreshed every 12 hours.` : "Daily LME rebar and scrap prices via Metals-API. Sign up at metals-api.com and paste the key in Settings."),
+      ...show.map((f) => {
       const live = f.feed && f.feed.configured;
       const status = f.lastDate
         ? [`Latest price ${fmt.date(f.lastDate)}`, Date.parse(todayIso()) - Date.parse(f.lastDate) > 45 * 86_400_000 ? "is-warn" : "is-good"]
@@ -70,7 +92,8 @@
             ? el("button", { class: "btn btn-sm", type: "button", text: "Add price", onclick: () => openAddPrice({ source: "Market intel" }) })
             : el("button", { class: "btn btn-sm", type: "button", text: "Upload export", onclick: () => openImport({ source: f.source }) }),
           run) : null);
-    });
+      }),
+    ];
     cards.push(el("article", { class: "feed-card is-auto" },
       el("div", { class: "feed-head" }, el("strong", { text: "Competition (UK & imports)" })),
       el("span", { class: "feed-status is-good", text: "Automatic" }),
@@ -91,6 +114,62 @@
     $("group-tabs").hidden = groups.length < 2;
   }
 
+  // ---------------------------------------------------------------- market pulse
+  const pctTxt = (c) => (c ? `${c.pct > 0 ? "+" : c.pct < 0 ? "−" : ""}${Math.abs(c.pct).toFixed(1)}%` : "—");
+  const pctCls = (c) => (!c || Math.abs(c.pct) < 0.05 ? "is-flat" : c.pct > 0 ? "is-up" : "is-down");
+  function spark(points, color) {
+    const pts = [...points].sort((a, b) => a.date.localeCompare(b.date)).slice(-24);
+    if (pts.length < 2) return el("span", { class: "muted small", text: "—" });
+    const W = 120, H = 32;
+    const lo = Math.min(...pts.map((p) => p.price)), hi = Math.max(...pts.map((p) => p.price)), r = hi - lo || 1;
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${((i / (pts.length - 1)) * (W - 4) + 2).toFixed(1)},${(H - 3 - ((p.price - lo) / r) * (H - 6)).toFixed(1)}`).join(" ");
+    const box = el("span", { class: "spark-mini" });
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" pathLength="1"${pulseAnimated ? "" : ' class="spark-path"'}/></svg>`;
+    return box;
+  }
+  let pulseAnimated = false;
+  function renderPulse() {
+    setTimeout(() => { if (data.series.some((x) => isPulse(x) || x.source === "LME")) pulseAnimated = true; }, 1200);
+    const list = data.series.filter((x) => isPulse(x) || x.source === "LME");
+    const box = $("pulse");
+    if (!list.length) {
+      const ons = data.live.ONS || {};
+      box.replaceChildren(el("div", { class: "pulse-empty" }, el("span", { class: "spinner sm", "aria-hidden": "true" }),
+        el("span", { text: ons.at && !ons.ok ? `Couldn't reach ONS yet (${ons.error}). It will retry automatically.` : "Fetching the latest official steel price indices…" })));
+      return;
+    }
+    const colors = ["#2a78d6", "#eb6834", "#1baf7a", "#6250d6", "#e34948"];
+    const ons = list.find((x) => x.feedKey === "ons:GHAV");
+    const headline = ons && ons.changes && ons.changes.m3
+      ? el("p", { class: "pulse-headline" }, "UK steel prices are ", el("strong", { class: pctCls(ons.changes.m3), text: `${ons.changes.m3.pct >= 0 ? "up" : "down"} ${Math.abs(ons.changes.m3.pct).toFixed(1)}%` }), ` over three months and ${ons.changes.m12 ? `${ons.changes.m12.pct >= 0 ? "up" : "down"} ${Math.abs(ons.changes.m12.pct).toFixed(1)}% on a year ago` : "—"} (ONS, ${ons.latest ? new Date(`${ons.latest.date}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }) : ""}).`)
+      : null;
+    box.replaceChildren(...[headline, el("div", { class: "table-scroll" }, el("table", { class: "quota-table pulse-table" },
+      el("thead", {}, el("tr", {}, el("th", { text: "Measure" }), el("th", { class: "num", text: "Latest" }), el("th", { class: "num", text: "1 month" }), el("th", { class: "num", text: "3 months" }), el("th", { class: "num wide-col", text: "12 months" }), el("th", { class: "wide-col", text: "Trend" }))),
+      el("tbody", {}, ...list.map((x, i) => {
+        const c = x.changes || {};
+        const color = colors[i % colors.length];
+        return el("tr", { class: pulseAnimated ? "" : "pulse-row", style: `animation-delay:${i * 60}ms` },
+          el("td", {}, el("div", { class: "pulse-name", text: x.name }), el("div", { class: "row-sub", text: `${x.source}${x.kind === "index" ? " · index 2015 = 100" : x.kind === "input" ? " · input cost" : ""}` })),
+          el("td", { class: "num" }, el("strong", { text: x.latest ? (x.kind === "index" ? x.latest.price.toFixed(1) : perT(x.latest.price, x.currency)) : "—" }), el("div", { class: "row-sub", text: x.latest ? fmt.date(x.latest.date) : "" })),
+          el("td", { class: `num chg ${pctCls(c.m1)}`, text: pctTxt(c.m1) }),
+          el("td", { class: `num chg ${pctCls(c.m3)}`, text: pctTxt(c.m3) }),
+          el("td", { class: `num chg wide-col ${pctCls(c.m12)}`, text: pctTxt(c.m12) }),
+          el("td", { class: "wide-col" }, spark(x.points || [], color)));
+      }))))].filter(Boolean));
+  }
+
+  // Market movement since a supplier's quote, from the ONS index that fits them.
+  function moveSinceQuote(sup) {
+    const key = sup.origin === "UK" ? "ons:GHAV" : "ons:GHCZ";
+    const idx = data.series.find((x) => x.feedKey === key);
+    if (!idx || !sup.metrics.priceDate || !(idx.points || []).length) return null;
+    const pts = [...idx.points].sort((a, b) => a.date.localeCompare(b.date));
+    const start = [...pts].reverse().find((p) => p.date <= sup.metrics.priceDate);
+    const end = pts[pts.length - 1];
+    if (!start || start.date === end.date) return { pct: 0, from: start ? start.date : end.date, to: end.date, same: true };
+    return { pct: Math.round(((end.price - start.price) / start.price) * 1000) / 10, from: start.date, to: end.date };
+  }
+
   // ---------------------------------------------------------------- comparison
   function renderCompare() {
     const series = groupSeries();
@@ -100,7 +179,9 @@
     $("cmp-sub").textContent = `${group} · each supplier's latest quote against the latest price in each series${external.length ? "" : " — add MEPS or Kallanish prices for an outside view"}`;
     if (!suppliers.length) { $("cmp").replaceChildren(el("div", { class: "empty-state" }, el("h3", { text: "No supplier quotes for this group" }), el("p", { text: "Log quotes on the Suppliers page." }))); return; }
     const cols = series.filter((s) => s.latest);
+    const hasIdx = data.series.some((x) => x.feedKey === "ons:GHAV" || x.feedKey === "ons:GHCZ");
     const head = el("tr", {}, el("th", { text: "Supplier" }), el("th", { class: "num", text: "Quoted" }),
+      hasIdx ? el("th", { class: "num bench-head" }, el("span", { class: "bench-name", text: "Market since quote" }), el("span", { class: "bench-val", text: "ONS index" })) : null,
       ...cols.map((s) => el("th", { class: "num bench-head" },
         el("span", { class: "bench-name" }, el("span", { class: "swatch", style: `background:${colorOf(s.id)}`, "aria-hidden": "true" }), s.computed ? s.source : s.name),
         el("span", { class: "bench-val", text: `${Number.isFinite(gbp(s.latest.price, s.currency)) ? perT(gbp(s.latest.price, s.currency)) : `${perT(s.latest.price, s.currency)} (no FX rate)`} · ${fmt.date(s.latest.date)}` }))),
@@ -110,6 +191,7 @@
       return el("tr", {},
         el("td", {}, el("a", { href: `suppliers.html?supplier=${sup.id}`, class: "sup-link", text: sup.name }), el("div", { class: "row-sub", text: `${sup.origin || "origin?"} · ${({ everything: "all-in", "except-duty": "+ duty" })[sup.metrics.covers] || ""}` })),
         el("td", { class: "num" }, el("strong", { text: perT(q) })),
+        hasIdx ? (() => { const mv = moveSinceQuote(sup); return el("td", { class: `num chg ${mv ? pctCls(mv) : ""}`, title: mv ? `Index ${mv.from} → ${mv.to}` : "" }, el("strong", { text: !mv ? "—" : mv.same ? "No change" : pctTxt(mv) }), el("div", { class: "row-sub", text: mv && !mv.same ? (mv.pct > 0 ? "quote may be cheap now" : "ask for a lower price") : mv ? "quote is current" : "" })); })() : null,
         ...cols.map((s) => {
           const b = gbp(s.latest.price, s.currency);
           if (!Number.isFinite(b)) return el("td", { class: "num", text: "—" });
@@ -204,7 +286,7 @@
 
   // ---------------------------------------------------------------- series table
   function renderSeries() {
-    const list = [...data.series].sort((a, b) => a.group.localeCompare(b.group) || a.source.localeCompare(b.source) || a.name.localeCompare(b.name));
+    const list = [...data.series].filter((x) => !isPulse(x)).sort((a, b) => a.group.localeCompare(b.group) || a.source.localeCompare(b.source) || a.name.localeCompare(b.name));
     $("series-count").textContent = `${list.length} series`;
     if (!list.length) {
       $("series-rows").replaceChildren(el("tr", {}, el("td", { colspan: "7", class: "empty" },
@@ -465,7 +547,8 @@
     try {
       data = await api("/api/benchmarks");
       assignColors();
-      renderFeeds(); renderGroups(); renderCompare(); renderChart(); renderSeries();
+      renderFeeds(); renderPulse(); renderGroups(); renderCompare(); renderChart(); renderSeries();
+      renderLivePill();
     } catch (error) {
       $("feeds").replaceChildren(el("p", { class: "muted", text: `Could not load market prices: ${error.message}` }));
     }
@@ -483,6 +566,37 @@
     $("range").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     renderChart();
   }));
+  // ---- live updates: the server pushes an event when prices or quotes change
+  let liveState = "connecting";
+  let lastPush = null;
+  function renderLivePill() {
+    const pill = $("live-pill");
+    if (!pill) return;
+    pill.hidden = false;
+    pill.className = `live-pill is-${liveState}`;
+    pill.replaceChildren(el("span", { class: "live-dot", "aria-hidden": "true" }),
+      liveState === "on" ? `Live${lastPush ? ` · updated ${fmt.time(lastPush)}` : ""}` : liveState === "off" ? "Reconnecting…" : "Connecting…");
+  }
+  let es = null;
+  let refreshTimer = null;
+  function connectLive() {
+    if (!window.EventSource || es) return;
+    es = new EventSource((window.OrderTool.apiBase || "") + "/api/benchmarks/events", { withCredentials: Boolean(window.OrderTool.apiBase) });
+    es.addEventListener("hello", () => { liveState = "on"; renderLivePill(); });
+    const onChange = (e) => {
+      lastPush = new Date().toISOString();
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => { if (started) load(); window.dispatchEvent(new CustomEvent("agx:live", { detail: e.type })); }, 300);
+      renderLivePill();
+    };
+    es.addEventListener("prices", (e) => { onChange(e); if (started) toast("New market prices in"); });
+    es.addEventListener("quotes", onChange);
+    es.onerror = () => { liveState = "off"; renderLivePill(); };
+    es.onopen = () => { liveState = "on"; renderLivePill(); };
+  }
+  connectLive();
+  setInterval(() => { if (started && !document.hidden && liveState !== "on") load(); }, 5 * 60 * 1000);
+
   let started = false;
   window.MarketTab = {
     open() {
