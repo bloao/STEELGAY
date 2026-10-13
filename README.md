@@ -116,6 +116,14 @@ API: `GET/POST /api/products`, `GET/PUT /api/products/:id`, `POST /api/products/
 
 **Adding a product** is pick-from-a-list: search the steel catalogue (`steel-catalogue.js` — 35 product types across merchant bar, structural sections, hollow sections, plate & sheet, bright bar, reinforcing, wire & rod and stainless, each with its standard sizes, grades and lengths), then choose size / grade / length from dropdowns. The description, specification and 10-digit commodity code are filled in automatically, so the quota category follows. Where the tariff splits a product on something a size can't tell (galvanised and pre-painted sheet, rebar) the form lists the tariff lines to choose from. "Other steel product" keeps the manual route. `tests/catalogue.test.mjs` checks every combination resolves to a real code in `steel-commodities.js`. Lead time, MOQ, safety stock and cover are dropdowns too ("Other…" for anything else).
 
+### Suppliers (`/suppliers.html`)
+
+Saved in `var/suppliers.json` (first run seeds Tata Steel UK, 7 Steel, LME, Megasa and Olifer from the supplier list, plus Venete from the Hall and Pickles workbook). Comparison table sorted by worst-case price: imports quoted "all except duty" show what they'd cost with the 50% steel duty if the origin's quota line runs out, alongside the live HMRC status of that line (EU members share the European Union line; others use their named line or Residual; UK has no quota).
+
+Supplier profile: Overview (commercial terms, quota & duty exposure, pricing benchmarks with links to MEPS/Kallanish/Fastmarkets/Argus, your products they supply), Quotes (history with price chart; the latest quote is the supplier's current price), Contacts, Audit trail. **Request quotes** writes one email per supplier (products, tonnage, tariff codes, delivery date, what to include) that opens in your own mail app or copies to the clipboard; each send is logged and the supplier shows "Awaiting reply" until you log their quote. Product profiles list the suppliers for that product group. The Assistant can compare suppliers (`list_suppliers` tool).
+
+API: `GET/POST /api/suppliers`, `GET/PUT /api/suppliers/:id`, `POST /api/suppliers/:id/archive`, `POST /api/suppliers/:id/quotes`, `DELETE /api/suppliers/:id/quotes/:quoteId`, `POST|PUT|DELETE /api/suppliers/:id/contacts[/:contactId]`, `POST /api/suppliers/:id/rfqs`.
+
 ### Workspace settings (`/settings.html`)
 
 Saved in `var/settings.json`: defaults for new products (category, lead time, MOQ, safety stock, cover), which product groups appear in the Add product search, company name, plus connection status (HMRC, Claude) and a one-click JSON backup of products, quotes and settings. API: `GET/PUT /api/settings`, `GET /api/backup`.

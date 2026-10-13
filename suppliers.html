@@ -9,15 +9,6 @@
     <title>Suppliers · Datafab AGX</title>
     <link rel="stylesheet" href="order-tool.css">
     <link rel="stylesheet" href="nav.css">
-    <style>
-      .supplier-table { min-width: 2350px !important; }
-      .supplier-table th:first-child, .supplier-table td:first-child { position: sticky; left: 0; min-width: 145px; background: var(--surface, #fff); z-index: 1; box-shadow: 1px 0 var(--line); }
-      .supplier-table th:first-child { background: var(--surface-alt); z-index: 2; }
-      .supplier-table th { white-space: nowrap; }
-      .supplier-table td:nth-child(4) { min-width: 235px; }
-      .supplier-table td:last-child { min-width: 275px; }
-      .supplier-table td:nth-child(5) { white-space: nowrap; }
-    </style>
   </head>
   <body>
     <nav class="site-nav" aria-label="Primary">
@@ -36,39 +27,92 @@
     <div class="app-layout">
       <aside class="sidebar" data-active="suppliers"></aside>
       <script src="app-sidebar.js"></script>
-    <main class="page">
+    <main class="page suppliers-page">
       <div class="page-head">
         <div>
           <p class="eyebrow">Steel procurement</p>
           <h1>Suppliers</h1>
-          <p class="muted" style="margin:6px 0 0;max-width:720px">Supplier quotes, delivery terms, reliability and quota exposure from Hall and Pickles.</p>
+          <p class="muted lede">Who can supply what, at what price, and what it really costs once quota and duty are counted.</p>
         </div>
-        <div class="actions"><a class="btn btn-primary" href="order-tool.html">New scenario</a></div>
+        <div class="actions">
+          <button class="btn" type="button" id="rfq-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+            Request quotes
+          </button>
+          <button class="btn btn-primary" type="button" id="add-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+            Add supplier
+          </button>
+        </div>
       </div>
+
+      <section class="stat-strip" aria-label="Summary">
+        <div class="stat"><span>Suppliers</span><strong id="kpi-count">–</strong></div>
+        <div class="stat"><span>Best all-in price</span><strong id="kpi-best">–</strong></div>
+        <div class="stat"><span>Average on-time</span><strong id="kpi-ontime">–</strong></div>
+        <div class="stat stat-alert"><span>Awaiting quotes</span><strong id="kpi-waiting">–</strong></div>
+      </section>
+
       <section class="table-card">
-        <div class="toolbar"><strong>Supplier options from workbook</strong><span class="small muted" id="count"></span></div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Supplier comparison, scroll horizontally for all columns">
-          <table class="data supplier-table">
-            <thead><tr><th scope="col">Supplier</th><th scope="col">Category</th><th scope="col">Sourcing origin</th><th scope="col">Pricing source</th><th scope="col" class="num">Quoted price (£/t)</th><th scope="col">Currency</th><th scope="col">Price basis</th><th scope="col">Price covers</th><th scope="col">Transport costs</th><th scope="col">Duty costs</th><th scope="col">Other duty</th><th scope="col">MOQ (tonnes)</th><th scope="col">On-time delivery</th><th scope="col">DDP available</th><th scope="col">Lead time</th><th scope="col">Payment terms</th><th scope="col">Duty risk (quota dependent)</th></tr></thead>
-            <tbody id="rows"></tbody>
+        <div class="toolbar">
+          <label class="search"><input type="search" id="q" placeholder="Search suppliers" aria-label="Search suppliers"></label>
+          <select id="flt-supplies" aria-label="Filter by what they supply"><option value="">Everything they supply</option></select>
+          <select id="flt-origin" aria-label="Filter by origin"><option value="">All origins</option><option value="uk">UK only</option><option value="import">Imports only</option></select>
+          <select id="sort" aria-label="Sort by">
+            <option value="price">Sort: price (worst case)</option>
+            <option value="quoted">Sort: quoted price</option>
+            <option value="ontime">Sort: on-time</option>
+            <option value="name">Sort: name</option>
+          </select>
+        </div>
+        <div class="table-scroll">
+          <table class="data products-table suppliers-table">
+            <thead>
+              <tr>
+                <th>Supplier</th>
+                <th class="num">Quoted</th>
+                <th class="num">If quota runs out</th>
+                <th>MOQ</th>
+                <th class="num">On time</th>
+                <th>Terms</th>
+                <th>Last quote</th>
+                <th><span class="sr-only">Open</span></th>
+              </tr>
+            </thead>
+            <tbody id="rows"><tr><td colspan="8" class="empty">Loading suppliers…</td></tr></tbody>
           </table>
         </div>
-        <div class="empty" id="empty" hidden>No suppliers found in the workbook.</div>
       </section>
-      <p class="small muted">Source: Hall and Pickles Data Sourcing, Supplier Options and Georges working supplier list. Quotes are supplied workbook values; quote dates and validity are not provided. Scroll horizontally to view every column.</p>
-      <p class="small muted">A dash means not supplied. n.a. means the workbook marks the field as not applicable. Merchant bar is the category heading in Supplier Options. Tata's on-time figure is entered as 70; interpreted as 70% pending confirmation. 7 Steel's payment terms may change from 60 to 30 days.</p>
-      <h2 style="font-size:18px;margin-top:8px">Planned for this page</h2>
-      <section class="placeholder">
-        <div class="card"><span class="coming">Coming next</span><h3>Supplier profiles</h3><p>Contacts, approved status, payment terms, certifications and the mills each trader represents.</p></div>
-        <div class="card"><span class="coming">Coming next</span><h3>Price history</h3><p>Every quote over time against the MEPS benchmark, so you can see who is drifting above market.</p></div>
-        <div class="card"><span class="coming">Coming next</span><h3>Reliability</h3><p>On-time delivery, quality claims and how often quotes are honoured.</p></div>
-        <div class="card"><span class="coming">Coming next</span><h3>Risk checks</h3><p>Sanctions screening, credit checks and origin-evidence status per supplier.</p></div>
-      </section>
+      <p class="small muted" id="foot-note">Prices in £/t. "If quota runs out" adds the 50% steel duty for imports quoted without duty — the risk sits with you once the origin's quota line is used up. Suppliers quoting everything covered carry that risk themselves (but may not deliver if quota is exhausted).</p>
+
+      <div class="drawer-backdrop" id="backdrop" hidden></div>
+      <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+        <header class="drawer-head">
+          <div>
+            <p class="eyebrow" id="drawer-eyebrow"></p>
+            <h2 id="drawer-title"></h2>
+          </div>
+          <div class="drawer-tools">
+            <button class="icon-btn" type="button" id="drawer-size" aria-label="Switch to large view" title="Large view">
+              <svg class="i-expand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              <svg class="i-collapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>
+            </button>
+            <button class="icon-btn" type="button" id="drawer-close" aria-label="Close">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+        </header>
+        <div class="profile-tabs" id="profile-tabs" role="tablist" aria-label="Supplier profile sections" hidden></div>
+        <div class="drawer-body" id="view-detail" hidden></div>
+        <form class="drawer-body" id="view-form" novalidate hidden></form>
+        <footer class="drawer-foot" id="drawer-foot"></footer>
+      </aside>
     </main>
     </div>
 
+    <script src="steel-trade-measure.js"></script>
     <script src="order-common.js"></script>
-    <script src="sections.js" data-section="suppliers"></script>
+    <script src="suppliers.js"></script>
     <script src="nav-menu.js"></script>
   </body>
 </html>

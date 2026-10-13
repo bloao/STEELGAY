@@ -326,22 +326,49 @@
       large ? null : el("p", { class: "small muted", style: "margin:0", text: "Switch to the large view for annual allocation, usage, burn rate and next quarter." }));
   }
 
-  function suppliersPanel() {
+  // Suppliers that supply this product's group, cheapest worst case first.
+  let supplierList = null;
+  function suppliersFor(p) { return (supplierList || []).filter((s) => (s.supplies || []).includes(p.category)); }
+  function suppliersPanel(p) {
     const panel = el("div", { class: "profile-panel" });
-    const box = el("div", { class: "empty-state" });
-    box.innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l5 3V10l5 3V6l8 4v11z"/><path d="M3 21h18"/></svg>';
-    box.append(el("h3", { text: "No suppliers linked yet" }), el("p", { text: "Suppliers for this product — mills, origins, prices, lead times and reliability — will appear here." }));
-    panel.append(box);
+    if (!supplierList) {
+      panel.append(el("div", { class: "empty-state" }, el("h3", { text: "Loading suppliers…" })));
+      return panel;
+    }
+    const list = suppliersFor(p).sort((a, b) => (a.metrics.worstCasePerT ?? 1e9) - (b.metrics.worstCasePerT ?? 1e9));
+    if (!list.length) {
+      const box = el("div", { class: "empty-state" });
+      box.innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l5 3V10l5 3V6l8 4v11z"/><path d="M3 21h18"/></svg>';
+      box.append(el("h3", { text: "No suppliers linked yet" }), el("p", {}, `No supplier is marked as supplying ${p.category}. `, el("a", { href: "suppliers.html", text: "Open Suppliers →" })));
+      panel.append(box);
+      return panel;
+    }
+    const sym = { GBP: "£", EUR: "€", USD: "$" };
+    const price = (v, c) => (Number.isFinite(v) ? `${sym[c] || ""}${Math.round(v).toLocaleString("en-GB")}/t` : "—");
+    const covers = { everything: "all-in", "except-duty": "+ duty", "ex-works": "ex works", port: "to port" };
+    const target = p.targetBuyPrice || p.costPerT;
+    panel.append(
+      el("p", { class: "small muted", style: "margin:0", text: `${list.length} supplier${list.length === 1 ? "" : "s"} supply ${p.category}. Prices are their latest quotes; "worst case" adds the 50% steel duty where you'd carry it.` }),
+      el("div", { class: "supplier-matches" }, ...list.map((s) => {
+        const m = s.metrics;
+        const lead = s.leadTimeMin === null ? null : `${s.leadTimeMin}${s.leadTimeMax && s.leadTimeMax !== s.leadTimeMin ? `–${s.leadTimeMax}` : ""} ${s.leadTimeUnit}`;
+        return el("div", { class: "supplier-match" },
+          el("div", {}, el("strong", { text: s.name }), el("div", { class: "small muted", text: [s.origin || "origin not set", s.type].filter(Boolean).join(" · ") })),
+          el("div", { class: "sm-price" },
+            el("strong", { text: price(m.pricePerT, m.currency) }),
+            el("div", { class: "small muted", text: `${covers[m.covers] || ""}${m.dutyExposed ? ` · worst case ${price(m.worstCasePerT, m.currency)}` : ""}` })),
+          el("div", { class: "sm-meta" },
+            Number.isFinite(m.pricePerT) && target ? el("span", { text: `${m.pricePerT <= target ? "below" : "above"} your ${p.targetBuyPrice ? "target" : "cost"} (${fmt.money(target)})` }) : null,
+            lead ? el("span", { text: `Lead ${lead}` }) : null,
+            s.onTimePct !== null ? el("span", { text: `${s.onTimePct}% on time` }) : null,
+            el("span", { text: s.moqNote || (s.moqMinT !== null ? `MOQ ${s.moqMinT}${s.moqMaxT && s.moqMaxT !== s.moqMinT ? `–${s.moqMaxT}` : ""} t` : "") }),
+            m.awaitingQuote ? el("span", { class: "status-dot is-warn", text: "awaiting reply" }) : m.priceDate ? el("span", { text: m.priceChannel === "list" ? "price from supplier list" : `quoted ${fmt.date(m.priceDate)}` }) : null),
+          el("div", { class: "sm-actions" },
+            el("a", { class: "link-btn", href: `suppliers.html?supplier=${s.id}`, text: "Open supplier" }),
+            me.canEdit ? el("a", { class: "link-btn", href: `suppliers.html?rfq=${p.id}`, text: "Request quote" }) : null));
+      })));
     return panel;
   }
-
-  const ACTION = {
-    created: ["Created", ""],
-    edited: ["Edited", ""],
-    "stock updated": ["Stock updated", "is-stock"],
-    "updated by import": ["Updated by import", "is-stock"],
-    archived: ["Archived", "is-archive"],
-  };
 
   function auditPanel(p) {
     const entries = (p.activity || []).map((a) => ({ kind: "change", at: a.at, a }));
@@ -400,7 +427,7 @@
     const tabs = [
       ["overview", "Overview", null],
       ["quotas", "Quotas", p.steelCategory ? lines || null : 0],
-      ["suppliers", "Suppliers", 0],
+      ["suppliers", "Suppliers", supplierList ? suppliersFor(p).length : null],
       ["audit", "Audit trail", (p.activity || []).length + productQuotes(p).length],
     ];
     $("profile-tabs").replaceChildren(...tabs.map(([key, label, count]) => el("button", {
@@ -997,6 +1024,10 @@
   ["q", "f-category", "f-status"].forEach((id) => $(id).addEventListener("input", renderTable));
 
   api("/api/settings").then((r) => { settings = r.settings; }).catch(() => { /* defaults */ });
+  api("/api/suppliers").then((r) => {
+    supplierList = r.suppliers;
+    if (mode === "detail" && detailId) { const p = products.find((x) => x.id === detailId); if (p) { renderTabs(p); renderProfileBody(p); } }
+  }).catch(() => { supplierList = []; });
   loadMe().then((m) => {
     me = m;
     if (!me.canEdit) { $("add-btn").hidden = true; $("import-btn").hidden = true; }

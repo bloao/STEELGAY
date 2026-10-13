@@ -12,6 +12,7 @@ import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/st
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
 import { createSettingsStore, validateSettings, CATALOGUE_GROUPS } from "./lib/settings.mjs";
+import * as SUP from "./lib/suppliers.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -20,6 +21,7 @@ const port = Number(process.env.PORT || 3000);
 const root = process.cwd();
 const STARTED_AT = new Date().toISOString();
 const store = createStore(process.env.DATA_DIR || join(root, "var"));
+const supplierStore = createStore(process.env.DATA_DIR || join(root, "var"), "suppliers.json", () => SUP.seedSuppliers());
 const settingsStore = createSettingsStore(process.env.DATA_DIR || join(root, "var"));
 const productStore = createStore(process.env.DATA_DIR || join(root, "var"), "products.json", () => SEED_PRODUCTS.map((p) => validateProduct(p).product));
 const allowedOrigin = process.env.ALLOWED_ORIGIN || ""; // e.g. https://app.example.com; empty = same-origin only
@@ -91,7 +93,7 @@ function corsHeaders(request) {
   if (!allow) return {};
   return {
     "access-control-allow-origin": allow,
-    "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
     "access-control-allow-headers": "content-type, authorization",
     vary: "Origin",
   };
@@ -1384,6 +1386,7 @@ async function handleAssistantApi(request, response, url) {
   const tradeMeasure = await loadTradeMeasure();
   const data = {
     products: async () => Promise.all((await productStore.list()).filter((p) => p.status !== "archived").map(productView)),
+    suppliers: async () => (await supplierStore.list()).filter((x) => x.status !== "archived").map(supplierView),
     scenarios: async () => (await store.list()).map(summarise),
     scenario: async (id) => store.get(String(id)),
     quotas: () => getMeasureQuotas(),
@@ -1535,6 +1538,119 @@ async function handleProductApi(request, response, url) {
   sendError(response, 405, "Method not allowed");
 }
 
+// ------------------------------------------------------------ supplier API
+
+const SUPPLIER_LABELS = {
+  name: "Name", type: "Type", standing: "Standing", origin: "Origin", supplies: "Supplies", pricingSources: "Pricing sources",
+  priceCovers: "Price covers", deliveryTerms: "Delivery terms", onTimePct: "On-time %", moqMinT: "MOQ min (t)", moqMaxT: "MOQ max (t)",
+  moqNote: "MOQ note", ddp: "DDP available", paymentDays: "Payment terms (days)", paymentNote: "Payment note", currency: "Currency",
+  leadTimeMin: "Lead time min", leadTimeMax: "Lead time max", leadTimeUnit: "Lead time unit", transport: "Transport",
+  dutyRiskNote: "Duty risk note", website: "Website", notes: "Notes",
+};
+
+function supplierChanges(before, after) {
+  const norm = (v) => (v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length) ? null : v);
+  return Object.keys(SUPPLIER_LABELS).filter((k) => k in after)
+    .filter((k) => JSON.stringify(norm(after[k])) !== JSON.stringify(norm(before[k])))
+    .map((k) => ({ field: k, label: SUPPLIER_LABELS[k], from: before[k] ?? null, to: after[k] ?? null }));
+}
+
+const supplierView = (s) => ({ ...s, contacts: s.contacts || [], quotes: s.quotes || [], rfqs: s.rfqs || [], activity: s.activity || [], metrics: SUP.supplierMetrics(s) });
+
+const SUPPLIER_CHOICES = {
+  types: SUP.SUPPLIER_TYPES, standing: SUP.SUPPLIER_STANDING, pricingSources: SUP.PRICING_SOURCES, priceCovers: SUP.PRICE_COVERS,
+  deliveryTerms: SUP.DELIVERY_TERMS, ddp: SUP.DDP_OPTIONS, currencies: SUP.CURRENCIES, quoteChannels: SUP.QUOTE_CHANNELS,
+  origins: SUP.ORIGINS, euMembers: [...SUP.EU_MEMBERS], groups: CATALOGUE_GROUPS,
+};
+
+async function handleSupplierApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  const method = request.method;
+  const live = async () => (await supplierStore.list()).filter((x) => x.status !== "archived");
+  if (url.pathname === "/api/suppliers" && method === "GET") {
+    return sendJson(response, 200, { suppliers: (await live()).map(supplierView), choices: SUPPLIER_CHOICES });
+  }
+  if (method !== "GET" && !can(user, "edit")) return sendError(response, 403, "Your account cannot change suppliers.");
+  const clashes = async (name, id) => (await live()).find((x) => x.id !== id && x.name.trim().toLowerCase() === name.trim().toLowerCase());
+  if (url.pathname === "/api/suppliers" && method === "POST") {
+    const { supplier, errors, valid } = SUP.validateSupplier(await readJsonBody(request));
+    if (await clashes(supplier.name)) errors.name = "A supplier with this name already exists.";
+    if (!valid || errors.name) return sendJson(response, 422, { ok: false, errors });
+    const saved = await supplierStore.create({ ...supplier, status: "active", contacts: [], quotes: [], rfqs: [] }, user.name);
+    return sendJson(response, 201, supplierView(saved));
+  }
+  const m = url.pathname.match(/^\/api\/suppliers\/([0-9a-f-]{36})(?:\/(archive|quotes|contacts|rfqs)(?:\/([0-9a-f-]{36}))?)?$/);
+  if (!m) return sendError(response, 404, "Not found");
+  const [, id, sub, subId] = m;
+  const existing = await supplierStore.get(id);
+  if (!existing || existing.status === "archived") return sendError(response, 404, "Supplier not found");
+  const done = async (saved, code = 200) => sendJson(response, code, supplierView(saved));
+
+  if (!sub && method === "GET") return done(existing);
+  if (!sub && method === "PUT") {
+    const { supplier, errors, valid } = SUP.validateSupplier(await readJsonBody(request));
+    if (await clashes(supplier.name, id)) errors.name = "Another supplier already has this name.";
+    if (!valid || errors.name) return sendJson(response, 422, { ok: false, errors });
+    const changes = supplierChanges(existing, supplier);
+    if (!changes.length) return done(existing);
+    return done(await supplierStore.update(id, (x) => Object.assign(x, supplier), user.name, "edited", changes.map((c) => c.label).join(", "), { changes }));
+  }
+  if (sub === "archive" && method === "POST") {
+    await supplierStore.update(id, (x) => { x.status = "archived"; }, user.name, "archived");
+    return sendJson(response, 200, { ok: true });
+  }
+  if (sub === "quotes" && method === "POST" && !subId) {
+    const { quote, errors, valid } = SUP.validateQuote(await readJsonBody(request));
+    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    const product = quote.productId ? await productStore.get(quote.productId) : null;
+    const entry = { id: SUP.newId(), at: new Date().toISOString(), by: user.name, ...quote, productName: product ? product.name : null, covers: quote.covers || existing.priceCovers };
+    const answered = (existing.rfqs || []).filter((r) => r.status === "open").length;
+    const sym = { GBP: "£", EUR: "€", USD: "$" }[quote.currency];
+    return done(await supplierStore.update(id, (x) => {
+      x.quotes = [...(x.quotes || []), entry];
+      for (const r of x.rfqs || []) if (r.status === "open") { r.status = "answered"; r.answeredAt = entry.at; r.quoteId = entry.id; }
+    }, user.name, "quote logged", `${sym}${quote.pricePerT}/t${product ? ` · ${product.name}` : ""}${quote.tonnage ? ` · ${quote.tonnage} t` : ""} · ${SUP.QUOTE_CHANNELS[quote.channel]}${answered ? " · answers quote request" : ""}`, { quoteId: entry.id }), 201);
+  }
+  if (sub === "quotes" && subId && method === "DELETE") {
+    const q = (existing.quotes || []).find((x) => x.id === subId);
+    if (!q) return sendError(response, 404, "Quote not found");
+    return done(await supplierStore.update(id, (x) => { x.quotes = x.quotes.filter((y) => y.id !== subId); }, user.name, "quote removed", `${q.pricePerT}/t from ${q.date}`));
+  }
+  if (sub === "contacts" && (method === "POST" || (method === "PUT" && subId))) {
+    const { contact, errors, valid } = SUP.validateContact(await readJsonBody(request));
+    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    if (subId && !(existing.contacts || []).some((c) => c.id === subId)) return sendError(response, 404, "Contact not found");
+    const cid = subId || SUP.newId();
+    return done(await supplierStore.update(id, (x) => {
+      x.contacts = x.contacts || [];
+      const first = !x.contacts.length;
+      if (contact.primary || first) x.contacts.forEach((c) => { c.primary = false; });
+      const rec = { id: cid, ...contact, primary: contact.primary || (first && !subId) };
+      const i = x.contacts.findIndex((c) => c.id === cid);
+      if (i >= 0) x.contacts[i] = rec; else x.contacts.push(rec);
+      if (!x.contacts.some((c) => c.primary) && x.contacts[0]) x.contacts[0].primary = true;
+    }, user.name, subId ? "contact updated" : "contact added", `${contact.name}${contact.role ? ` (${contact.role})` : ""}`), subId ? 200 : 201);
+  }
+  if (sub === "contacts" && subId && method === "DELETE") {
+    const c = (existing.contacts || []).find((x) => x.id === subId);
+    if (!c) return sendError(response, 404, "Contact not found");
+    return done(await supplierStore.update(id, (x) => {
+      x.contacts = x.contacts.filter((y) => y.id !== subId);
+      if (!x.contacts.some((y) => y.primary) && x.contacts[0]) x.contacts[0].primary = true;
+    }, user.name, "contact removed", c.name));
+  }
+  if (sub === "rfqs" && method === "POST" && !subId) {
+    const { rfq, errors, valid } = SUP.validateRfq(await readJsonBody(request));
+    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    const contact = (existing.contacts || []).find((c) => c.id === rfq.contactId);
+    const entry = { id: SUP.newId(), at: new Date().toISOString(), by: user.name, status: "open", ...rfq, contactName: contact ? contact.name : null };
+    const total = rfq.lines.reduce((t, l) => t + (l.tonnage || 0), 0);
+    return done(await supplierStore.update(id, (x) => { x.rfqs = [...(x.rfqs || []), entry]; }, user.name, "quote requested",
+      `${rfq.lines.length} product${rfq.lines.length === 1 ? "" : "s"}${total ? ` · ${total} t` : ""}${contact ? ` · to ${contact.name}` : ""} · ${rfq.channel === "copy" ? "copied" : "email"}`, { rfqId: entry.id }), 201);
+  }
+  sendError(response, 405, "Method not allowed");
+}
+
 // ------------------------------------------------------------ settings API
 
 async function handleSettingsApi(request, response, url) {
@@ -1552,7 +1668,7 @@ async function handleSettingsApi(request, response, url) {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot download backups.");
     const body = JSON.stringify({
       exportedAt: new Date().toISOString(), exportedBy: user.name,
-      settings: await settingsStore.get(), products: await productStore.list(), scenarios: await store.list(),
+      settings: await settingsStore.get(), products: await productStore.list(), suppliers: await supplierStore.list(), scenarios: await store.list(),
     }, null, 2);
     response.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
@@ -1845,6 +1961,11 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname.startsWith("/api/products")) {
       await handleProductApi(request, response, url);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/suppliers")) {
+      await handleSupplierApi(request, response, url);
       return;
     }
 

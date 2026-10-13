@@ -17,8 +17,8 @@ const data = {
   categoryFor: () => "12B",
 };
 
-test("six read-only tools with valid names", () => {
-  assert.equal(TOOLS.length, 6);
+test("seven read-only tools with valid names", () => {
+  assert.equal(TOOLS.length, 7);
   for (const t of TOOLS) assert.match(t.name, /^[a-zA-Z0-9_-]{1,128}$/);
 });
 
@@ -52,7 +52,7 @@ test("the loop runs tools, returns results to the model, and ends with text", as
   assert.equal(res.reply, "Order **5 t** of 100×50 Flat.");
   assert.deepEqual(res.tools.map((t) => t.name), ["list_products"]);
   assert.equal(res.usage.input_tokens, 30);
-  assert.equal(calls[0].tools.length, 6);
+  assert.equal(calls[0].tools.length, 7);
 });
 
 test("tool errors go back to the model as is_error", async () => {
