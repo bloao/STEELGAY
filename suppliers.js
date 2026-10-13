@@ -102,12 +102,13 @@
         onclick: () => openDetail(s.id),
         onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(s.id); } },
       },
-        el("td", {},
-          el("div", { class: "p-name" }, s.name, s.standing !== "active" ? el("span", { class: "tag tag-muted", text: choices.standing[s.standing] }) : null),
-          el("div", { class: "p-meta" },
-            el("span", { text: s.origin || "Origin not set" }),
-            s.type ? el("span", { text: s.type }) : null,
-            (s.supplies || []).length ? el("span", { text: s.supplies.join(", ") }) : null)),
+        el("td", {}, el("div", { class: "sup-cell" }, avatar(s.name),
+          el("div", {},
+            el("div", { class: "p-name" }, s.name, s.standing !== "active" ? el("span", { class: "tag tag-muted", text: choices.standing[s.standing] }) : null),
+            el("div", { class: "p-meta" },
+              el("span", { text: s.origin || "Origin not set" }),
+              s.type ? el("span", { text: s.type }) : null,
+              (s.supplies || []).length ? el("span", { text: s.supplies.join(", ") }) : null)))),
         el("td", { class: "num" },
           el("strong", { text: perT(m.pricePerT, m.currency) }),
           el("div", { class: "row-sub" }, el("span", { class: `tag ${m.covers === "everything" ? "" : "tag-warn"}`, text: coversShort(m.covers) }), m.priceExpired ? el("span", { class: "tag tag-bad", text: "expired" }) : null)),
@@ -149,6 +150,8 @@
     if (drawer.hidden) lastFocus = document.activeElement;
     $("drawer-title").textContent = title;
     $("drawer-eyebrow").textContent = eyebrow || "";
+    $("drawer-avatar").hidden = true;
+    $("drawer-tags").hidden = true;
     $("view-detail").hidden = newMode !== "detail";
     form.hidden = newMode === "detail";
     $("profile-tabs").hidden = newMode !== "detail";
@@ -312,7 +315,11 @@
         openDetail(saved.id, s ? undefined : "contacts");
       });
     };
-    footer(el("span", { class: "spacer" }), cancelBtn(s ? backToProfile(s.id) : null), el("button", { class: "btn btn-primary", type: "submit", form: "view-form", id: "save-btn", text: s ? "Save changes" : "Add supplier" }));
+    const archiveBtn = s && me.canEdit ? el("button", { class: "btn btn-danger-quiet", type: "button", text: "Archive supplier", onclick: async () => {
+      if (archiveBtn.dataset.confirm !== "1") { archiveBtn.dataset.confirm = "1"; archiveBtn.textContent = `Archive ${s.name}?`; archiveBtn.classList.add("btn-danger"); return; }
+      try { await api(`/api/suppliers/${s.id}/archive`, { method: "POST" }); toast(`${s.name} archived`); closeDrawer(true); await load(); } catch (error) { toast(error.message, true); }
+    } }) : null;
+    footer(archiveBtn, el("span", { class: "spacer" }), cancelBtn(s ? backToProfile(s.id) : null), el("button", { class: "btn btn-primary", type: "submit", form: "view-form", id: "save-btn", text: s ? "Save changes" : "Add supplier" }));
     field("name").focus();
   }
 
@@ -514,67 +521,172 @@
   }
 
   // ---------------------------------------------------------------- profile
-  function kv(rows) {
-    const dl = el("dl", { class: "kv" });
-    for (const [label, value, sub] of rows) dl.append(el("dt", { text: label }), el("dd", {}, value === null || value === undefined || value === "" ? "—" : value, sub ? el("small", { text: sub }) : null));
-    return dl;
+  const initials = (name) => {
+    const words = String(name || "?").replace(/[^A-Za-z0-9 ]/g, " ").trim().split(/\s+/).filter(Boolean);
+    return (words.length > 1 ? words.slice(0, 2).map((w) => w[0]).join("") : (words[0] || "?").slice(0, 2)).toUpperCase();
+  };
+  const avatar = (name, cls = "") => el("span", { class: `avatar ${cls}`, "aria-hidden": "true", text: initials(name) });
+  const icon = (path, size = 16) => { const s = el("span", { class: "i", "aria-hidden": "true" }); s.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`; return s; };
+  const I = {
+    mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/>',
+    phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+    web: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
+    copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  };
+  const meter = (share, cls = "") => el("span", { class: `meter ${cls}`, "aria-hidden": "true" }, el("span", { style: `width:${Math.max(0, Math.min(100, share * 100)).toFixed(1)}%` }));
+
+  // What's missing from a profile — shown as a gentle prompt.
+  function missing(s) {
+    const gaps = [];
+    if (!s.origin) gaps.push("origin");
+    if (!(s.supplies || []).length) gaps.push("what they supply");
+    if (!s.priceCovers) gaps.push("what the price covers");
+    if (!s.deliveryTerms) gaps.push("delivery terms");
+    if (!s.transport) gaps.push("transport");
+    if (s.paymentDays === null) gaps.push("payment terms");
+    if (s.onTimePct === null) gaps.push("on-time %");
+    if (s.leadTimeMin === null) gaps.push("lead time");
+    if (!(s.contacts || []).length) gaps.push("a contact");
+    return gaps;
+  }
+
+  // The headline: what this supplier's price really means given quota.
+  function exposureCallout(s) {
+    const m = s.metrics;
+    const q = quotaFor(s).find((x) => x.kind === "line");
+    const lineText = (l) => `${l.residual ? "Other-origins" : l.origin === "European Union" ? "EU" : l.origin} quota for Category ${l.categoryId}`;
+    if (!s.origin) {
+      return el("div", { class: "callout is-muted" }, icon(I.alert, 18),
+        el("div", {}, el("strong", { text: "Origin not set" }), el("p", { text: "Set where the steel is melted and poured to see which quota line applies and what the duty risk is." }),
+          me.canEdit ? el("button", { class: "link-btn", type: "button", text: "Set origin", onclick: () => openSupplierForm(s) }) : null));
+    }
+    if (s.origin === "UK") {
+      return el("div", { class: "callout is-good" }, icon(I.check, 18),
+        el("div", {}, el("strong", { text: "UK steel — no quota, no steel duty" }), el("p", { text: `The quoted ${perT(m.pricePerT, m.currency)} is the price you pay.` })));
+    }
+    if (s.origin === "Ukraine") {
+      return el("div", { class: "callout is-good" }, icon(I.check, 18),
+        el("div", {}, el("strong", { text: "Ukrainian origin is excluded from the steel measure" }), el("p", { text: "No quota or 50% steel duty applies." })));
+    }
+    const lineBlock = q ? el("div", { class: "callout-line" },
+      el("div", { class: "callout-line-head" }, el("span", { text: lineText(q.line) }), el("a", { href: `quotas.html?category=${encodeURIComponent(q.categoryId)}`, text: `Line ${q.line.orderNumber} →` })),
+      q.line.found && q.line.usedShare !== null && q.line.usedShare !== undefined ? meter(q.line.usedShare, (RISK[q.line.risk] || [])[1] || "") : null,
+      el("div", { class: "callout-line-foot" },
+        el("span", { text: q.line.found ? `${Math.round((q.line.usedShare || 0) * 100)}% used · ${fmt.tonnesRound(q.line.balanceT)} left` : "No live balance" }),
+        el("span", { text: q.line.risk === "exhausted" ? "Used up" : q.line.runOutDate ? `runs out ~${fmt.date(q.line.runOutDate)}` : "" }))) : null;
+    if (m.dutyExposed) {
+      const bad = q && ["exhausted", "critical"].includes(q.line.risk);
+      return el("div", { class: `callout ${bad ? "is-bad" : "is-warn"}` }, icon(I.alert, 18),
+        el("div", {},
+          el("strong", { text: "You carry the duty risk on this price" }),
+          el("p", { text: `${perT(m.pricePerT, m.currency)} is quoted without duty. If the quota is used up before your load clears customs, the 50% steel duty applies: about ${perT(m.worstCasePerT, m.currency)}.` }),
+          lineBlock));
+    }
+    return el("div", { class: "callout is-info" }, icon(I.shield, 18),
+      el("div", {},
+        el("strong", { text: "Duty paid by the supplier" }),
+        el("p", { text: "They quote duty paid, so the 50% duty risk is theirs — but if the quota runs out they may delay or refuse delivery." }),
+        lineBlock));
+  }
+
+  function facts(rows) {
+    return el("dl", { class: "facts" }, ...rows.filter(([, v]) => v !== null && v !== undefined && v !== "").map(([label, value, sub]) =>
+      el("div", { class: "fact" }, el("dt", { text: label }), el("dd", {}, value, sub ? el("small", { text: sub }) : null))));
+  }
+
+  function contactActions(c, { compact } = {}) {
+    return el("div", { class: "contact-btns" },
+      c.email ? el("a", { class: "btn btn-sm", href: `mailto:${c.email}`, title: c.email }, icon(I.mail), compact ? null : "Email") : null,
+      c.phone ? el("a", { class: "btn btn-sm", href: `tel:${c.phone.replace(/[^\d+]/g, "")}`, title: c.phone }, icon(I.phone), compact ? null : "Call") : null);
   }
 
   function overviewPanel(s) {
     const m = s.metrics;
-    const qs = quotaFor(s);
     const supplied = products.filter((p) => (s.supplies || []).includes(p.category));
-    const sec = (title, ...kids) => el("section", { class: "detail-section" }, el("h3", { text: title }), ...kids);
-    return el("div", { class: "profile-panel profile-overview" },
-      el("div", { class: "kv-head span-all" },
-        el("div", {}, el("span", { text: "Quoted" }), el("strong", { text: perT(m.pricePerT, m.currency) }), el("small", { class: "kv-sub", text: m.priceDate ? `${coversShort(m.covers)} · ${m.priceChannel === "list" ? "supplier list" : ago(m.priceAgeDays)}` : "No quote yet" })),
-        el("div", {}, el("span", { text: "If quota runs out" }), el("strong", { text: perT(m.worstCasePerT, m.currency) }), el("small", { class: "kv-sub", text: m.dutyUnknown ? "set the origin to work this out" : m.dutyExposed ? "+50% steel duty, you pay" : isImport(s) ? "supplier carries duty" : "UK — no steel duty" })),
-        el("div", {}, el("span", { text: "On time" }), el("strong", { text: s.onTimePct === null ? "—" : `${s.onTimePct}%` })),
-        el("div", {}, el("span", { text: "Lead time" }), el("strong", { text: lead(s) }))),
-      sec("Commercial", kv([
-        ["Price covers", choices.priceCovers[s.priceCovers] || ""],
-        ["Delivery terms", s.deliveryTerms],
-        ["Transport", { included: "Included in price", extra: "Charged extra" }[s.transport] || ""],
-        ["DDP available", choices.ddp[s.ddp] || ""],
-        ["Payment terms", terms(s), s.paymentNote],
+    const needs = (p) => ["critical", "reorder", "low"].includes(p.metrics && p.metrics.status);
+    const gaps = missing(s);
+    const rank = suppliers.filter((x) => Number.isFinite(x.metrics.worstCasePerT)).sort((a, b) => a.metrics.worstCasePerT - b.metrics.worstCasePerT);
+    const pos = rank.findIndex((x) => x.id === s.id);
+    const sec = (title, action, ...kids) => el("section", { class: "p-sec" }, el("div", { class: "p-sec-head" }, el("h3", { text: title }), action || null), ...kids);
+    const onTime = s.onTimePct;
+
+    const main = el("div", { class: "p-main" },
+      el("div", { class: "metric-row" },
+        el("div", { class: "metric" }, el("span", { text: "Quoted" }), el("strong", { text: perT(m.pricePerT, m.currency) }),
+          el("small", {}, el("span", { class: `tag ${m.covers === "everything" ? "" : "tag-warn"}`, text: coversShort(m.covers) }), " ", m.priceChannel === "list" ? "supplier list" : ago(m.priceAgeDays))),
+        el("div", { class: "metric" }, el("span", { text: "Worst case" }), el("strong", { class: m.dutyExposed ? "is-warn" : "", text: perT(m.worstCasePerT, m.currency) }),
+          el("small", { text: pos >= 0 ? (pos === 0 ? "cheapest of your suppliers" : `#${pos + 1} of ${rank.length} · +${money(m.worstCasePerT - rank[0].metrics.worstCasePerT)}`) : "set origin to compare" })),
+        el("div", { class: "metric" }, el("span", { text: "On time" }), el("strong", { text: onTime === null ? "—" : `${onTime}%` }),
+          onTime === null ? el("small", { text: "not recorded" }) : meter(onTime / 100, onTime >= 85 ? "is-good" : onTime >= 75 ? "" : "is-warn")),
+        el("div", { class: "metric" }, el("span", { text: "Lead time" }), el("strong", { text: lead(s) }), el("small", { text: s.moqNote || (s.moqMinT !== null ? `MOQ ${moq(s)}` : "MOQ not set") }))),
+      exposureCallout(s),
+      sec("Terms", null, facts([
+        ["Price covers", choices.priceCovers[s.priceCovers] ? coversLong(s.priceCovers) : null],
+        ["Delivery", s.deliveryTerms || null],
+        ["Transport", { included: "Included", extra: "Charged extra" }[s.transport] || null],
+        ["DDP", isImport(s) && s.ddp ? choices.ddp[s.ddp] : null],
+        ["Payment", s.paymentDays === null ? null : terms(s), s.paymentNote],
+        ["Minimum order", s.moqNote || (s.moqMinT !== null ? moq(s) : null)],
         ["Currency", s.currency],
-        ["Minimum order", s.moqNote || moq(s)],
-      ])),
-      sec("Quota & duty exposure",
-        qs.length ? el("ul", { class: "exposure" }, ...qs.map((q) => el("li", {},
-          el("div", {}, el("strong", { text: `Category ${q.categoryId}` }), el("span", { class: "small muted", text: ` ${categoryName(q.categoryId)}` })),
-          el("div", { class: "exp-line" }, quotaChip(q) || "—",
-            q.kind === "line" ? el("a", { class: "small", href: `quotas.html?category=${encodeURIComponent(q.categoryId)}`, text: `${q.line.residual ? "Other origins" : q.line.origin} line ${q.line.orderNumber}${q.line.runOutDate && q.line.risk !== "exhausted" ? ` · runs out ${fmt.date(q.line.runOutDate)}` : ""}` }) : null))))
-          : el("p", { class: "muted small", style: "margin:0", text: quota ? "Tick what they supply (Edit) to see the quota lines that apply." : "Loading live quota balances…" }),
-        s.dutyRiskNote ? el("p", { class: "small", style: "margin:8px 0 0", text: s.dutyRiskNote }) : null),
-      sec("Pricing benchmarked against",
+      ]),
+        gaps.length && me.canEdit ? el("div", { class: "gaps" }, el("span", { text: `Missing: ${gaps.join(", ")}.` }), el("button", { class: "link-btn", type: "button", text: gaps.includes("a contact") && gaps.length === 1 ? "Add contact" : "Complete profile", onclick: () => (gaps.length === 1 && gaps[0] === "a contact" ? openContactForm(s) : openSupplierForm(s)) })) : null),
+      sec(`Your products they supply${supplied.length ? ` · ${supplied.length}` : ""}`,
+        supplied.some(needs) && me.canEdit ? el("button", { class: "link-btn", type: "button", text: "Request quote for these", onclick: () => openRfq({ supplierId: s.id }) }) : null,
+        supplied.length
+          ? el("ul", { class: "prod-list" }, ...supplied.map((p) => {
+              const st = p.metrics ? p.metrics.status : "ok";
+              const cls = { critical: "is-bad", reorder: "is-bad", low: "is-warn", "no-usage": "is-muted" }[st] || "";
+              return el("li", {},
+                el("a", { href: `products.html?product=${p.id}` }, el("span", { class: `status-dot ${cls}`, "aria-hidden": "true" }), el("span", { text: p.name })),
+                el("span", { class: "prod-meta", text: needs(p) ? `order ${p.metrics.suggestedOrderT} t` : p.metrics && p.metrics.coverMonths !== null ? `${p.metrics.coverMonths.toFixed(1)} mo cover` : "" }));
+            }))
+          : el("p", { class: "muted small", text: `No products in ${(s.supplies || []).join(", ") || "their groups"} yet.` })));
+
+    const side = el("div", { class: "p-side" },
+      sec("Main contact", m.primaryContact && me.canEdit ? el("button", { class: "link-btn", type: "button", text: "All contacts", onclick: () => { tab = "contacts"; renderTabs(s); renderBody(s); } }) : null,
+        m.primaryContact
+          ? el("div", { class: "contact-mini" }, avatar(m.primaryContact.name),
+              el("div", { class: "contact-mini-text" }, el("strong", { text: m.primaryContact.name }), el("span", { text: m.primaryContact.role || m.primaryContact.email || m.primaryContact.phone || "" })),
+              contactActions(m.primaryContact, { compact: true }))
+          : el("div", { class: "empty-mini" }, el("span", { text: "No contact yet — quote requests need an email." }), me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Add contact", onclick: () => openContactForm(s) }) : null)),
+      sec("Supplies", null, (s.supplies || []).length ? el("div", { class: "tag-row" }, ...s.supplies.map((g) => el("span", { class: "tag tag-plain", text: g }))) : el("p", { class: "muted small", text: "Not set" })),
+      sec("Prices benchmarked against", null,
         (s.pricingSources || []).length
-          ? el("div", { class: "source-chips" }, ...s.pricingSources.map((src) => (SOURCE_LINKS[src]
-              ? el("a", { class: "chip", href: SOURCE_LINKS[src], target: "_blank", rel: "noopener", text: `${src} ↗` })
-              : el("span", { class: "chip", text: src }))))
-          : el("p", { class: "muted small", style: "margin:0", text: "Not recorded." })),
-      sec("Your products they supply",
-        supplied.length ? el("ul", { class: "mini-list" }, ...supplied.map((p) => el("li", {}, el("a", { href: `products.html?product=${p.id}`, text: p.name }), el("span", { class: "small muted", text: p.metrics && p.metrics.suggestedOrderT ? `order ${p.metrics.suggestedOrderT} t` : "" }))))
-          : el("p", { class: "muted small", style: "margin:0", text: "None linked — tick what they supply in Edit." })),
-      sec("Main contact",
-        m.primaryContact ? contactCard(s, m.primaryContact, true) : el("p", { class: "muted small", style: "margin:0" }, "No contact yet. ", me.canEdit ? el("button", { class: "link-btn", type: "button", text: "Add one", onclick: () => openContactForm(s) }) : null)),
-      s.website || s.notes ? el("section", { class: "detail-section span-all" }, el("h3", { text: "Notes" }),
-        s.website ? el("p", { class: "small", style: "margin:0 0 6px" }, el("a", { href: s.website, target: "_blank", rel: "noopener", text: s.website.replace(/^https?:\/\//, "") })) : null,
-        s.notes ? el("p", { style: "margin:0;white-space:pre-wrap", text: s.notes }) : null) : null);
+          ? el("div", { class: "tag-row" }, ...s.pricingSources.map((src) => (SOURCE_LINKS[src]
+              ? el("a", { class: "tag tag-plain tag-link", href: SOURCE_LINKS[src], target: "_blank", rel: "noopener", text: `${src} ↗` })
+              : el("span", { class: "tag tag-plain", text: src }))))
+          : el("p", { class: "muted small", text: "Not recorded" })),
+      s.dutyRiskNote ? sec("Quota note", null, el("p", { class: "note-text", text: s.dutyRiskNote })) : null,
+      s.notes || s.website ? sec("Notes", null,
+        s.website ? el("a", { class: "web-link", href: s.website, target: "_blank", rel: "noopener" }, icon(I.web, 14), s.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")) : null,
+        s.notes ? el("p", { class: "note-text", text: s.notes }) : null) : null);
+
+    return el("div", { class: "supplier-overview" }, main, side);
   }
+  const coversLong = (c) => ({ everything: "Everything (delivered, duty paid)", "except-duty": "All except duty", "ex-works": "Ex works", port: "To UK port" })[c] || "—";
 
   function spark(quotes) {
     const pts = [...quotes].filter((q) => q.currency === "GBP").sort((a, b) => (a.date + a.at).localeCompare(b.date + b.at));
     if (pts.length < 2) return null;
-    const W = 320, H = 64, pad = 6;
+    const W = 560, H = 120, padX = 8, padY = 14;
     const xs = pts.map((q) => Date.parse(q.date)), ys = pts.map((q) => q.pricePerT);
-    const [x0, x1] = [Math.min(...xs), Math.max(...xs)], [y0, y1] = [Math.min(...ys), Math.max(...ys)];
-    const X = (x) => pad + (x1 === x0 ? (W - 2 * pad) / 2 : ((x - x0) / (x1 - x0)) * (W - 2 * pad));
-    const Y = (y) => H - pad - (y1 === y0 ? (H - 2 * pad) / 2 : ((y - y0) / (y1 - y0)) * (H - 2 * pad));
-    const d = pts.map((q, i) => `${i ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(" ");
-    const wrap = el("div", { class: "spark" });
-    wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Price history from £${ys[0]} to £${ys[ys.length - 1]} per tonne"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${pts.map((q, i) => `<circle cx="${X(xs[i]).toFixed(1)}" cy="${Y(ys[i]).toFixed(1)}" r="3" fill="currentColor"><title>${q.date}: £${q.pricePerT}/t</title></circle>`).join("")}</svg>`;
-    wrap.append(el("div", { class: "spark-axis" }, el("span", { text: `${fmt.date(pts[0].date)} · £${ys[0]}` }), el("span", { text: `${fmt.date(pts[pts.length - 1].date)} · £${ys[ys.length - 1]}` })));
+    const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
+    const lo = Math.min(...ys), hi = Math.max(...ys), span = Math.max(hi - lo, 20);
+    const [y0, y1] = [lo - span * 0.15, hi + span * 0.15];
+    const X = (i) => padX + (x1 === x0 ? (i / (pts.length - 1)) * (W - 2 * padX) : ((xs[i] - x0) / (x1 - x0)) * (W - 2 * padX));
+    const Y = (y) => H - padY - ((y - y0) / (y1 - y0)) * (H - 2 * padY);
+    const line = pts.map((q, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(" ");
+    const area = `${line} L${X(pts.length - 1).toFixed(1)},${H} L${X(0).toFixed(1)},${H} Z`;
+    const wrap = el("figure", { class: "price-chart" });
+    wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="Price history from £${ys[0]} to £${ys[ys.length - 1]} per tonne">
+      <path d="${area}" class="pc-area"/><path d="${line}" class="pc-line" vector-effect="non-scaling-stroke"/>
+      ${pts.map((q, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(ys[i]).toFixed(1)}" r="3.5" class="pc-dot"><title>${q.date}: £${q.pricePerT}/t</title></circle>`).join("")}</svg>`;
+    wrap.append(el("figcaption", {}, el("span", { text: `${fmt.date(pts[0].date)} · £${ys[0]}` }), el("span", { text: `low £${lo} · high £${hi}` }), el("span", { text: `${fmt.date(pts[pts.length - 1].date)} · £${ys[ys.length - 1]}` })));
     return wrap;
   }
 
@@ -582,17 +694,29 @@
     const quotes = [...(s.quotes || [])].sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));
     const open = (s.rfqs || []).filter((r) => r.status === "open");
     const today = todayIso();
+    const latest = quotes[0];
+    const prev = quotes[1];
+    const others = suppliers.filter((x) => x.id !== s.id && Number.isFinite(x.metrics.pricePerT));
+    const cheapest = others.sort((a, b) => a.metrics.pricePerT - b.metrics.pricePerT)[0];
     return el("div", { class: "profile-panel" },
-      open.length ? el("div", { class: "notice" },
-        el("strong", { text: `Waiting on ${open.length} quote request${open.length === 1 ? "" : "s"}` }),
-        el("ul", { class: "mini-list" }, ...open.map((r) => el("li", {}, el("span", { text: `${fmt.date(r.at.slice(0, 10))} · ${r.lines.map((l) => `${l.name}${l.tonnage ? ` ${l.tonnage} t` : ""}`).join(", ")}` }), el("span", { class: "small muted", text: r.contactName ? `to ${r.contactName}` : "" }))))) : null,
+      open.length ? el("div", { class: "callout is-warn" }, icon(I.clock, 18), el("div", {},
+        el("strong", { text: `Waiting on ${open.length === 1 ? "a reply" : `${open.length} replies`}` }),
+        el("ul", { class: "plain-list" }, ...open.map((r) => el("li", { text: `Requested ${fmt.date(r.at.slice(0, 10))}${r.contactName ? ` from ${r.contactName}` : ""}: ${r.lines.map((l) => `${l.name}${l.tonnage ? ` (${l.tonnage} t)` : ""}`).join(", ")}` }))),
+        me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Log their quote", onclick: () => openQuoteForm(s) }) : null)) : null,
+      latest ? el("div", { class: "latest-quote" },
+        el("div", {}, el("span", { class: "lq-label", text: "Latest quote" }), el("strong", { class: "lq-price", text: perT(latest.pricePerT, latest.currency) }),
+          el("span", { class: "lq-sub", text: `${coversLong(latest.covers)} · ${latest.channel === "list" ? "from supplier list" : `${fmt.date(latest.date)} by ${(choices.quoteChannels[latest.channel] || latest.channel).toLowerCase()}`}` })),
+        el("div", { class: "lq-side" },
+          prev ? el("span", { class: latest.pricePerT > prev.pricePerT ? "trend up" : latest.pricePerT < prev.pricePerT ? "trend down" : "trend", text: latest.pricePerT === prev.pricePerT ? "No change" : `${latest.pricePerT > prev.pricePerT ? "▲" : "▼"} ${money(Math.abs(latest.pricePerT - prev.pricePerT), latest.currency)} vs previous` }) : null,
+          latest.validUntil ? el("span", { class: latest.validUntil < today ? "status-dot is-bad" : "status-dot", text: latest.validUntil < today ? `Expired ${fmt.date(latest.validUntil)}` : `Valid to ${fmt.date(latest.validUntil)}` }) : el("span", { class: "muted small", text: "Validity not stated" }),
+          cheapest ? el("span", { class: "muted small", text: latest.pricePerT <= cheapest.metrics.pricePerT ? "Lowest quoted price right now" : `${cheapest.name} quotes ${perT(cheapest.metrics.pricePerT, cheapest.metrics.currency)}` }) : null)) : null,
       spark(quotes),
       quotes.length ? el("div", { class: "table-scroll" }, el("table", { class: "quota-table quotes-table" },
         el("thead", {}, el("tr", {}, el("th", { text: "Date" }), el("th", { class: "num", text: "Price" }), el("th", { text: "Covers" }), el("th", { text: "For" }), el("th", { class: "wide-only", text: "Valid until" }), el("th", { class: "wide-only", text: "Source" }), me.canEdit ? el("th", {}, el("span", { class: "sr-only", text: "Remove" })) : null)),
         el("tbody", {}, ...quotes.map((q) => el("tr", {},
-          el("td", { text: fmt.date(q.date) }),
+          el("td", { text: q.channel === "list" ? "Supplier list" : fmt.date(q.date) }),
           el("td", { class: "num" }, el("strong", { text: perT(q.pricePerT, q.currency) })),
-          el("td", { text: coversShort(q.covers) }),
+          el("td", {}, el("span", { class: `tag ${q.covers === "everything" ? "" : "tag-warn"}`, text: coversShort(q.covers) })),
           el("td", { text: `${q.productName || "General"}${q.tonnage ? ` · ${q.tonnage} t` : ""}` }),
           el("td", { class: "wide-only" }, q.validUntil ? el("span", { class: q.validUntil < today ? "status-dot is-bad" : "", text: fmt.date(q.validUntil) }) : "—"),
           el("td", { class: "wide-only", title: q.note || "", text: `${choices.quoteChannels[q.channel] || q.channel}${q.by && q.by !== "setup" ? ` · ${q.by}` : ""}` }),
@@ -600,21 +724,30 @@
             if (e.currentTarget.dataset.confirm !== "1") { e.currentTarget.dataset.confirm = "1"; e.currentTarget.textContent = "Remove?"; return; }
             try { await api(`/api/suppliers/${s.id}/quotes/${q.id}`, { method: "DELETE" }); toast("Quote removed"); await load(); openDetail(s.id, "quotes"); } catch (error) { toast(error.message, true); }
           } })) : null))))) : el("div", { class: "empty-state" }, el("h3", { text: "No quotes yet" }), el("p", { text: "Request a quote, then log their reply here." })),
-      el("p", { class: "small muted", style: "margin:0", text: "The latest quote is the price used across the tool. Quotes from the supplier list are kept as the starting point." }));
+      el("p", { class: "small muted", style: "margin:0", text: "The latest quote is this supplier's current price everywhere in the tool." }));
   }
 
-  function contactCard(s, c, compact) {
-    return el("div", { class: "contact-card" },
-      el("div", {}, el("strong", { text: c.name }), c.primary && !compact ? el("span", { class: "tag", text: "Main contact" }) : null, c.role ? el("div", { class: "small muted", text: c.role }) : null),
-      el("div", { class: "contact-links" },
-        c.email ? el("a", { href: `mailto:${c.email}`, text: c.email }) : null,
-        c.phone ? el("a", { href: `tel:${c.phone.replace(/[^\d+]/g, "")}`, text: c.phone }) : null),
-      compact || !me.canEdit ? null : el("div", { class: "contact-actions" },
-        el("button", { class: "link-btn", type: "button", text: "Edit", onclick: () => openContactForm(s, c) }),
-        el("button", { class: "link-btn", type: "button", text: "Remove", onclick: async (e) => {
-          if (e.currentTarget.dataset.confirm !== "1") { e.currentTarget.dataset.confirm = "1"; e.currentTarget.textContent = "Remove?"; return; }
-          try { await api(`/api/suppliers/${s.id}/contacts/${c.id}`, { method: "DELETE" }); toast("Contact removed"); await load(); openDetail(s.id, "contacts"); } catch (error) { toast(error.message, true); }
-        } })));
+  function contactCard(s, c) {
+    const copyBtn = c.email ? el("button", { class: "btn btn-sm", type: "button", title: "Copy email", onclick: async () => { try { await navigator.clipboard.writeText(c.email); toast("Email copied"); } catch { toast(c.email); } } }, icon(I.copy)) : null;
+    return el("article", { class: `contact-card${c.primary ? " is-primary" : ""}` },
+      avatar(c.name),
+      el("div", { class: "contact-body" },
+        el("div", { class: "contact-name" }, el("strong", { text: c.name }), c.primary ? el("span", { class: "tag", text: "Main contact" }) : null),
+        c.role ? el("div", { class: "small muted", text: c.role }) : null,
+        el("div", { class: "contact-lines" },
+          c.email ? el("span", {}, icon(I.mail, 13), c.email) : null,
+          c.phone ? el("span", {}, icon(I.phone, 13), c.phone) : null)),
+      el("div", { class: "contact-side" },
+        el("div", { class: "contact-btns" }, contactActions(c), copyBtn),
+        me.canEdit ? el("div", { class: "contact-actions" },
+          !c.primary ? el("button", { class: "link-btn", type: "button", text: "Make main", onclick: async () => {
+            try { await api(`/api/suppliers/${s.id}/contacts/${c.id}`, { method: "PUT", body: { ...c, primary: true } }); await load(); openDetail(s.id, "contacts"); } catch (error) { toast(error.message, true); }
+          } }) : null,
+          el("button", { class: "link-btn", type: "button", text: "Edit", onclick: () => openContactForm(s, c) }),
+          el("button", { class: "link-btn", type: "button", text: "Remove", onclick: async (e) => {
+            if (e.currentTarget.dataset.confirm !== "1") { e.currentTarget.dataset.confirm = "1"; e.currentTarget.textContent = "Remove?"; return; }
+            try { await api(`/api/suppliers/${s.id}/contacts/${c.id}`, { method: "DELETE" }); toast("Contact removed"); await load(); openDetail(s.id, "contacts"); } catch (error) { toast(error.message, true); }
+          } })) : null));
   }
 
   function contactsPanel(s) {
@@ -676,19 +809,26 @@
     if (detailId !== id) tab = t || "overview";
     if (t) tab = t;
     detailId = id;
-    showDrawer("detail", s.name, [s.origin, s.type, choices.standing[s.standing]].filter(Boolean).join(" · "));
+    const m = s.metrics;
+    showDrawer("detail", s.name, "Supplier");
+    const av = $("drawer-avatar");
+    av.textContent = initials(s.name);
+    av.hidden = false;
+    const tags = $("drawer-tags");
+    tags.replaceChildren(...[
+      el("span", { class: "ident-tag", text: s.origin || "Origin not set" }),
+      s.type ? el("span", { class: "ident-tag", text: s.type }) : null,
+      el("span", { class: `ident-tag standing-${s.standing}`, text: choices.standing[s.standing] }),
+      m.awaitingQuote ? el("span", { class: "ident-tag is-warn", text: `Awaiting reply · ${m.awaitingQuote.days ? `${m.awaitingQuote.days}d` : "today"}` }) : null,
+      m.priceExpired ? el("span", { class: "ident-tag is-bad", text: "Price expired" }) : null].filter(Boolean));
+    tags.hidden = false;
     renderTabs(s);
     renderBody(s);
-    const archiveBtn = el("button", { class: "btn btn-danger", type: "button", text: "Archive", onclick: async () => {
-      if (archiveBtn.dataset.confirm !== "1") { archiveBtn.dataset.confirm = "1"; archiveBtn.textContent = `Archive ${s.name}?`; return; }
-      try { await api(`/api/suppliers/${s.id}/archive`, { method: "POST" }); toast(`${s.name} archived`); closeDrawer(true); await load(); } catch (error) { toast(error.message, true); }
-    } });
     footer(
-      me.canEdit ? archiveBtn : null,
+      me.canEdit ? el("button", { class: "btn", type: "button", onclick: () => openSupplierForm(s) }, icon(I.edit, 15), "Edit") : null,
       el("span", { class: "spacer" }),
-      me.canEdit ? el("button", { class: "btn", type: "button", text: "Edit", onclick: () => openSupplierForm(s) }) : null,
       me.canEdit ? el("button", { class: "btn", type: "button", text: "Log quote", onclick: () => openQuoteForm(s) }) : null,
-      me.canEdit ? el("button", { class: "btn btn-primary", type: "button", text: "Request quote", onclick: () => openRfq({ supplierId: s.id }) }) : null);
+      me.canEdit ? el("button", { class: "btn btn-primary", type: "button", onclick: () => openRfq({ supplierId: s.id }) }, icon(I.mail, 15), "Request quote") : null);
     if (!drawer.contains(document.activeElement)) $(`tab-${tab}`).focus();
   }
 
