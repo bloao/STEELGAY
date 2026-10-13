@@ -109,53 +109,64 @@
     if (!group || !groups.includes(group)) group = groups[0];
     $("group-tabs").replaceChildren(...groups.map((g) => el("button", {
       type: "button", role: "tab", class: "group-tab", "aria-selected": String(g === group),
-      onclick: () => { group = g; renderGroups(); renderCompare(); renderChart(); },
+      onclick: () => { group = g; renderGroups(); renderGlance(); renderCompare(); renderChart(); },
     }, g, el("span", { class: "count", text: allSeries().filter((s) => s.group === g).length }))));
     $("group-tabs").hidden = groups.length < 2;
   }
 
-  // ---------------------------------------------------------------- market pulse
+  // ---------------------------------------------------------------- shared bits
   const pctTxt = (c) => (c ? `${c.pct > 0 ? "+" : c.pct < 0 ? "−" : ""}${Math.abs(c.pct).toFixed(1)}%` : "—");
   const pctCls = (c) => (!c || Math.abs(c.pct) < 0.05 ? "is-flat" : c.pct > 0 ? "is-up" : "is-down");
-  function spark(points, color) {
+  const monthYear = (iso) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }) : "");
+  let animated = false; // draw-in animations only on the first render
+  function spark(points, color, { w = 160, h = 40, labels = false } = {}) {
     const pts = [...points].sort((a, b) => a.date.localeCompare(b.date)).slice(-24);
-    if (pts.length < 2) return el("span", { class: "muted small", text: "—" });
-    const W = 120, H = 32;
+    if (pts.length < 2) return el("span", { class: "muted small", text: "Not enough history yet" });
     const lo = Math.min(...pts.map((p) => p.price)), hi = Math.max(...pts.map((p) => p.price)), r = hi - lo || 1;
-    const d = pts.map((p, i) => `${i ? "L" : "M"}${((i / (pts.length - 1)) * (W - 4) + 2).toFixed(1)},${(H - 3 - ((p.price - lo) / r) * (H - 6)).toFixed(1)}`).join(" ");
-    const box = el("span", { class: "spark-mini" });
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" pathLength="1"${pulseAnimated ? "" : ' class="spark-path"'}/></svg>`;
+    const xy = (p, i) => [((i / (pts.length - 1)) * (w - 8) + 4), (h - 5 - ((p.price - lo) / r) * (h - 10))];
+    const d = pts.map((p, i) => { const [x, y] = xy(p, i); return `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`; }).join(" ");
+    const [ex, ey] = xy(pts[pts.length - 1], pts.length - 1);
+    const area = `${d} L${ex.toFixed(1)},${h} L4,${h} Z`;
+    const box = el("span", { class: "spark" });
+    box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" aria-hidden="true"><path d="${area}" fill="${color}" opacity="0.08"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" pathLength="1"${animated ? "" : ' class="spark-path"'}/><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5" fill="${color}"/></svg>`;
+    if (labels) box.append(el("span", { class: "spark-axis" }, el("span", { text: monthYear(pts[0].date) }), el("span", { text: monthYear(pts[pts.length - 1].date) })));
     return box;
   }
-  let pulseAnimated = false;
+  const trendWord = (c) => (!c ? null : c.pct <= -0.5 ? ["Easing", "is-down"] : c.pct >= 0.5 ? ["Rising", "is-up"] : ["Steady", "is-flat"]);
+  const moveWords = (c, span) => (!c ? "" : Math.abs(c.pct) < 0.05 ? `unchanged over ${span}` : `${c.pct > 0 ? "up" : "down"} ${Math.abs(c.pct).toFixed(1)}% over ${span}`);
+
+  // ---------------------------------------------------------------- where prices are heading
+  const PULSE_TEXT = {
+    "ons:GHAV": ["UK-made steel", "What UK producers charge for steel sold in the UK."],
+    "ons:GHCZ": ["Imported steel (UK buyers)", "What UK firms pay for steel brought in from abroad."],
+    "ons:EZWP": ["Steel import prices", "Price of basic steel at the UK border, before it's sold on."],
+  };
   function renderPulse() {
-    setTimeout(() => { if (data.series.some((x) => isPulse(x) || x.source === "LME")) pulseAnimated = true; }, 1200);
     const list = data.series.filter((x) => isPulse(x) || x.source === "LME");
     const box = $("pulse");
     if (!list.length) {
       const ons = data.live.ONS || {};
       box.replaceChildren(el("div", { class: "pulse-empty" }, el("span", { class: "spinner sm", "aria-hidden": "true" }),
-        el("span", { text: ons.at && !ons.ok ? `Couldn't reach ONS yet (${ons.error}). It will retry automatically.` : "Fetching the latest official steel price indices…" })));
+        el("span", { text: ons.at && !ons.ok ? `Couldn't reach the ONS yet (${ons.error}). It will retry automatically.` : "Fetching the latest official steel price indices…" })));
       return;
     }
     const colors = ["#2a78d6", "#eb6834", "#1baf7a", "#6250d6", "#e34948"];
-    const ons = list.find((x) => x.feedKey === "ons:GHAV");
-    const headline = ons && ons.changes && ons.changes.m3
-      ? el("p", { class: "pulse-headline" }, "UK steel prices are ", el("strong", { class: pctCls(ons.changes.m3), text: `${ons.changes.m3.pct >= 0 ? "up" : "down"} ${Math.abs(ons.changes.m3.pct).toFixed(1)}%` }), ` over three months and ${ons.changes.m12 ? `${ons.changes.m12.pct >= 0 ? "up" : "down"} ${Math.abs(ons.changes.m12.pct).toFixed(1)}% on a year ago` : "—"} (ONS, ${ons.latest ? new Date(`${ons.latest.date}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }) : ""}).`)
-      : null;
-    box.replaceChildren(...[headline, el("div", { class: "table-scroll" }, el("table", { class: "quota-table pulse-table" },
-      el("thead", {}, el("tr", {}, el("th", { text: "Measure" }), el("th", { class: "num", text: "Latest" }), el("th", { class: "num", text: "1 month" }), el("th", { class: "num", text: "3 months" }), el("th", { class: "num wide-col", text: "12 months" }), el("th", { class: "wide-col", text: "Trend" }))),
-      el("tbody", {}, ...list.map((x, i) => {
-        const c = x.changes || {};
-        const color = colors[i % colors.length];
-        return el("tr", { class: pulseAnimated ? "" : "pulse-row", style: `animation-delay:${i * 60}ms` },
-          el("td", {}, el("div", { class: "pulse-name", text: x.name }), el("div", { class: "row-sub", text: `${x.source}${x.kind === "index" ? " · index 2015 = 100" : x.kind === "input" ? " · input cost" : ""}` })),
-          el("td", { class: "num" }, el("strong", { text: x.latest ? (x.kind === "index" ? x.latest.price.toFixed(1) : perT(x.latest.price, x.currency)) : "—" }), el("div", { class: "row-sub", text: x.latest ? fmt.date(x.latest.date) : "" })),
-          el("td", { class: `num chg ${pctCls(c.m1)}`, text: pctTxt(c.m1) }),
-          el("td", { class: `num chg ${pctCls(c.m3)}`, text: pctTxt(c.m3) }),
-          el("td", { class: `num chg wide-col ${pctCls(c.m12)}`, text: pctTxt(c.m12) }),
-          el("td", { class: "wide-col" }, spark(x.points || [], color)));
-      }))))].filter(Boolean));
+    box.replaceChildren(el("div", { class: "pulse-grid" }, ...list.map((x, i) => {
+      const c = x.changes || {};
+      const [title, what] = PULSE_TEXT[x.feedKey] || [x.name.replace(/\s*\((ONS|LME)\)\s*$/, ""), x.note || (x.kind === "input" ? "An input cost that feeds through to steel prices." : "")];
+      const tw = trendWord(c.m3);
+      const chip = (label, v) => el("span", { class: `pchip ${pctCls(v)}` }, el("span", { class: "pchip-k", text: label }), el("b", { text: pctTxt(v) }));
+      const val = x.latest ? (x.kind === "index" ? x.latest.price.toFixed(1) : perT(x.latest.price, x.currency)) : "—";
+      return el("article", { class: "pulse-card", style: `--d:${i * 70}ms` },
+        el("div", { class: "pulse-top" },
+          el("div", {}, el("h3", { text: title }), el("p", { text: what })),
+          tw ? el("span", { class: `trend-tag ${tw[1]}`, text: tw[0] }) : null),
+        el("div", { class: "pulse-val" }, el("strong", { text: val }),
+          el("span", { text: x.kind === "index" ? `index · ${monthYear(x.latest && x.latest.date)}` : `${x.latest ? fmt.date(x.latest.date) : ""}` })),
+        spark(x.points || [], colors[i % colors.length], { w: 260, h: 56, labels: true }),
+        el("div", { class: "pchips" }, chip("1 month", c.m1), chip("3 months", c.m3), chip("1 year", c.m12)),
+        el("p", { class: "pulse-src", text: `${x.source}${x.kind === "index" ? " · 2015 = 100" : ""}` }));
+    })));
   }
 
   // Market movement since a supplier's quote, from the ONS index that fits them.
@@ -170,42 +181,140 @@
     return { pct: Math.round(((end.price - start.price) / start.price) * 1000) / 10, from: start.date, to: end.date };
   }
 
-  // ---------------------------------------------------------------- comparison
+  // ---------------------------------------------------------------- what "the market" means
+  let refMode = "auto";
+  const refLabel = (s) => (s.computed ? (/imports/i.test(s.source) ? "Average of your import quotes" : "Average of your UK quotes") : `${s.name} (${s.source})`);
+  const refShort = (s) => (s.computed ? (/imports/i.test(s.source) ? "imports average" : "UK average") : `${s.source} price`);
+  function refs() {
+    return groupSeries().filter((s) => s.latest && Number.isFinite(gbp(s.latest.price, s.currency)))
+      .sort((a, b) => Number(Boolean(a.computed)) - Number(Boolean(b.computed)) || a.name.localeCompare(b.name))
+      .map((s) => ({ s, v: gbp(s.latest.price, s.currency) }));
+  }
+  // The benchmark a supplier is judged against: chosen one, or like-for-like.
+  function refFor(sup, list) {
+    if (refMode !== "auto") return list.find((r) => r.s.id === refMode) || null;
+    const ext = list.find((r) => !r.s.computed);
+    if (ext) return ext;
+    if (!sup.origin) return null; // can't tell UK from import yet
+    const imp = sup.origin !== "UK";
+    return list.find((r) => r.s.computed && /imports/i.test(r.s.source) === Boolean(imp)) || list[0] || null;
+  }
+  const groupSuppliers = () => data.suppliers.filter((s) => s.supplies.includes(group) && Number.isFinite(gbp(s.metrics.pricePerT, s.metrics.currency)))
+    .sort((a, b) => gbp(a.metrics.pricePerT, a.metrics.currency) - gbp(b.metrics.pricePerT, b.metrics.currency));
+  const gapWords = (diff, ref) => (Math.abs(diff) < 2 ? ["In line with", "is-flat"] : diff < 0 ? [`${money(-diff)}/t below`, "is-below"] : [`${money(diff)}/t above`, "is-above"]);
+
+  // ---------------------------------------------------------------- comparison ladder
   function renderCompare() {
-    const series = groupSeries();
-    const suppliers = data.suppliers.filter((s) => s.supplies.includes(group) && Number.isFinite(s.metrics.pricePerT))
-      .sort((a, b) => gbp(a.metrics.pricePerT, a.metrics.currency) - gbp(b.metrics.pricePerT, b.metrics.currency));
-    const external = series.filter((s) => !s.computed);
-    $("cmp-sub").textContent = `${group} · each supplier's latest quote against the latest price in each series${external.length ? "" : " — add MEPS or Kallanish prices for an outside view"}`;
-    if (!suppliers.length) { $("cmp").replaceChildren(el("div", { class: "empty-state" }, el("h3", { text: "No supplier quotes for this group" }), el("p", { text: "Log quotes on the Suppliers page." }))); return; }
-    const cols = series.filter((s) => s.latest);
-    const hasIdx = data.series.some((x) => x.feedKey === "ons:GHAV" || x.feedKey === "ons:GHCZ");
-    const head = el("tr", {}, el("th", { text: "Supplier" }), el("th", { class: "num", text: "Quoted" }),
-      hasIdx ? el("th", { class: "num bench-head" }, el("span", { class: "bench-name", text: "Market since quote" }), el("span", { class: "bench-val", text: "ONS index" })) : null,
-      ...cols.map((s) => el("th", { class: "num bench-head" },
-        el("span", { class: "bench-name" }, el("span", { class: "swatch", style: `background:${colorOf(s.id)}`, "aria-hidden": "true" }), s.computed ? s.source : s.name),
-        el("span", { class: "bench-val", text: `${Number.isFinite(gbp(s.latest.price, s.currency)) ? perT(gbp(s.latest.price, s.currency)) : `${perT(s.latest.price, s.currency)} (no FX rate)`} · ${fmt.date(s.latest.date)}` }))),
-      external.length ? null : el("th", { class: "bench-head is-empty" }, el("span", { class: "bench-name", text: "MEPS / Kallanish" }), el("span", { class: "bench-val", text: "no prices yet" })));
-    const rows = suppliers.map((sup) => {
+    const list = refs();
+    const sel = $("cmp-ref");
+    const hasExt = list.some((r) => !r.s.computed);
+    if (refMode !== "auto" && !list.some((r) => r.s.id === refMode)) refMode = "auto";
+    sel.replaceChildren(el("option", { value: "auto", text: hasExt ? "Outside benchmark" : "Like for like (UK vs UK, imports vs imports)" }),
+      ...list.map((r) => el("option", { value: r.s.id, text: `${refLabel(r.s)} · ${perT(r.v)}` })));
+    sel.value = refMode;
+    sel.closest(".ref-pick").hidden = !list.length;
+    const sups = groupSuppliers();
+    $("cmp-sub").textContent = hasExt
+      ? `${group} · each quote against outside market prices.`
+      : `${group} · with no MEPS or Kallanish prices yet, quotes are compared with the average of your own suppliers.`;
+    if (!sups.length) { $("cmp").replaceChildren(el("div", { class: "empty-state" }, el("h3", { text: "No supplier quotes for this product group" }), el("p", { text: "Log a quote on the Suppliers tab and it appears here." }))); return; }
+
+    const vals = [...sups.map((s) => gbp(s.metrics.pricePerT, s.metrics.currency)), ...list.map((r) => r.v)];
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const pad = Math.max((hi - lo) * 0.12, 10);
+    lo = Math.floor((lo - pad) / 10) * 10; hi = Math.ceil((hi + pad) / 10) * 10;
+    const P = (v) => ((v - lo) / (hi - lo)) * 100;
+    const shown = refMode === "auto" ? list : list.filter((r) => r.s.id === refMode);
+
+    const legend = el("div", { class: "lad-legend" },
+      ...shown.map((r) => el("span", { class: "lad-key" }, el("span", { class: "lad-key-line", style: `--c:${colorOf(r.s.id)}` }), `${refLabel(r.s)} `, el("b", { text: perT(r.v) }), el("span", { class: "muted", text: ` · ${fmt.date(r.s.latest.date)}` }))),
+      el("span", { class: "lad-key" }, el("span", { class: "lad-key-dot" }), "Supplier quote"));
+    const ticks = Array.from({ length: 5 }, (_, i) => lo + ((hi - lo) * i) / 4);
+    const axis = el("div", { class: "lad-row lad-axis", "aria-hidden": "true" }, el("span"), el("span"),
+      el("div", { class: "lad-track is-axis" }, ...ticks.map((t) => el("span", { class: "lad-tick", style: `left:${P(t)}%`, text: `£${Math.round(t)}` }))), el("span"));
+
+    const rows = sups.map((sup, i) => {
       const q = gbp(sup.metrics.pricePerT, sup.metrics.currency);
-      return el("tr", {},
-        el("td", {}, el("a", { href: `suppliers.html?supplier=${sup.id}`, class: "sup-link", text: sup.name }), el("div", { class: "row-sub", text: `${sup.origin || "origin?"} · ${({ everything: "all-in", "except-duty": "+ duty" })[sup.metrics.covers] || ""}` })),
-        el("td", { class: "num" }, el("strong", { text: perT(q) })),
-        hasIdx ? (() => { const mv = moveSinceQuote(sup); return el("td", { class: `num chg ${mv ? pctCls(mv) : ""}`, title: mv ? `Index ${mv.from} → ${mv.to}` : "" }, el("strong", { text: !mv ? "—" : mv.same ? "No change" : pctTxt(mv) }), el("div", { class: "row-sub", text: mv && !mv.same ? (mv.pct > 0 ? "quote may be cheap now" : "ask for a lower price") : mv ? "quote is current" : "" })); })() : null,
-        ...cols.map((s) => {
-          const b = gbp(s.latest.price, s.currency);
-          if (!Number.isFinite(b)) return el("td", { class: "num", text: "—" });
-          const diff = q - b;
-          const pct = (diff / b) * 100;
-          const cls = Math.abs(pct) < 0.5 ? "is-flat" : diff > 0 ? "is-above" : "is-below";
-          return el("td", { class: `num diff ${cls}`, title: `${sup.name} ${perT(q)} vs ${s.name} ${perT(b)}` },
-            el("strong", { text: Math.abs(pct) < 0.5 ? "In line" : `${signed(diff)}` }), el("div", { class: "row-sub", text: `${pct >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%` }));
-        }),
-        external.length ? null : el("td", { class: "num muted", text: "—" }));
+      const ref = refFor(sup, list);
+      const diff = ref ? q - ref.v : null;
+      const [gw, gcls] = ref ? gapWords(diff, ref) : ["", ""];
+      const mv = moveSinceQuote(sup);
+      const covers = ({ everything: "all-in", "except-duty": "+ duty" })[sup.metrics.covers] || "";
+      const track = el("div", { class: "lad-track" },
+        ...shown.map((r) => el("span", { class: `lad-ref${ref && r.s.id === ref.s.id ? " is-mine" : ""}`, style: `left:${P(r.v)}%;--c:${colorOf(r.s.id)}`, title: `${refLabel(r.s)} ${perT(r.v)}` })),
+        ref && Math.abs(diff) >= 2 ? el("span", { class: `lad-gap ${gcls}`, style: `left:${Math.min(P(q), P(ref.v))}%;width:0%`, "data-w": String(Math.abs(P(q) - P(ref.v))) }) : null,
+        el("span", { class: `lad-dot ${gcls}`, style: `left:${P(q)}%`, title: `${sup.name} ${perT(q)}` }));
+      const second = mv && !mv.same
+        ? `Market ${mv.pct > 0 ? "up" : "down"} ${Math.abs(mv.pct).toFixed(1)}% since this quote${mv.pct < -0.4 ? " — worth asking for a better price" : mv.pct > 0.4 ? " — this price may not last" : ""}`
+        : mv ? "Quote is up to date with the market" : `Quoted ${fmt.date(sup.metrics.priceDate)}`;
+      return el("div", { class: "lad-row", style: `--d:${i * 60}ms` },
+        el("div", { class: "lad-who" }, el("a", { href: `suppliers.html?supplier=${sup.id}`, class: "sup-link", text: sup.name }),
+          el("span", { class: "row-sub" }, sup.origin || "origin not set", covers ? el("span", { class: `tag ${covers === "+ duty" ? "tag-warn" : ""}`, text: covers }) : null)),
+        el("strong", { class: "lad-q", text: perT(q) }),
+        track,
+        el("div", { class: "lad-verdict" },
+          ref ? el("strong", { class: gcls, text: gcls === "is-flat" ? `In line with the ${refShort(ref.s)}` : `${gw} the ${refShort(ref.s)}` }) : el("strong", { class: "muted", text: sup.origin ? "No benchmark yet" : "Set the origin to compare" }),
+          el("span", { class: "row-sub", text: second })));
     });
-    $("cmp").replaceChildren(
-      el("div", { class: "table-scroll" }, el("table", { class: "quota-table cmp-table" }, el("thead", {}, head), el("tbody", {}, ...rows))),
-      el("p", { class: "small muted", style: "margin:10px 0 0", text: "Green = below the benchmark, amber = above. Check the basis matches (delivered vs ex-works, duty paid vs not) before reading too much into small gaps." }));
+    const anyDuty = sups.some((s) => s.metrics.covers === "except-duty");
+    $("cmp").replaceChildren(legend, el("div", { class: "ladder" }, axis, ...rows),
+      el("p", { class: "lad-note" },
+        hasExt ? "Check the basis matches (delivered vs ex-works) before reading much into small gaps." : "UK suppliers are compared with your UK average and importers with your import average, so it's like for like.",
+        anyDuty ? " Quotes marked “+ duty” leave out the steel duty: the Suppliers tab shows what they really cost once quota risk is counted." : ""));
+    requestAnimationFrame(() => requestAnimationFrame(() => $("cmp").querySelectorAll(".lad-gap").forEach((g) => { g.style.width = `${g.dataset.w}%`; })));
+  }
+
+  // ---------------------------------------------------------------- at a glance
+  function renderGlance() {
+    const ons = data.series.find((x) => x.feedKey === "ons:GHAV");
+    const c = ons && ons.changes;
+    const tw = c ? trendWord(c.m3) : null;
+    const card = (cls, label, big, bigCls, text, extra) => el("article", { class: `glance ${cls}` },
+      el("span", { class: "glance-l", text: label }),
+      el("strong", { class: `glance-big ${bigCls || ""}`, text: big }),
+      el("p", { class: "glance-t" }, ...[].concat(text)), extra || null);
+
+    const trend = ons && c && c.m3
+      ? card("is-trend", "UK steel prices", tw[0], tw[1],
+          [`${moveWords(c.m3, "3 months")[0].toUpperCase()}${moveWords(c.m3, "3 months").slice(1)}`, c.m12 ? `, ${moveWords(c.m12, "the year")}.` : "."],
+          el("div", { class: "glance-foot" }, spark(ons.points || [], "#2a78d6", { w: 320, h: 56 }), el("span", { class: "glance-src", text: `ONS official index · ${monthYear(ons.latest.date)}` })))
+      : card("is-trend", "UK steel prices", "Loading…", "is-muted", "Fetching the official ONS steel price index.");
+
+    const list = refs();
+    const sups = groupSuppliers();
+    let best;
+    if (sups.length) {
+      const sup = sups[0];
+      const q = gbp(sup.metrics.pricePerT, sup.metrics.currency);
+      const ref = refFor(sup, list);
+      const diff = ref ? q - ref.v : null;
+      const [gw, gcls] = ref ? gapWords(diff, ref) : ["", ""];
+      best = card("is-best", `Cheapest ${group} quote`, perT(q), "",
+        [el("b", { text: sup.name }), ref ? ` is ${gcls === "is-flat" ? "in line with" : gw} the ${refShort(ref.s)} (${perT(ref.v)}).` : "."],
+        el("p", { class: "glance-src", text: sup.metrics.covers === "except-duty" ? "Quoted before steel duty, so check the Suppliers tab for the real cost." : `${sups.length} supplier quote${sups.length === 1 ? "" : "s"} in this group` }));
+    } else best = card("is-best", `Cheapest ${group} quote`, "—", "is-muted", "No quotes logged for this product group yet.");
+
+    const ext = list.filter((r) => !r.s.computed);
+    const bench = ext.length
+      ? card("is-bench", "Outside benchmark", perT(ext[0].v), "", [`${ext[0].s.name}, ${fmt.date(ext[0].s.latest.date)}.`, ext.length > 1 ? ` Plus ${ext.length - 1} more.` : ""],
+          el("p", { class: "glance-src", text: `${ext[0].s.source}${ext[0].s.basis ? ` · ${ext[0].s.basis}` : ""}` }))
+      : card("is-bench is-setup", "Outside benchmark", "Not set up", "is-muted",
+          "MEPS or Kallanish prices show what the wider market pays. Without them, your quotes can only be compared with each other.",
+          me.canEdit ? el("div", { class: "glance-actions" },
+            el("button", { class: "btn btn-sm btn-primary", type: "button", text: "Import MEPS prices", onclick: () => openImport({ source: "MEPS" }) }),
+            el("button", { class: "btn btn-sm", type: "button", text: "Add a price you've heard", onclick: () => openAddPrice({ source: "Market intel" }) })) : null);
+    $("glance").replaceChildren(trend, best, bench);
+  }
+
+  function renderSourcesSummary() {
+    const liveOn = ["ONS", "LME"].filter((k) => (data.live[k] && data.live[k].ok) || ((data.feeds.find((f) => f.source === k) || {}).points > 0)).length;
+    const withData = data.feeds.filter((f) => f.points > 0 && !["ONS", "LME"].includes(f.source)).length;
+    const needs = (data.live.LME && !data.live.LME.hasKey ? 1 : 0) + ["MEPS", "Kallanish"].filter((s) => !(data.feeds.find((f) => f.source === s) || {}).points).length;
+    $("sources-sum").replaceChildren(...[
+      el("span", { class: "src-chip is-on", text: `${liveOn} live` }),
+      withData ? el("span", { class: "src-chip", text: `${withData} with prices` }) : null,
+      el("span", { class: "src-chip is-auto", text: "your quotes" }),
+      needs ? el("span", { class: "src-chip is-todo", text: `${needs} to set up` }) : null].filter(Boolean));
   }
 
   // ---------------------------------------------------------------- chart
@@ -215,8 +324,16 @@
     const from = rangeDays ? new Date(Date.now() - rangeDays * 86_400_000).toISOString().slice(0, 10) : "0000";
     const quotes = data.suppliers.filter((s) => s.supplies.includes(group)).flatMap((s) => s.quotes.map((q) => ({ ...q, supplier: s.name, gbp: gbp(q.pricePerT, q.currency) }))).filter((q) => q.date >= from && Number.isFinite(q.gbp));
     const lines = series.map((s) => ({ s, pts: s.points.filter((p) => p.date >= from).map((p) => ({ date: p.date, v: gbp(p.price, s.currency) })).filter((p) => Number.isFinite(p.v)) })).filter((l) => l.pts.length);
-    if (!lines.length && !quotes.length) { box.replaceChildren(el("div", { class: "empty-state" }, el("h3", { text: "Nothing to chart yet" }), el("p", { text: "Import MEPS or Kallanish prices, or log supplier quotes." }))); return; }
     const all = [...lines.flatMap((l) => l.pts), ...quotes.map((q) => ({ date: q.date, v: q.gbp }))];
+    const dateCount = new Set(all.map((p) => p.date)).size;
+    if (dateCount < 2) {
+      box.replaceChildren(el("div", { class: "chart-wait" },
+        el("svg"),
+        el("div", {}, el("strong", { text: all.length ? "History builds up from here" : "Nothing to chart yet" }),
+          el("p", { text: all.length ? `Everything so far is from ${fmt.date(all[0].date)}. Each quote you log and each price you import adds a point, and the trend lines appear once there are two dates.` : "Import MEPS or Kallanish prices, or log supplier quotes, to start a price history." }))));
+      box.querySelector(".chart-wait svg").outerHTML = '<svg width="56" height="40" viewBox="0 0 56 40" fill="none" aria-hidden="true"><path d="M2 34h52" stroke="var(--line-strong)" stroke-width="2" stroke-linecap="round"/><path d="M6 28 18 22l10 6 12-14 10 4" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 4"/><circle cx="6" cy="28" r="3.5" fill="var(--accent)"/></svg>';
+      return;
+    }
     const t = (d) => Date.parse(`${d}T00:00:00Z`);
     let x0 = Math.min(...all.map((p) => t(p.date))), x1 = Math.max(...all.map((p) => t(p.date)));
     if (x0 === x1) { x0 -= 15 * 86_400_000; x1 += 15 * 86_400_000; }
@@ -547,10 +664,11 @@
     try {
       data = await api("/api/benchmarks");
       assignColors();
-      renderFeeds(); renderPulse(); renderGroups(); renderCompare(); renderChart(); renderSeries();
+      renderFeeds(); renderGroups(); renderGlance(); renderCompare(); renderPulse(); renderChart(); renderSeries(); renderSourcesSummary();
       renderLivePill();
+      setTimeout(() => { animated = true; }, 1500);
     } catch (error) {
-      $("feeds").replaceChildren(el("p", { class: "muted", text: `Could not load market prices: ${error.message}` }));
+      $("glance").replaceChildren(el("p", { class: "muted", text: `Could not load market prices: ${error.message}` }));
     }
   }
 
@@ -561,6 +679,7 @@
   $("backdrop").addEventListener("click", () => closeDrawer());
   $("drawer-size").addEventListener("click", () => { drawer.classList.toggle("is-large"); });
   document.addEventListener("keydown", (e) => { if (!drawer.hidden && e.key === "Escape") { e.preventDefault(); closeDrawer(); } });
+  $("cmp-ref").addEventListener("change", (e) => { refMode = e.target.value; renderCompare(); renderGlance(); });
   $("range").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     rangeDays = Number(b.dataset.range);
     $("range").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));

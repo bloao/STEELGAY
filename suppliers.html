@@ -100,19 +100,9 @@
       </div>
 
       <div id="pane-market" role="tabpanel" aria-labelledby="ptab-market" hidden>
-      <section aria-labelledby="feeds-title">
-        <div class="sec-row"><h2 class="sec-title" id="feeds-title">Price sources</h2><span class="live-pill" id="live-pill" hidden></span></div>
-        <div class="feed-grid" id="feeds"><p class="muted">Loading…</p></div>
-      </section>
-
-      <section class="card mk-card" aria-labelledby="pulse-title">
-        <div class="card-head">
-          <div>
-            <h2 id="pulse-title">Market pulse</h2>
-            <p class="small muted" style="margin:2px 0 0">Where steel prices are heading — live official indices and exchange prices, updated automatically.</p>
-          </div>
-        </div>
-        <div id="pulse"></div>
+      <section class="mk-glance" aria-labelledby="glance-title">
+        <div class="sec-row"><h2 class="sec-title" id="glance-title">At a glance</h2><span class="live-pill" id="live-pill" hidden></span></div>
+        <div class="glance-grid" id="glance"><p class="muted">Loading…</p></div>
       </section>
 
       <div class="group-tabs" id="group-tabs" role="tablist" aria-label="Product group"></div>
@@ -120,18 +110,29 @@
       <section class="card mk-card" aria-labelledby="cmp-title">
         <div class="card-head">
           <div>
-            <h2 id="cmp-title">Supplier quotes vs market</h2>
+            <h2 id="cmp-title">Your quotes against the market</h2>
             <p class="small muted" id="cmp-sub" style="margin:2px 0 0"></p>
           </div>
+          <label class="ref-pick"><span>Compare with</span><select id="cmp-ref" class="pill-select" aria-label="Compare quotes with"></select></label>
         </div>
         <div id="cmp"></div>
+      </section>
+
+      <section class="card mk-card" aria-labelledby="pulse-title">
+        <div class="card-head">
+          <div>
+            <h2 id="pulse-title">Where UK steel prices are heading</h2>
+            <p class="small muted" style="margin:2px 0 0">Official monthly price indices from the ONS, pulled in automatically. Watch the direction: an index of 200 just means prices are double their 2015 level.</p>
+          </div>
+        </div>
+        <div id="pulse"></div>
       </section>
 
       <section class="card mk-card" aria-labelledby="chart-title">
         <div class="card-head">
           <div>
             <h2 id="chart-title">Price history</h2>
-            <p class="small muted" style="margin:2px 0 0">£ per tonne. Market series as lines, supplier quotes as dots.</p>
+            <p class="small muted" style="margin:2px 0 0">£ per tonne. Market prices as lines, each supplier quote as a square.</p>
           </div>
           <div class="seg" role="group" aria-label="Time range" id="range">
             <button type="button" data-range="90" aria-pressed="false">3M</button>
@@ -143,16 +144,22 @@
         <div id="chart" class="mk-chart"></div>
       </section>
 
-      <section class="table-card" aria-labelledby="series-title">
-        <div class="table-head"><strong id="series-title">Price series</strong><span class="small muted" id="series-count"></span></div>
-        <div class="table-scroll">
-          <table class="data series-table">
-            <thead><tr><th>Series</th><th>Source</th><th class="num">Latest</th><th class="num">Change</th><th>Updated</th><th class="num">Prices</th><th><span class="sr-only">Open</span></th></tr></thead>
-            <tbody id="series-rows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
-          </table>
+      <details class="mk-sources" id="mk-sources">
+        <summary><span class="mk-sources-title">Data sources</span><span class="mk-sources-sum" id="sources-sum"></span><svg class="mk-sources-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="mk-sources-body">
+          <div class="feed-grid" id="feeds"><p class="muted">Loading…</p></div>
+          <section class="table-card" aria-labelledby="series-title">
+            <div class="table-head"><strong id="series-title">Price series you've added</strong><span class="small muted" id="series-count"></span></div>
+            <div class="table-scroll">
+              <table class="data series-table">
+                <thead><tr><th>Series</th><th>Source</th><th class="num">Latest</th><th class="num">Change</th><th>Updated</th><th class="num">Prices</th><th><span class="sr-only">Open</span></th></tr></thead>
+                <tbody id="series-rows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+          <p class="small muted">Prices you import stay in this tool. MEPS, Kallanish, Fastmarkets and Argus data is licensed to your subscription — don't share exports outside your team.</p>
         </div>
-      </section>
-      <p class="small muted">Prices you import stay in this tool (var/benchmarks.json). MEPS, Kallanish, Fastmarkets and Argus data is licensed to your subscription — don't share exports outside your team.</p>
+      </details>
 
       </div>
 
