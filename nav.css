@@ -206,3 +206,34 @@
     font-size: 0.9rem;
   }
 }
+
+/* Collaboration lockup: Datafab AGX × Hall & Pickles */
+.site-nav__collab {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 1.1rem;
+  color: #8a96a3;
+  letter-spacing: 0;
+  margin: 0 2px;
+}
+.site-nav__partner {
+  display: block;
+  height: 26px;
+  width: auto;
+  flex-shrink: 0;
+  padding-left: 14px;
+  border-left: 1px solid rgba(97, 144, 174, 0.3);
+}
+.site-nav__collab + .site-nav__partner { border-left: 0; padding-left: 0; }
+@media (max-width: 760px) {
+  .site-nav { gap: 12px; }
+  .site-nav__brand { gap: 8px; }
+  .site-nav__links { flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; justify-content: flex-start; }
+  .site-nav__links::-webkit-scrollbar { display: none; }
+  .site-nav__link { white-space: nowrap; }
+  .site-nav__partner { height: 20px; }
+  .site-nav__collab { font-size: 0.95rem; }
+}
+@media (max-width: 420px) {
+  .site-nav__partner { height: 16px; }
+}

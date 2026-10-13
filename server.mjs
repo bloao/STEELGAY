@@ -1676,8 +1676,10 @@ async function supplierBreakdown(s, opts = {}) {
   const quotaApplies = engine.buyerImports && engine.quota;
   const worstPerT = quotaApplies ? round2(engine.totals.expectedPerT - (quotaLine.perTonne || 0) + engine.customsValuePerT * 0.5) : engine.totals.expectedPerT;
   const adj = adjustments.reduce((t, a) => t + a.perTonne, 0);
+  const model = buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV });
   return {
     ok: true,
+    model,
     supplier: { id: s.id, name: s.name, origin: s.origin },
     product: { id: product.id, name: product.name, commodityCode: product.commodityCode, monthlyUsageT: usage, suggestedOrderT: metrics.suggestedOrderT },
     inputs: { tonnage, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel },
@@ -1690,6 +1692,129 @@ async function supplierBreakdown(s, opts = {}) {
   };
 }
 const round2 = (v) => (v === null || v === undefined || !Number.isFinite(v) ? v : Math.round(v * 100) / 100);
+// Every cost variable for an order, always listed — even when it's zero, in
+// the supplier's price, carried by the supplier or not applicable — each with
+// its equation and the data points behind it.
+function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV }) {
+  const L = (k) => engine.lines.find((l) => l.key === k) || { perTonne: 0, status: "n/a", source: "" };
+  const cv = engine.customsValuePerT;
+  const cur = latest.currency || "GBP";
+  const uk = s.origin === "UK";
+  const buyerImports = engine.buyerImports;
+  const inQuota = Boolean(engine.category);
+  const quota = engine.quota;
+  const incoterm = engine.inputs ? engine.inputs.incoterm : "";
+  const gbpTxt = (x) => `£${round2(x)}`;
+  const res = (label, value, unit = "£/t", extra = {}) => ({ label, value: round2(value), unit, ...extra });
+  const eqs = (...list) => list;
+  const cvV = v("Customs value", `${gbpTxt(cv)}/t`, "calc", "Price + freight + insurance", cv);
+  const rows = [];
+  const add = (group, key, label, perTonne, status, equations, note = "") => rows.push({ group, key, label, perTonne: round2(perTonne || 0), status, equations, note });
+  const notImporting = uk
+    ? { status: "n/a", eq: [v("Origin", "UK", "supplier", "Supplier profile")], note: "UK steel — no import, no customs." }
+    : { status: "supplier", eq: [v("Importer of record", "Supplier", "supplier", `Delivered duty paid (${incoterm})`)], note: "The supplier clears customs and pays this." };
+
+  // ---- Purchase
+  const fxRate = engine.fx ? engine.fx.rate : 1;
+  add("Purchase", "price", "Supplier price", pricePerT, "included",
+    eqs({ parts: [v("Quoted price", `${cur === "GBP" ? "£" : ""}${latest.pricePerT}${cur !== "GBP" ? ` ${cur}` : ""}/t`, "quote", quoteSrc), op("×"), v("Exchange rate", cur === "GBP" ? "1.00" : String(fxRate), cur === "GBP" ? "fixed" : "live", cur === "GBP" ? "Quoted in sterling" : (engine.fx.source || "ECB rate"))], result: res("Price per tonne", pricePerT) }));
+
+  // ---- Delivery
+  for (const [key, label] of [["freight", "Freight to UK"], ["insurance", "Cargo insurance"], ["inland", "UK haulage to you"]]) {
+    const l = L(key);
+    if (l.status === "in-price") add("Delivery", key, label, 0, "in-price", eqs({ parts: [v(label, "In their price", "supplier", `Incoterm ${incoterm}`)], result: res(label, 0) }));
+    else add("Delivery", key, label, l.perTonne, l.perTonne ? "included" : "missing", eqs({ parts: [v(label, `${gbpTxt(l.perTonne)}/t`, "you", l.perTonne ? "Entered" : "Not entered — add an estimate")], result: res(label, l.perTonne) }), l.perTonne ? "" : "Not in their price — add a haulage estimate on the breakdown.");
+  }
+  {
+    const b = L("brokerage");
+    if (!buyerImports) add("Delivery", "brokerage", "Customs brokerage", 0, notImporting.status, eqs({ parts: notImporting.eq, result: res("Brokerage", 0) }), notImporting.note);
+    else add("Delivery", "brokerage", "Customs brokerage", b.perTonne, b.perTonne ? "included" : "missing", eqs({ parts: [v("Broker fee", b.source.replace(/ per shipment.*/, ""), "you", "Per shipment"), op("÷"), v("Your order", `${tonnage} t`, "you", "Your choice")], result: res("Per tonne", b.perTonne) }), b.perTonne ? "" : "Add your broker's fee per shipment to include it.");
+  }
+
+  // ---- Duty & tax
+  add("Duty & tax", "customsValue", "Customs value", cv, "memo",
+    eqs({ parts: [priceV, op("+"), v("Freight", `${gbpTxt(L("freight").perTonne)}`, L("freight").status === "in-price" ? "supplier" : "you", L("freight").status === "in-price" ? "In their price" : "Entered"), op("+"), v("Insurance", `${gbpTxt(L("insurance").perTonne)}`, L("insurance").status === "in-price" ? "supplier" : "you", L("insurance").status === "in-price" ? "In their price" : "Entered")], result: res("Customs value", cv) }),
+    "What duty is charged on (not an extra cost).");
+  for (const [key, label] of [["duty", "Import duty"], ["remedies", "Anti-dumping / countervailing"]]) {
+    const l = L(key);
+    if (!buyerImports) { add("Duty & tax", key, label, 0, notImporting.status, eqs({ parts: notImporting.eq, result: res(label, 0) }), notImporting.note); continue; }
+    const rate = cv ? (l.perTonne / cv) * 100 : 0;
+    add("Duty & tax", key, label, l.perTonne, "included", eqs({ parts: [cvV, op("×"), v(key === "duty" ? "Duty rate" : "Trade remedy rate", `${rate.toFixed(1)}%`, "live", l.source || "GOV.UK Trade Tariff")], result: res(label, l.perTonne) }),
+      key === "duty" && choicesEu(s.origin) ? "0% for EU-origin steel with a statement on origin (UK–EU TCA)." : "");
+  }
+  {
+    const c = L("cbam");
+    add("Duty & tax", "cbam", "UK CBAM (carbon)", c.perTonne || 0, c.perTonne ? "included" : c.status === "missing" ? "missing" : buyerImports ? "n/a" : notImporting.status,
+      eqs({ parts: [v("CBAM", c.source || "Not applicable", c.perTonne ? "live" : "fixed", "UK CBAM rules")], result: res("CBAM", c.perTonne || 0) }), c.source);
+  }
+  {
+    const vat = engine.totals.vatPerT || 0;
+    const dutiesPerT = ["duty", "quota", "remedies", "cbam"].reduce((t, k) => t + (L(k).perTonne || 0), 0);
+    if (buyerImports) add("Duty & tax", "vat", "Import VAT (reclaimable)", vat, "memo", eqs({ parts: [cvV, op("+"), v("Duties", `${gbpTxt(dutiesPerT)}/t`, "calc", "Duty + expected steel duty + remedies + CBAM"), op("×"), v("VAT", "20%", "fixed", "UK import VAT")], result: res("VAT paid then reclaimed", vat) }), "A cash-flow cost, not a final cost — reclaimed on your VAT return.");
+    else add("Duty & tax", "vat", "Import VAT", 0, notImporting.status, eqs({ parts: notImporting.eq, result: res("VAT", 0) }), uk ? "Normal UK VAT on the invoice — reclaimable." : notImporting.note);
+  }
+
+  // ---- Quota risk (expected value and the cost of a miss)
+  let missPerT = 0;
+  const steelDutyRate = 0.5;
+  if (buyerImports && quota) {
+    const ev = L("quota").perTonne || 0;
+    missPerT = cv * steelDutyRate;
+    add("Quota risk", "steelExpected", "Steel-measure duty — expected value", ev, "included",
+      eqs({ parts: [v("Chance quota runs out", `${Math.round(quota.probability * 100)}%`, "live", `HMRC live quota · ${String(L("quota").source || "").replace(/^.*order /, "line ")}`), op("×"), v("Steel-measure duty", "50%", "fixed", "UK steel measure, out of quota"), op("×"), cvV], result: res("Expected duty", ev) }),
+      quota.basis || "");
+    add("Quota risk", "quotaMiss", "If the quota is missed", missPerT, "scenario",
+      eqs(
+        { parts: [v("Steel-measure duty", "50%", "fixed", "UK steel measure, out of quota"), op("×"), cvV], result: res("Extra per tonne", missPerT) },
+        { parts: [v("Extra per tonne", `${gbpTxt(missPerT)}`, "calc", "Step 1"), op("×"), v("Your order", `${tonnage} t`, "you", "Your choice")], result: res("Extra on this order", missPerT * tonnage, "£") },
+      ), "Not in the expected cost — this is what you'd pay on top if the line is used up before your load clears.");
+  } else if (!uk && inQuota && !buyerImports) {
+    add("Quota risk", "steelExpected", "Steel-measure duty — expected value", 0, "supplier", eqs({ parts: [v("Importer of record", "Supplier", "supplier", `Delivered duty paid (${incoterm})`)], result: res("Expected duty to you", 0) }), "The supplier pays any 50% duty.");
+    add("Quota risk", "quotaMiss", "If the quota is missed", 0, "scenario", eqs({ parts: [v("Duty risk", "Supplier's", "supplier", "DDP contract"), op("+"), v("Delivery risk", "May delay or cancel", "supplier", "When quota is exhausted")], result: res("Extra to you", 0) }), "No duty to you, but a real risk the load is delayed or cancelled — agree what happens in the contract.");
+  } else {
+    const why = uk ? [v("Origin", "UK", "supplier", "Supplier profile")] : [v("Product", product.name, "product", `Code ${product.commodityCode} — not in a steel-measure category`)];
+    add("Quota risk", "steelExpected", "Steel-measure duty — expected value", 0, "n/a", eqs({ parts: why, result: res("Expected duty", 0) }), uk ? "UK steel isn't covered by import quotas." : "This product isn't in a quota category.");
+    add("Quota risk", "quotaMiss", "If the quota is missed", 0, "n/a", eqs({ parts: why, result: res("Extra", 0) }), "Nothing to miss.");
+  }
+
+  // ---- Finance & terms
+  {
+    const fxb = L("fxBuffer");
+    add("Finance & terms", "fxBuffer", "Currency buffer", fxb.perTonne || 0, cur === "GBP" ? "n/a" : "included", eqs({ parts: cur === "GBP" ? [v("Currency", "GBP", "quote", "No exchange-rate risk")] : [priceV, op("×"), v("Buffer", fxb.source, "you", "Your setting")], result: res("Buffer", fxb.perTonne || 0) }));
+    const t = adjustments.find((a) => a.key === "terms");
+    if (t) add("Finance & terms", "terms", t.label, t.perTonne, "included", t.equations, t.why);
+    else add("Finance & terms", "terms", "Payment terms credit", 0, "missing", eqs({ parts: [v("Credit period", "Not recorded", "supplier", "Add to supplier profile")], result: res("Value", 0) }), "Add their payment terms to value the credit.");
+  }
+
+  // ---- Supply
+  {
+    const mq = adjustments.find((a) => a.key === "moq");
+    if (mq) add("Supply", "moq", mq.label, mq.perTonne, "included", mq.equations, mq.why);
+    else add("Supply", "moq", "Minimum order", 0, moqMin ? "n/a" : "missing", eqs({ parts: moqMin ? [v("Your order", `${tonnage} t`, "you", "Your choice"), op("≥"), v("Their minimum", `${moqMin} t`, "supplier", "Supplier MOQ")] : [v("Their minimum", "Not recorded", "supplier", "Add to supplier profile")], result: res("Extra stock cost", 0) }), moqMin ? "Your order meets their minimum." : "");
+    const rl = adjustments.find((a) => a.key === "reliability");
+    if (rl) add("Supply", "reliability", rl.label, rl.perTonne, "included", rl.equations, rl.why);
+    else add("Supply", "reliability", "Reliability buffer", 0, s.onTimePct === 100 ? "n/a" : "missing",
+      eqs({ parts: [v("On time", s.onTimePct === null ? "Not recorded" : `${s.onTimePct}%`, "supplier", "Supplier profile"), op("·"), v("Lead time", s.leadTimeMin === null ? "Not recorded" : `${s.leadTimeMin}–${s.leadTimeMax ?? s.leadTimeMin} ${s.leadTimeUnit}`, "supplier", "Supplier profile"), op("·"), v("Monthly usage", usage ? `${usage} t` : "Not set", "product", "Product")], result: res("Buffer cost", 0) }),
+      s.onTimePct === 100 ? "Always on time." : "Needs on-time %, lead time and product usage.");
+  }
+
+  const expected = rows.filter((r) => r.status === "included").reduce((t, r) => t + r.perTonne, 0);
+  const steelEv = (rows.find((r) => r.key === "steelExpected") || {}).perTonne || 0;
+  const best = expected - steelEv;
+  const worst = best + missPerT;
+  return {
+    groups: ["Purchase", "Delivery", "Duty & tax", "Quota risk", "Finance & terms", "Supply"],
+    rows,
+    totals: {
+      expected: round2(expected), best: round2(best), worst: round2(worst),
+      missPerT: round2(missPerT), missOrder: round2(missPerT * tonnage), probability: quota && buyerImports ? quota.probability : null,
+      expectedOrder: round2(expected * tonnage), vatPerT: round2(engine.totals.vatPerT || 0),
+      missing: rows.filter((r) => r.status === "missing").map((r) => r.label),
+    },
+  };
+}
+const choicesEu = (o) => SUP.EU_MEMBERS.has(o);
+
 
 async function handleSupplierApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };

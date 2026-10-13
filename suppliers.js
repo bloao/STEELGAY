@@ -772,7 +772,7 @@
     return `${v < 0 ? "−" : "+"}${a > 0 && a < 1 ? `${SYM[cur] || "£"}${a.toFixed(2)}` : money(a, cur)}`;
   };
 
-  const fmtEq = (x, unit) => (unit === "£/t" ? `£${x.toFixed(2)}` : unit === "t" ? `${(Math.round(x * 100) / 100).toLocaleString("en-GB")} t` : unit === "months" ? `${x.toFixed(2)} mo` : String(Math.round(x * 100) / 100));
+  const fmtEq = (x, unit) => (unit === "£/t" ? `£${x.toFixed(2)}` : unit === "t" ? `${(Math.round(x * 100) / 100).toLocaleString("en-GB")} t` : unit === "months" ? `${x.toFixed(2)} mo` : unit === "£" ? `£${Math.round(x).toLocaleString("en-GB")}` : String(Math.round(x * 100) / 100));
   const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // Count a number up from zero (skipped when the user prefers less motion).
   function countUp(node, to, format, ms = 700, delay = 0) {
@@ -923,49 +923,44 @@
       s.transport === "extra" ? (() => { const i = pill(el("input", { type: "number", min: "0", step: "1", value: String(d.inputs.transportPerT || ""), placeholder: "£0" }), "Haulage £ per tonne"); i.style.width = "72px"; i.addEventListener("change", () => refresh({ transportPerT: Number(i.value) || 0 })); return i; })() : null,
       bd.loading ? el("span", { class: "spinner sm", "aria-label": "Updating" }) : null);
 
-    // ---- 2. the answer
-    const span = d.worstPerT - d.bestPerT;
-    const pos = span > 0 ? Math.min(100, Math.max(0, ((d.effectivePerT - d.bestPerT) / span) * 100)) : 0;
-    const prob = e.quota ? e.quota.probability : null;
-    const answer = el("div", { class: "bd2-answer" },
-      el("div", { class: "bd2-answer-main" },
-        el("span", { class: "bd2-k", text: "Effective cost" }),
-        (() => { const n = el("strong", { class: "bd2-big", text: perT(d.effectivePerT) }); if (bd.animatedFor !== `${s.id}:${d.effectivePerT}`) { bd.animatedFor = `${s.id}:${d.effectivePerT}`; countUp(n, d.effectivePerT, (x) => `£${Math.round(x).toLocaleString("en-GB")}/t`, 800); } return n; })(),
-        el("span", { class: "bd2-k2", text: `${money(d.effectivePerT * d.inputs.tonnage)} for ${d.inputs.tonnage} t · quoted ${perT(d.inputs.quotedPerT, cur)}` })),
-      span > 0.5
-        ? el("div", { class: "bd2-range", role: "img", "aria-label": `Best case ${perT(d.bestPerT)}, worst case ${perT(d.worstPerT)}` },
-            (() => {
-              const fill = el("span", { class: "bd2-fill", style: "width:0%" });
-              const marker = el("span", { class: "bd2-marker", style: "left:0%" });
-              requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = `${pos}%`; marker.style.left = `${pos}%`; }));
-              return el("div", { class: "bd2-track" }, fill, marker);
-            })(),
-            el("div", { class: "bd2-range-labels" }, el("span", {}, el("b", { text: perT(d.bestPerT) }), " if quota holds"), el("span", {}, el("b", { class: "is-bad", text: perT(d.worstPerT) }), " if it runs out")),
-            el("p", { class: "bd2-range-note", text: prob === null ? "" : `${pctFmt(prob)} chance the quota runs out before ${fmt.date(d.inputs.importDate)}.` }))
-        : el("div", { class: "bd2-range is-flat" }, el("span", { class: "status-dot", text: s.origin === "UK" ? "UK steel — no quota or steel duty" : !e.buyerImports ? "Supplier pays the duty — price is fixed" : "No steel-measure duty on this product" })));
+    // ---- 2. the answer: three scenarios and the cost of missing the quota
+    const M = d.model;
+    const T = M ? M.totals : { expected: d.effectivePerT, best: d.bestPerT, worst: d.worstPerT, missPerT: d.worstPerT - d.bestPerT, missOrder: (d.worstPerT - d.bestPerT) * d.inputs.tonnage, probability: e.quota ? e.quota.probability : null, missing: [] };
+    const tons = d.inputs.tonnage;
+    const animateNum = (node, value, fmtFn, key) => { if (bd.animatedFor !== key) countUp(node, value, fmtFn, 800); return node; };
+    const animKey = `${s.id}:${T.expected}:${tons}`;
+    const scen = (cls, label, value, sub, extra) => el("div", { class: `scen ${cls}` },
+      el("span", { class: "scen-l", text: label }),
+      animateNum(el("strong", { class: "scen-v", text: perT(value) }), value, (x) => `£${Math.round(x).toLocaleString("en-GB")}/t`, animKey),
+      el("span", { class: "scen-s", text: sub }), extra || null);
+    const hasRisk = T.missPerT > 0.5;
+    const span = T.worst - T.best;
+    const pos = span > 0 ? Math.min(100, Math.max(0, ((T.expected - T.best) / span) * 100)) : 0;
+    const prob = T.probability;
+    const answer = el("div", { class: "bd3-answer" },
+      el("div", { class: `scen-row${hasRisk ? "" : " is-single"}` },
+        hasRisk ? scen("is-best", "If the quota holds", T.best, `${money(T.best * tons)} for ${tons} t`) : null,
+        scen("is-expected", hasRisk ? "Expected cost" : "Landed cost", T.expected, `${money(T.expected * tons)} for ${tons} t${hasRisk ? ` · ${pctFmt(prob || 0)} risk priced in` : ""}`,
+          el("span", { class: "scen-q", text: `quoted ${perT(d.inputs.quotedPerT, cur)}` })),
+        hasRisk ? scen("is-worst", "If the quota is missed", T.worst, `${money(T.worst * tons)} for ${tons} t`) : null),
+      hasRisk ? (() => {
+        const fill = el("span", { class: "bd2-fill", style: "width:0%" });
+        const marker = el("span", { class: "bd2-marker", style: "left:0%" });
+        requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = `${pos}%`; marker.style.left = `${pos}%`; }));
+        return el("div", { class: "bd3-track-wrap", role: "img", "aria-label": `Expected cost sits ${Math.round(pos)}% of the way from best to worst case` }, el("div", { class: "bd2-track" }, fill, marker));
+      })() : null,
+      hasRisk
+        ? el("div", { class: "miss-banner" }, icon(I.alert, 18),
+            el("div", {}, el("strong", { text: `Missing the quota would cost ${money(T.missPerT)}/t more — ${money(T.missOrder)} on this order.` }),
+              el("p", { text: prob > 0.005 ? `${pctFmt(prob)} chance it runs out before ${fmt.date(d.inputs.importDate)}, so ${money(prob * T.missPerT)}/t of that is already in the expected cost.` : `At today's burn rate the quota lasts past ${fmt.date(d.inputs.importDate)}, so none of it is priced in yet — a later arrival date raises the risk.` })))
+        : el("div", { class: "miss-banner is-calm" }, icon(I.check, 18), el("div", {}, el("strong", { text: s.origin === "UK" ? "UK steel — no quota or steel duty to miss." : !e.buyerImports ? "Duty paid by the supplier — no 50% duty to you." : "No steel-measure duty on this product." }),
+            el("p", { text: !e.buyerImports && s.origin !== "UK" ? "The risk is delay or non-delivery if the quota runs out — agree it in the contract." : "Your price is the landed cost below." }))),
+      T.missing && T.missing.length ? el("p", { class: "bd3-missing" }, icon(I.alert, 14), ` Not yet costed: ${T.missing.join(", ").toLowerCase()}.`) : null);
+    bd.animatedFor = animKey;
 
-    // ---- 3. how the price is built — every line is an equation whose inputs
-    // show their value and where the number comes from.
-    const cv = e.customsValuePerT;
-    const ev = (label, value, kind, source) => ({ t: "v", label, value, kind, source });
-    const eop = (o) => ({ t: "op", o });
-    const engineEquations = (l) => {
-      if (l.key === "quota" && e.quota) return [{ parts: [
-        ev("Chance quota runs out", pctFmt(e.quota.probability), "live", `HMRC live quota${e.quota.orderNumber ? ` · ${String(e.quota.orderNumber).replace(/^.*order /, "line ")}` : ""}`), eop("×"),
-        ev("Steel-measure duty", "50%", "fixed", "UK steel measure"), eop("×"),
-        ev("Customs value", `£${Math.round(cv)}/t`, "calc", "Price + freight + insurance")],
-        result: { label: "Expected duty", value: l.perTonne, unit: "£/t" } }];
-      if (l.key === "duty" && cv) return [{ parts: [ev("Customs value", `£${Math.round(cv)}/t`, "calc", "Price + freight + insurance"), eop("×"), ev("Import duty rate", `${((l.perTonne / cv) * 100).toFixed(1)}%`, "live", l.source)], result: { label: "Duty", value: l.perTonne, unit: "£/t" } }];
-      return [{ parts: [ev(l.label, `£${l.perTonne}/t`, l.source && /entered/i.test(l.source) ? "you" : "live", l.source)], result: { label: l.label, value: l.perTonne, unit: "£/t" } }];
-    };
-    const steps = [
-      ...e.lines.filter((l) => l.key !== "price" && (l.perTonne || 0) !== 0).map((l) => ({ label: l.key === "quota" ? "Expected steel-measure duty" : l.label, perTonne: l.perTonne, equations: engineEquations(l),
-        why: l.key === "quota" ? (e.quota && e.quota.basis ? `Within quota there's no steel duty; once the origin's line is used up, 50% applies. ${e.quota.basis}` : null) : null })),
-      ...d.adjustments.map((a) => ({ label: a.label, perTonne: a.perTonne, equations: a.equations || [], why: a.why })),
-    ];
-    const inPrice = [...new Set(e.lines.filter((l) => l.status === "in-price").map((l) => l.label.toLowerCase()))];
-    const supplierCarries = e.lines.some((l) => l.status === "supplier");
+    // ---- 3. the full cost model — every variable, each with its equation
     const KIND = { quote: "Quote", supplier: "Supplier", product: "Product", you: "Your choice", live: "Live data", fixed: "Fixed", calc: "Earlier step" };
+    const STATUS = { included: ["Included", "st-in"], "in-price": ["In their price", "st-price"], supplier: ["Supplier pays", "st-sup"], "n/a": ["Not applicable", "st-na"], missing: ["Needs input", "st-miss"], scenario: ["If missed", "st-scen"], memo: ["For reference", "st-memo"] };
     const renderEq = (eq, n, total) => {
       let i = 0;
       const tok = (p) => {
@@ -976,51 +971,67 @@
           el("strong", { class: "eq-n", text: p.value }),
           el("span", { class: "eq-s", title: p.source || "" }, el("span", { class: "eq-k", text: KIND[p.kind] || "" }), p.source && p.source !== KIND[p.kind] ? ` · ${p.source}` : ""));
       };
-      const res = eq.result;
-      const resVal = el("strong", { class: "eq-n", "data-count": String(Math.abs(res.value)), "data-unit": res.unit, text: fmtEq(Math.abs(res.value), res.unit) });
+      const r = eq.result;
+      const resVal = el("strong", { class: "eq-n", "data-count": String(Math.abs(r.value)), "data-unit": r.unit, text: fmtEq(Math.abs(r.value), r.unit) });
       return el("div", { class: "eq" },
         total > 1 ? el("span", { class: "eq-step", text: `Step ${n + 1}` }) : null,
-        el("div", { class: "eq-row", role: "math", "aria-label": `${eq.parts.map((p) => (p.t === "op" ? p.o : `${p.label} ${p.value}`)).join(" ")} equals ${res.label} ${fmtEq(Math.abs(res.value), res.unit)}` },
+        el("div", { class: "eq-row", role: "math", "aria-label": `${eq.parts.map((p) => (p.t === "op" ? p.o : `${p.label} ${p.value}`)).join(" ")} equals ${r.label} ${fmtEq(Math.abs(r.value), r.unit)}` },
           ...eq.parts.map(tok),
           el("span", { class: "eq-op is-eq", style: `--i:${i++}`, "aria-hidden": "true", text: "=" }),
-          el("div", { class: `eq-r${res.sign < 0 ? " is-saving" : ""}`, style: `--i:${i++}` }, el("span", { class: "eq-l", text: res.label }), resVal)));
+          el("div", { class: `eq-r${r.sign < 0 ? " is-saving" : ""}${Math.abs(r.value) < 0.005 ? " is-zero" : ""}`, style: `--i:${i++}` }, el("span", { class: "eq-l", text: r.label }), resVal)));
     };
-    const openWork = (row, btn, work, open) => {
+    const openWork = (btn, work, open) => {
       work.classList.toggle("is-open", open);
       btn.setAttribute("aria-expanded", String(open));
       if (open) work.querySelectorAll("[data-count]").forEach((n) => countUp(n, Number(n.dataset.count), (x) => fmtEq(x, n.dataset.unit), 650, 260));
     };
-    const stepRow = (st, idx) => {
-      const row = el("li", { class: `bd2-step ${st.perTonne < 0 ? "is-down" : "is-up"}`, style: `--i:${idx}` });
-      const btn = el("button", { type: "button", class: "bd2-step-btn", "aria-expanded": "false" },
-        el("span", { class: "bd2-step-label", text: st.label }),
-        el("span", { class: "bd2-step-val", text: `${st.perTonne < 0 ? "−" : "+"}£${Math.abs(st.perTonne).toFixed(2)}` }),
+    const rowEls = [];
+    let idx = 0;
+    const modelRow = (r) => {
+      const [stLabel, stCls] = STATUS[r.status] || [r.status, ""];
+      const zero = Math.abs(r.perTonne) < 0.005;
+      const amount = r.status === "memo" ? perT(r.perTonne) : r.status === "scenario" ? (zero ? "£0" : `+${perT(r.perTonne)}`) : zero ? "£0.00" : `${r.perTonne < 0 ? "−" : "+"}£${Math.abs(r.perTonne).toFixed(2)}`;
+      const li = el("li", { class: `cm-row ${stCls}${zero && r.status !== "memo" ? " is-zero" : ""} ${r.perTonne < 0 ? "is-down" : ""}`, style: `--i:${idx++}` });
+      const btn = el("button", { type: "button", class: "cm-btn", "aria-expanded": "false" },
+        el("span", { class: "cm-label", text: r.label }),
+        el("span", { class: `cm-status ${stCls}`, text: stLabel }),
+        el("span", { class: "cm-amt", text: amount }),
         icon('<path d="m6 9 6 6 6-6"/>', 14));
       const work = el("div", { class: "bd2-work" }, el("div", { class: "bd2-work-in" },
-        ...st.equations.map((q, n) => renderEq(q, n, st.equations.length)),
-        st.why ? el("p", { class: "eq-why", text: st.why }) : null));
-      btn.addEventListener("click", () => openWork(row, btn, work, !work.classList.contains("is-open")));
-      row.append(btn, work);
-      return row;
+        ...(r.equations || []).map((q, n) => renderEq(q, n, r.equations.length)),
+        r.note ? el("p", { class: "eq-why", text: r.note }) : null));
+      btn.addEventListener("click", () => openWork(btn, work, !work.classList.contains("is-open")));
+      li.append(btn, work);
+      rowEls.push({ r, btn, work });
+      return li;
     };
-    const stepEls = steps.map(stepRow);
-    const allBtn = steps.length ? el("button", { class: "link-btn", type: "button", text: "Show all working", onclick: (ev) => {
+    const groupTotal = (g) => M.rows.filter((r) => r.group === g && r.status === "included" && r.key !== "price").reduce((t, r) => t + r.perTonne, 0);
+    const model = M ? el("div", { class: "cm" },
+      ...M.groups.map((g) => {
+        const rows = M.rows.filter((r) => r.group === g);
+        const sub = g === "Purchase" ? M.rows.find((r) => r.key === "price").perTonne : groupTotal(g);
+        return el("section", { class: "cm-group" },
+          el("div", { class: "cm-group-head" }, el("h4", { text: g }), el("span", { class: "cm-group-sum", text: g === "Purchase" ? perT(sub) : Math.abs(sub) < 0.005 ? "£0.00" : `${sub < 0 ? "−" : "+"}£${Math.abs(sub).toFixed(2)}` })),
+          el("ul", { class: "cm-list" }, ...rows.map(modelRow)));
+      }),
+      el("div", { class: "cm-total" },
+        el("div", {}, el("span", { text: hasRisk ? "Expected landed cost" : "Landed cost" }), el("small", { text: "Included lines only — reference and if-missed lines aren't added" })),
+        el("strong", { text: perT(T.expected) }))) : null;
+    const allBtn = el("button", { class: "link-btn", type: "button", text: "Show all working", onclick: (ev) => {
       const open = ev.currentTarget.textContent.startsWith("Show");
-      ev.currentTarget.textContent = open ? "Hide working" : "Show all working";
-      stepEls.forEach((r) => openWork(r, r.querySelector(".bd2-step-btn"), r.querySelector(".bd2-work"), open));
-    } }) : null;
+      ev.currentTarget.textContent = open ? "Hide all working" : "Show all working";
+      rowEls.forEach((x) => openWork(x.btn, x.work, open));
+    } });
     const legend = el("div", { class: "eq-legend", "aria-label": "Where the numbers come from" },
       ...["quote", "supplier", "product", "you", "live", "fixed", "calc"].map((k) => el("span", { class: `eq-chip k-${k}`, text: KIND[k] })));
-    const build = el("div", { class: "bd2-build" },
-      el("div", { class: "bd2-line is-base" }, el("span", {}, cur === "GBP" ? "Quoted price" : `Quoted price (${d.inputs.quotedPerT} ${cur} × ${e.fx.rate})`, el("small", { class: "bd2-line-src", text: d.inputs.quoteChannel === "list" ? "supplier list" : `quote of ${fmt.date(d.inputs.quoteDate)}` })), el("strong", { text: perT(e.lines.find((l) => l.key === "price").perTonne) })),
-      steps.length ? el("ul", { class: "bd2-steps" }, ...stepEls) : null,
-      el("div", { class: "bd2-line is-total" }, el("span", { text: "Effective cost" }), el("strong", { text: perT(d.effectivePerT) })),
-      el("p", { class: "bd2-foot" }, inPrice.length ? `Already in their price: ${inPrice.join(", ")}.` : "", supplierCarries ? " Duty and customs are theirs." : ""));
-    // open the biggest line by default so the working is visible straight away
-    if (stepEls.length) {
-      const biggest = steps.reduce((bi, st, i) => (Math.abs(st.perTonne) > Math.abs(steps[bi].perTonne) ? i : bi), 0);
-      requestAnimationFrame(() => { const r = stepEls[biggest]; openWork(r, r.querySelector(".bd2-step-btn"), r.querySelector(".bd2-work"), true); });
-    }
+    // open the quota lines (or the biggest cost) straight away
+    requestAnimationFrame(() => {
+      const pick = rowEls.find((x) => x.r.key === "steelExpected" && x.r.status === "included") || rowEls.filter((x) => x.r.key !== "price" && x.r.status === "included").sort((a, b2) => Math.abs(b2.r.perTonne) - Math.abs(a.r.perTonne))[0];
+      if (pick) openWork(pick.btn, pick.work, true);
+      const miss = rowEls.find((x) => x.r.key === "quotaMiss" && x.r.perTonne > 0);
+      if (miss) openWork(miss.btn, miss.work, true);
+    });
+    const build = model;
 
     // ---- 4. what to weigh up — a compact checklist, most important first
     const order = { risk: 0, watch: 1, muted: 2, good: 3 };
@@ -1068,7 +1079,7 @@
         counts.watch ? el("span", { class: "is-watch", text: `${counts.watch} to watch` }) : null,
         counts.muted ? el("span", { class: "is-muted", text: `${counts.muted} missing` }) : null,
         el("span", { class: "is-good", text: `${counts.good} good` })), checklist),
-      sec("How the price is built", allBtn, legend, build),
+      sec("Full cost model", allBtn, legend, build),
       compare ? sec("Same order from each supplier", el("span", { class: "small muted", text: "effective £/t, each at their own lead time" }), compare) : null,
       (e.checks || []).length || (e.warnings || []).length ? sec("Before you order", null, el("ul", { class: "bd2-todo" }, ...[...(e.warnings || []), ...(e.checks || [])].map((c) => el("li", { text: c })))) : null,
       el("div", { class: "bd2-actions" }, el("p", { class: "small muted", text: "Estimates only — not customs advice." }), save),
