@@ -13,6 +13,8 @@ import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./li
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
 import { createSettingsStore, validateSettings, CATALOGUE_GROUPS } from "./lib/settings.mjs";
 import * as SUP from "./lib/suppliers.mjs";
+import * as BM from "./lib/benchmarks.mjs";
+import { feedConfig, fetchFeed, FEED_SOURCES } from "./lib/benchmark-feed.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -22,6 +24,7 @@ const root = process.cwd();
 const STARTED_AT = new Date().toISOString();
 const store = createStore(process.env.DATA_DIR || join(root, "var"));
 const supplierStore = createStore(process.env.DATA_DIR || join(root, "var"), "suppliers.json", () => SUP.seedSuppliers());
+const benchmarkStore = createStore(process.env.DATA_DIR || join(root, "var"), "benchmarks.json");
 const settingsStore = createSettingsStore(process.env.DATA_DIR || join(root, "var"));
 const productStore = createStore(process.env.DATA_DIR || join(root, "var"), "products.json", () => SEED_PRODUCTS.map((p) => validateProduct(p).product));
 const allowedOrigin = process.env.ALLOWED_ORIGIN || ""; // e.g. https://app.example.com; empty = same-origin only
@@ -1578,6 +1581,82 @@ const SUPPLIER_CHOICES = {
   origins: SUP.ORIGINS, euMembers: [...SUP.EU_MEMBERS], groups: CATALOGUE_GROUPS,
 };
 
+
+// Landed cost of buying one product from one supplier: the order engine
+// (price, freight, duty, steel-measure quota risk, CBAM …) plus the
+// supplier-specific variables — payment terms, MOQ and reliability.
+const engineOrigin = (o) => (o === "UK" ? "United Kingdom" : SUP.EU_MEMBERS.has(o) ? "European Union" : ORIGINS.includes(o) ? o : "Other non-UK");
+const engineIncoterm = (s) => ({ "Delivered to depot": "DAP", DDP: "DDP", DAP: "DAP", CPT: "CPT", CFR: "CFR", CIF: "CIF", FCA: "FCA", FOB: "FOB", EXW: "EXW" })[s.deliveryTerms]
+  || (s.priceCovers === "everything" ? "DDP" : s.priceCovers === "ex-works" ? "EXW" : "DAP");
+const addDaysIso = (iso, d) => new Date(Date.parse(`${iso}T00:00:00Z`) + Math.round(d) * 86_400_000).toISOString().slice(0, 10);
+
+async function supplierBreakdown(s, opts = {}) {
+  const m = SUP.supplierMetrics(s);
+  if (!s.origin) return { ok: false, error: "Set the supplier's origin first — it decides duty and quota." };
+  if (!Number.isFinite(m.pricePerT)) return { ok: false, error: "No quote logged for this supplier yet." };
+  const products = (await productStore.list()).filter((p) => p.status !== "archived");
+  const supplied = products.filter((p) => (s.supplies || []).includes(p.category));
+  const needsOrder = supplied.find((p) => ["critical", "reorder", "low"].includes(stockMetrics({ ...p, stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || undefined }).status));
+  const product = products.find((p) => p.id === opts.productId) || needsOrder || supplied[0];
+  if (!product) return { ok: false, error: "Add a product they supply to price it." };
+  const metrics = stockMetrics({ ...product, stockAsOf: product.stockAsOf || (product.createdAt || "").slice(0, 10) || undefined });
+  const ratePct = Number.isFinite(Number(opts.ratePct)) ? Number(opts.ratePct) : 8;
+  const leadDays = s.leadTimeMax !== null && s.leadTimeMax !== undefined ? s.leadTimeMax * (s.leadTimeUnit === "days" ? 1 : 7) : s.leadTimeMin !== null && s.leadTimeMin !== undefined ? s.leadTimeMin * (s.leadTimeUnit === "days" ? 1 : 7) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const importDate = /^\d{4}-\d{2}-\d{2}$/.test(opts.importDate || "") ? opts.importDate : addDaysIso(today, leadDays ?? 21);
+  const tonnage = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : Math.max(metrics.suggestedOrderT || 0, s.moqMinT || 0) || 25;
+  const transportPerT = s.transport === "extra" ? Math.max(Number(opts.transportPerT) || 0, 0) : 0;
+  const latest = [...(s.quotes || [])].sort((a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || "")))[0];
+  const engine = await runScenario({
+    title: `${product.name} from ${s.name}`, commodityCode: product.commodityCode, origin: engineOrigin(s.origin), tonnage, importDate,
+    incoterm: engineIncoterm(s), importerOfRecord: m.covers === "everything" ? "supplier" : "us",
+    priceAmount: latest.pricePerT, priceCurrency: latest.currency || "GBP", supplier: s.name, inlandFreightPerT: transportPerT,
+    leadTimeWeeks: leadDays ? Math.round(leadDays / 7) : null,
+  });
+  if (!engine.ok) return { ok: false, error: Object.values(engine.errors || {})[0] || "Could not price this order.", errors: engine.errors };
+
+  const pricePerT = engine.lines.find((l) => l.key === "price").perTonne;
+  const rate = ratePct / 100;
+  const usage = product.monthlyUsageT || 0;
+  const adjustments = [];
+  // Credit terms are worth money: paying in N days instead of on delivery.
+  if (s.paymentDays !== null && s.paymentDays !== undefined) {
+    adjustments.push({ key: "terms", label: `Payment terms credit (${s.paymentDays} days)`, perTonne: -round2(pricePerT * rate * (s.paymentDays / 365)),
+      formula: `price × ${ratePct}% cost of capital × ${s.paymentDays}/365` });
+  }
+  // Buying above what you need ties up cash until it's used.
+  const moqMin = s.moqMinT || 0;
+  if (moqMin && tonnage < moqMin) {
+    const extra = moqMin - tonnage;
+    const months = usage > 0 ? extra / usage : 6;
+    adjustments.push({ key: "moq", label: `Minimum order: ${round2(extra)} t more than you need`, perTonne: round2((extra * pricePerT * rate * (months / 12)) / tonnage),
+      formula: `${round2(extra)} t extra × price × ${ratePct}% × ${round2(months)} months to use it ÷ ${tonnage} t` });
+  }
+  // Late deliveries mean holding extra safety stock.
+  if (s.onTimePct !== null && s.onTimePct !== undefined && s.onTimePct < 100 && usage > 0 && leadDays) {
+    const late = 1 - s.onTimePct / 100;
+    const bufferT = late * usage * ((leadDays / 2) / 30.44);
+    adjustments.push({ key: "reliability", label: `Reliability buffer (${s.onTimePct}% on time)`, perTonne: round2((bufferT * pricePerT * rate) / (usage * 12)),
+      formula: `${Math.round(late * 100)}% late × cover for half the lead time (${round2(bufferT)} t) × price × ${ratePct}% ÷ ${round2(usage * 12)} t a year` });
+  }
+  const quotaLine = engine.lines.find((l) => l.key === "quota");
+  const quotaApplies = engine.buyerImports && engine.quota;
+  const worstPerT = quotaApplies ? round2(engine.totals.expectedPerT - (quotaLine.perTonne || 0) + engine.customsValuePerT * 0.5) : engine.totals.expectedPerT;
+  const adj = adjustments.reduce((t, a) => t + a.perTonne, 0);
+  return {
+    ok: true,
+    supplier: { id: s.id, name: s.name, origin: s.origin },
+    product: { id: product.id, name: product.name, commodityCode: product.commodityCode, monthlyUsageT: usage, suggestedOrderT: metrics.suggestedOrderT },
+    inputs: { tonnage, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel },
+    engine: { lines: engine.lines, totals: engine.totals, quota: engine.quota ? { probability: engine.quota.probability, basis: engine.quota.basis, orderNumber: quotaLine?.source } : null, category: engine.category, buyerImports: engine.buyerImports, checks: engine.checks, warnings: engine.warnings, customsValuePerT: engine.customsValuePerT, fx: engine.fx },
+    adjustments,
+    effectivePerT: round2(engine.totals.expectedPerT + adj),
+    worstPerT: round2(worstPerT + adj),
+    bestPerT: round2(engine.totals.expectedPerT - (quotaLine?.perTonne || 0) + adj),
+  };
+}
+const round2 = (v) => (v === null || v === undefined || !Number.isFinite(v) ? v : Math.round(v * 100) / 100);
+
 async function handleSupplierApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   const method = request.method;
@@ -1585,7 +1664,21 @@ async function handleSupplierApi(request, response, url) {
   if (url.pathname === "/api/suppliers" && method === "GET") {
     return sendJson(response, 200, { suppliers: (await live()).map(supplierView), choices: SUPPLIER_CHOICES });
   }
-  if (method !== "GET" && !can(user, "edit")) return sendError(response, 403, "Your account cannot change suppliers.");
+  if (url.pathname === "/api/suppliers/compare" && method === "POST") {
+    const body = await readJsonBody(request);
+    const all = (await live()).filter((x) => x.standing !== "hold");
+    const products = await productStore.list();
+    const product = products.find((p) => p.id === body.productId);
+    const pool = product ? all.filter((x) => (x.supplies || []).includes(product.category)) : all;
+    const rows = await Promise.all(pool.map(async (x) => {
+      const b = await supplierBreakdown(x, { ...body, importDate: body.arrival === "fixed" ? body.importDate : undefined }).catch((e) => ({ ok: false, error: e.message }));
+      return b.ok ? { id: x.id, name: x.name, origin: x.origin, quotedPerT: b.engine.lines.find((l) => l.key === "price").perTonne, expectedPerT: b.engine.totals.expectedPerT,
+        effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, probability: b.engine.quota ? b.engine.quota.probability : null, importDate: b.inputs.importDate, adjustments: b.adjustments }
+        : { id: x.id, name: x.name, origin: x.origin, error: b.error };
+    }));
+    return sendJson(response, 200, { rows: rows.sort((a, b) => (a.effectivePerT ?? 1e9) - (b.effectivePerT ?? 1e9)) });
+  }
+  if (method !== "GET" && !can(user, "edit") && !/\/breakdown$/.test(url.pathname)) return sendError(response, 403, "Your account cannot change suppliers.");
   const clashes = async (name, id) => (await live()).find((x) => x.id !== id && x.name.trim().toLowerCase() === name.trim().toLowerCase());
   if (url.pathname === "/api/suppliers" && method === "POST") {
     const { supplier, errors, valid } = SUP.validateSupplier(await readJsonBody(request));
@@ -1594,7 +1687,7 @@ async function handleSupplierApi(request, response, url) {
     const saved = await supplierStore.create({ ...supplier, status: "active", contacts: [], quotes: [], rfqs: [] }, user.name);
     return sendJson(response, 201, supplierView(saved));
   }
-  const m = url.pathname.match(/^\/api\/suppliers\/([0-9a-f-]{36})(?:\/(archive|quotes|contacts|rfqs)(?:\/([0-9a-f-]{36}))?)?$/);
+  const m = url.pathname.match(/^\/api\/suppliers\/([0-9a-f-]{36})(?:\/(archive|quotes|contacts|rfqs|breakdown)(?:\/([0-9a-f-]{36}))?)?$/);
   if (!m) return sendError(response, 404, "Not found");
   const [, id, sub, subId] = m;
   const existing = await supplierStore.get(id);
@@ -1602,6 +1695,7 @@ async function handleSupplierApi(request, response, url) {
   const done = async (saved, code = 200) => sendJson(response, code, supplierView(saved));
 
   if (!sub && method === "GET") return done(existing);
+  if (sub === "breakdown" && method === "POST") return sendJson(response, 200, await supplierBreakdown(existing, await readJsonBody(request)));
   if (!sub && method === "PUT") {
     const { supplier, errors, valid } = SUP.validateSupplier(await readJsonBody(request));
     if (await clashes(supplier.name, id)) errors.name = "Another supplier already has this name.";
@@ -1666,6 +1760,158 @@ async function handleSupplierApi(request, response, url) {
   sendError(response, 405, "Method not allowed");
 }
 
+// ------------------------------------------------------------ market prices API
+
+const feedRuns = {}; // source → last run result (in memory)
+
+async function fxMap(currencies) {
+  const map = { GBP: 1 };
+  await Promise.all([...new Set(currencies)].filter((c) => c && c !== "GBP").map(async (c) => {
+    const fx = await getFx(c).catch(() => null);
+    if (fx && fx.rate) map[c] = fx.rate;
+  }));
+  return map;
+}
+
+async function liveSeries() {
+  return (await benchmarkStore.list()).filter((x) => x.status !== "archived");
+}
+
+// Import parsed rows into saved series. `mapping` maps a series key to an
+// existing series id, or to {create: {...series fields}}; unmapped keys are
+// matched by alias and otherwise skipped.
+async function importBenchmarkRows(rows, mapping, user, via) {
+  const plan = BM.planImport(rows, await liveSeries());
+  const result = { added: 0, series: [], skipped: [] };
+  for (const g of plan) {
+    let target = mapping && mapping[g.key];
+    let id = typeof target === "string" ? target : g.seriesId;
+    if (target && typeof target === "object" && target.create) {
+      const { series, valid, errors } = BM.validateSeries({ ...target.create, keys: [g.name, ...(target.create.keys || [])] });
+      if (!valid) { result.skipped.push({ name: g.name, reason: Object.values(errors)[0] }); continue; }
+      const created = await benchmarkStore.create({ ...series, status: "active", points: [] }, user);
+      id = created.id;
+    }
+    if (target === "skip" || !id) { result.skipped.push({ name: g.name, reason: target === "skip" ? "skipped" : "not mapped to a series", count: g.count }); continue; }
+    const existing = await benchmarkStore.get(id);
+    if (!existing) { result.skipped.push({ name: g.name, reason: "series not found" }); continue; }
+    const incoming = rows.filter((r) => BM.normKey(r.series) === g.key).map((r) => ({ date: r.date, price: r.price, via, by: user, at: new Date().toISOString() }));
+    const before = (existing.points || []).length;
+    await benchmarkStore.update(id, (x) => {
+      x.points = BM.mergePoints(x.points || [], incoming);
+      const k = BM.normKey(g.name);
+      if (!(x.keys || []).includes(k)) x.keys = [...(x.keys || []), k];
+    }, user, via === "feed" ? "feed update" : "prices imported", `${incoming.length} price${incoming.length === 1 ? "" : "s"} · ${g.from}${g.to !== g.from ? ` to ${g.to}` : ""}`);
+    const after = (await benchmarkStore.get(id)).points.length;
+    result.added += after - before;
+    result.series.push({ id, name: existing.name, prices: incoming.length, newDates: after - before });
+  }
+  return result;
+}
+
+async function runFeed(source) {
+  const cfg = feedConfig()[source];
+  const started = new Date().toISOString();
+  try {
+    const parsed = await fetchFeed(source, cfg);
+    // New series in the feed are created automatically under the default
+    // product group (Settings) — re-assign them on Market prices if needed.
+    const settings = await settingsStore.get();
+    const plan = BM.planImport(parsed.rows, await liveSeries());
+    const mapping = Object.fromEntries(plan.filter((g) => !g.seriesId).map((g) => [g.key, { create: { name: g.name, source, group: settings.defaultCategory || "Merchant Bar", currency: g.currency || "GBP" } }]));
+    const res = await importBenchmarkRows(parsed.rows, mapping, `feed:${source}`, "feed");
+    feedRuns[source] = { ok: true, at: started, rows: parsed.rows.length, ...res, errors: parsed.errors.slice(0, 5) };
+  } catch (error) {
+    feedRuns[source] = { ok: false, at: started, error: error.message };
+  }
+  return feedRuns[source];
+}
+
+function scheduleFeeds() {
+  const configured = Object.entries(feedConfig()).filter(([, c]) => c.configured).map(([s]) => s);
+  if (!configured.length) return;
+  const runAll = () => configured.forEach((s) => runFeed(s).catch(() => {}));
+  setTimeout(runAll, 15_000).unref?.();
+  setInterval(runAll, 6 * 60 * 60 * 1000).unref?.();
+}
+
+async function marketView() {
+  const series = await liveSeries();
+  const suppliers = (await supplierStore.list()).filter((x) => x.status !== "archived");
+  const fx = await fxMap([...series.map((x) => x.currency), ...suppliers.flatMap((x) => (x.quotes || []).map((q) => q.currency))]);
+  const groups = [...new Set([...series.map((x) => x.group), ...suppliers.flatMap((x) => x.supplies || [])])].filter(Boolean).sort();
+  const competition = groups.flatMap((g) => BM.competitionSeries(suppliers, g, fx));
+  const cfg = feedConfig();
+  const feeds = Object.keys(BM.SOURCES).map((source) => {
+    const mine = series.filter((x) => x.source === source);
+    const lastDate = mine.flatMap((x) => (x.points || []).map((p) => p.date)).sort().pop() || null;
+    return {
+      source, ...BM.SOURCES[source], series: mine.length, points: mine.reduce((n, x) => n + (x.points || []).length, 0), lastDate,
+      feed: FEED_SOURCES.includes(source) ? { configured: cfg[source].configured, env: cfg[source].envUrl, lastRun: feedRuns[source] || null } : null,
+    };
+  });
+  return {
+    series: series.map((x) => ({ ...x, latest: BM.latest(x.points) })),
+    competition: competition.map((x) => ({ ...x, latest: BM.latest(x.points) })),
+    suppliers: suppliers.map((x) => ({ id: x.id, name: x.name, origin: x.origin, supplies: x.supplies || [], metrics: SUP.supplierMetrics(x), quotes: (x.quotes || []).map(({ date, pricePerT, currency, covers, channel }) => ({ date, pricePerT, currency, covers, channel })) })),
+    fx, groups, feeds,
+    choices: { sources: Object.keys(BM.SOURCES), regions: BM.REGIONS, bases: BM.BASES, currencies: BM.CURRENCIES, groups: CATALOGUE_GROUPS },
+  };
+}
+
+async function handleBenchmarkApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  const method = request.method;
+  if (url.pathname === "/api/benchmarks" && method === "GET") return sendJson(response, 200, await marketView());
+  if (method !== "GET" && !can(user, "edit")) return sendError(response, 403, "Your account cannot change market prices.");
+  if (url.pathname === "/api/benchmarks" && method === "POST") {
+    const body = await readJsonBody(request);
+    const { series, errors, valid } = BM.validateSeries(body);
+    if ((await liveSeries()).some((x) => x.name.toLowerCase() === series.name.toLowerCase())) errors.name = "A series with this name already exists.";
+    if (!valid || errors.name) return sendJson(response, 422, { ok: false, errors });
+    const created = await benchmarkStore.create({ ...series, status: "active", points: [] }, user.name);
+    return sendJson(response, 201, created);
+  }
+  if (url.pathname === "/api/benchmarks/import" && method === "POST") {
+    const body = await readJsonBody(request, 2_000_000);
+    const parsed = Array.isArray(body.rows) ? BM.parseBenchmarkTable(body.rows, { defaultSeries: body.defaultSeries }) : BM.parseBenchmarkTable(body.text || "", { defaultSeries: body.defaultSeries });
+    if (!body.commit) return sendJson(response, 200, { format: parsed.format, count: parsed.rows.length, errors: parsed.errors.slice(0, 20), plan: BM.planImport(parsed.rows, await liveSeries()) });
+    const res = await importBenchmarkRows(parsed.rows, body.mapping || {}, user.name, "import");
+    return sendJson(response, 200, res);
+  }
+  const feedMatch = url.pathname.match(/^\/api\/benchmarks\/feeds\/([A-Za-z]+)\/run$/);
+  if (feedMatch && method === "POST") {
+    const source = FEED_SOURCES.find((s) => s.toLowerCase() === feedMatch[1].toLowerCase());
+    if (!source) return sendError(response, 404, "Unknown feed");
+    return sendJson(response, 200, await runFeed(source));
+  }
+  const m = url.pathname.match(/^\/api\/benchmarks\/([0-9a-f-]{36})(?:\/(archive|points)(?:\/(\d{4}-\d{2}-\d{2}))?)?$/);
+  if (!m) return sendError(response, 404, "Not found");
+  const [, id, sub, date] = m;
+  const existing = await benchmarkStore.get(id);
+  if (!existing || existing.status === "archived") return sendError(response, 404, "Series not found");
+  if (!sub && method === "PUT") {
+    const { series, errors, valid } = BM.validateSeries({ ...existing, ...(await readJsonBody(request)) });
+    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    return sendJson(response, 200, await benchmarkStore.update(id, (x) => Object.assign(x, series), user.name, "edited"));
+  }
+  if (sub === "archive" && method === "POST") {
+    await benchmarkStore.update(id, (x) => { x.status = "archived"; }, user.name, "archived");
+    return sendJson(response, 200, { ok: true });
+  }
+  if (sub === "points" && method === "POST" && !date) {
+    const { point, errors, valid } = BM.validatePoint(await readJsonBody(request));
+    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    const sym = { GBP: "£", EUR: "€", USD: "$" }[existing.currency];
+    return sendJson(response, 201, await benchmarkStore.update(id, (x) => { x.points = BM.mergePoints(x.points || [], [{ ...point, via: "manual", by: user.name, at: new Date().toISOString() }]); },
+      user.name, "price added", `${sym}${point.price}/t on ${point.date}${point.note ? ` · ${point.note}` : ""}`));
+  }
+  if (sub === "points" && date && method === "DELETE") {
+    return sendJson(response, 200, await benchmarkStore.update(id, (x) => { x.points = (x.points || []).filter((p) => p.date !== date); }, user.name, "price removed", date));
+  }
+  sendError(response, 405, "Method not allowed");
+}
+
 // ------------------------------------------------------------ settings API
 
 async function handleSettingsApi(request, response, url) {
@@ -1683,7 +1929,7 @@ async function handleSettingsApi(request, response, url) {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot download backups.");
     const body = JSON.stringify({
       exportedAt: new Date().toISOString(), exportedBy: user.name,
-      settings: await settingsStore.get(), products: await productStore.list(), suppliers: await supplierStore.list(), scenarios: await store.list(),
+      settings: await settingsStore.get(), products: await productStore.list(), suppliers: await supplierStore.list(), benchmarks: await benchmarkStore.list(), scenarios: await store.list(),
     }, null, 2);
     response.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
@@ -1979,6 +2225,11 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname.startsWith("/api/benchmarks")) {
+      await handleBenchmarkApi(request, response, url);
+      return;
+    }
+
     if (url.pathname.startsWith("/api/suppliers")) {
       await handleSupplierApi(request, response, url);
       return;
@@ -2023,6 +2274,7 @@ server.on("error", (error) => {
   throw error;
 });
 
+scheduleFeeds();
 applySupplierSheet().catch((error) => console.error("Supplier sheet update failed:", error.message));
 
 server.listen(port, bindHost, () => {

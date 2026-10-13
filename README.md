@@ -124,6 +124,20 @@ Supplier profile: Overview (commercial terms, quota & duty exposure, pricing ben
 
 API: `GET/POST /api/suppliers`, `GET/PUT /api/suppliers/:id`, `POST /api/suppliers/:id/archive`, `POST /api/suppliers/:id/quotes`, `DELETE /api/suppliers/:id/quotes/:quoteId`, `POST|PUT|DELETE /api/suppliers/:id/contacts[/:contactId]`, `POST /api/suppliers/:id/rfqs`.
 
+**Cost breakdown** (supplier profile tab): runs the supplier's latest quote through the landed-cost engine for a chosen product, tonnage and arrival date (live HMRC duty and quota), then adds payment-terms credit, MOQ carrying cost and a reliability buffer at your cost of capital (Settings). Shows effective / best / worst case, ten "what to weigh up" checks (price vs others, against the market, duty & quota, proof of origin, terms, lead time, MOQ, reliability, currency, quote freshness) and the same order priced from every supplier. API: `POST /api/suppliers/:id/breakdown`, `POST /api/suppliers/compare`.
+
+### Market prices (`/market.html`)
+
+Benchmark price series saved in `var/benchmarks.json`, compared with every supplier's latest quote (matrix + price-history chart).
+
+Ingestion:
+- **Upload / paste** an export — Kallanish Price Analyser → Export to Excel, a MEPS price table, or any CSV. One row per price (Date, Series, Price, Currency) or one column per series both work; title rows, UK dates, month names, Excel date numbers, `1,020` / `£760` are handled. You map each series in the file to a saved series once; later imports match by name.
+- **Market intel**: add a price by hand.
+- **Competition – UK / imports**: built automatically from logged supplier quotes.
+- **API feed** (for when you have a data licence): set `MEPS_FEED_URL` (+ `MEPS_FEED_TOKEN`), `KALLANISH_FEED_URL`, `FASTMARKETS_FEED_URL` or `ARGUS_FEED_URL` in `.env`. The server fetches every 6 hours (and on "Fetch now"); the URL may return JSON (`[{date, series, price, currency}]`) or CSV. New series land in the default product group.
+
+API: `GET/POST /api/benchmarks`, `PUT /api/benchmarks/:id`, `POST /api/benchmarks/:id/archive`, `POST /api/benchmarks/:id/points`, `DELETE /api/benchmarks/:id/points/:date`, `POST /api/benchmarks/import` (`{text|rows, commit, mapping}`), `POST /api/benchmarks/feeds/:source/run`.
+
 ### Workspace settings (`/settings.html`)
 
 Saved in `var/settings.json`: defaults for new products (category, lead time, MOQ, safety stock, cover), which product groups appear in the Add product search, company name, plus connection status (HMRC, Claude) and a one-click JSON backup of products, quotes and settings. API: `GET/PUT /api/settings`, `GET /api/backup`.

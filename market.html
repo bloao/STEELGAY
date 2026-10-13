@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Market prices · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="market"></aside>
+      <script src="app-sidebar.js"></script>
+    <main class="page market-page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Supplier pricing</p>
+          <h1>Market prices</h1>
+          <p class="muted lede">Your supplier quotes against MEPS, Kallanish, market intel and what the competition is quoting.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button" id="add-price-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+            Add price
+          </button>
+          <button class="btn btn-primary" type="button" id="import-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            Import prices
+          </button>
+        </div>
+      </div>
+
+      <section aria-labelledby="feeds-title">
+        <h2 class="sec-title" id="feeds-title">Price sources</h2>
+        <div class="feed-grid" id="feeds"><p class="muted">Loading…</p></div>
+      </section>
+
+      <div class="group-tabs" id="group-tabs" role="tablist" aria-label="Product group"></div>
+
+      <section class="card mk-card" aria-labelledby="cmp-title">
+        <div class="card-head">
+          <div>
+            <h2 id="cmp-title">Supplier quotes vs market</h2>
+            <p class="small muted" id="cmp-sub" style="margin:2px 0 0"></p>
+          </div>
+        </div>
+        <div id="cmp"></div>
+      </section>
+
+      <section class="card mk-card" aria-labelledby="chart-title">
+        <div class="card-head">
+          <div>
+            <h2 id="chart-title">Price history</h2>
+            <p class="small muted" style="margin:2px 0 0">£ per tonne. Market series as lines, supplier quotes as dots.</p>
+          </div>
+          <div class="seg" role="group" aria-label="Time range" id="range">
+            <button type="button" data-range="90" aria-pressed="false">3M</button>
+            <button type="button" data-range="180" aria-pressed="false">6M</button>
+            <button type="button" data-range="365" aria-pressed="true">1Y</button>
+            <button type="button" data-range="0" aria-pressed="false">All</button>
+          </div>
+        </div>
+        <div id="chart" class="mk-chart"></div>
+      </section>
+
+      <section class="table-card" aria-labelledby="series-title">
+        <div class="toolbar"><strong id="series-title">Price series</strong><span class="small muted" id="series-count"></span></div>
+        <div class="table-scroll">
+          <table class="data series-table">
+            <thead><tr><th>Series</th><th>Source</th><th class="num">Latest</th><th class="num">Change</th><th>Updated</th><th class="num">Prices</th><th><span class="sr-only">Open</span></th></tr></thead>
+            <tbody id="series-rows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <p class="small muted">Prices you import stay in this tool (var/benchmarks.json). MEPS, Kallanish, Fastmarkets and Argus data is licensed to your subscription — don't share exports outside your team.</p>
+
+      <div class="drawer-backdrop" id="backdrop" hidden></div>
+      <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+        <header class="drawer-head">
+          <div class="drawer-ident">
+            <span class="avatar avatar-lg" id="drawer-avatar" aria-hidden="true" hidden></span>
+            <div>
+              <p class="eyebrow" id="drawer-eyebrow"></p>
+              <h2 id="drawer-title"></h2>
+              <div class="ident-tags" id="drawer-tags" hidden></div>
+            </div>
+          </div>
+          <div class="drawer-tools">
+            <button class="icon-btn" type="button" id="drawer-size" aria-label="Switch to large view" title="Large view">
+              <svg class="i-expand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              <svg class="i-collapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>
+            </button>
+            <button class="icon-btn" type="button" id="drawer-close" aria-label="Close">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+        </header>
+        <div class="profile-tabs" id="profile-tabs" role="tablist" aria-label="Series sections" hidden></div>
+        <div class="drawer-body" id="view-detail" hidden></div>
+        <form class="drawer-body" id="view-form" novalidate hidden></form>
+        <footer class="drawer-foot" id="drawer-foot"></footer>
+      </aside>
+    </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="market.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

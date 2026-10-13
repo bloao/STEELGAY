@@ -5,7 +5,7 @@
   const form = $("settings-form");
   const field = (n) => form.elements.namedItem(n);
   const CAT = window.STEEL_CATALOGUE;
-  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths"];
+  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct"];
 
   let saved = null;
   let groups = [];
@@ -15,7 +15,7 @@
   form.querySelectorAll("select[data-options]").forEach((sel) => {
     const unit = sel.dataset.unit;
     const opts = sel.dataset.empty ? [el("option", { value: "", text: sel.dataset.empty })] : [];
-    for (const v of sel.dataset.options.split(",")) opts.push(el("option", { value: v, text: `${v} ${Number(v) === 1 && unit !== "t" ? unit.replace(/s$/, "") : unit}` }));
+    for (const v of sel.dataset.options.split(",")) opts.push(el("option", { value: v, text: unit === "%" ? `${v}%` : `${v} ${Number(v) === 1 && unit !== "t" ? unit.replace(/s$/, "") : unit}` }));
     sel.replaceChildren(...opts);
   });
 

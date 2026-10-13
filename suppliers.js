@@ -754,6 +754,201 @@
       me.canEdit ? el("div", {}, el("button", { class: "btn", type: "button", text: "Add contact", onclick: () => openContactForm(s) })) : null);
   }
 
+  // ---------------------------------------------------------------- cost breakdown
+  // Runs this supplier's latest quote through the landed-cost engine for one
+  // product, then adds the supplier-specific variables, and lays out every
+  // factor worth weighing before buying from them.
+  const bd = { key: null, opts: {}, data: null, compare: null, loading: false, error: null };
+  let market = null; // /api/benchmarks, loaded once for the market check
+  const pctFmt = (p) => `${Math.round(p * 100)}%`;
+  const signed = (v, cur) => `${v < 0 ? "−" : "+"}${money(Math.abs(v), cur)}`;
+
+  async function loadBreakdown(s, opts) {
+    bd.key = s.id;
+    bd.opts = { ...opts };
+    bd.loading = true;
+    bd.error = null;
+    const body = { ...opts, ratePct: opts.ratePct ?? settings.costOfCapitalPct ?? 8 };
+    try {
+      const [data, cmp] = await Promise.all([
+        api(`/api/suppliers/${s.id}/breakdown`, { method: "POST", body }),
+        api("/api/suppliers/compare", { method: "POST", body: { ...body, productId: opts.productId, arrival: "lead" } }).catch(() => null),
+      ]);
+      bd.data = data.ok ? data : null;
+      bd.error = data.ok ? null : data.error;
+      if (data.ok && !opts.productId) bd.opts.productId = data.product.id;
+      if (cmp && data.ok && !opts.productId) {
+        const again = await api("/api/suppliers/compare", { method: "POST", body: { ...body, productId: data.product.id, arrival: "lead" } }).catch(() => null);
+        bd.compare = again;
+      } else bd.compare = cmp;
+      if (!market) market = await api("/api/benchmarks").catch(() => null);
+    } catch (error) {
+      bd.error = error.message;
+    } finally {
+      bd.loading = false;
+      if (mode === "detail" && detailId === s.id && tab === "breakdown") renderBody(s);
+    }
+  }
+
+  function variableCards(s, d) {
+    const m = s.metrics;
+    const e = d.engine;
+    const cur = d.inputs.currency;
+    const cards = [];
+    const add = (name, value, verdict, note) => cards.push({ name, value, verdict, note });
+    // 1 Price position
+    const rows = (bd.compare && bd.compare.rows || []).filter((r) => Number.isFinite(r.effectivePerT));
+    const pos = rows.findIndex((r) => r.id === s.id);
+    if (pos >= 0) add("Price vs your other suppliers", pos === 0 ? "Cheapest" : `#${pos + 1} of ${rows.length}`, pos === 0 ? "good" : pos === rows.length - 1 ? "risk" : "watch",
+      pos === 0 ? `Lowest effective cost for ${d.product.name}.` : `${money(d.effectivePerT - rows[0].effectivePerT, cur)}/t more than ${rows[0].name} once duty risk and terms are counted.`);
+    // 2 Market check
+    const series = market ? [...market.series, ...market.competition].filter((x) => x.group && (s.supplies || []).includes(x.group) && !(x.computed && x.suppliers && x.suppliers.includes(s.name) && x.suppliers.length === 1)) : [];
+    const fx = market ? market.fx : { GBP: 1 };
+    const quotedGbp = e.lines.find((l) => l.key === "price").perTonne;
+    const benches = series.map((x) => ({ x, l: x.latest })).filter((b) => b.l && fx[b.x.currency || "GBP"]);
+    if (benches.length) {
+      // Reference: an outside source first (UK, delivered, most recent), else competition.
+      const rank = (b) => (b.x.computed ? 10 : 0) + (b.x.region === "UK" ? 0 : 2) + (/deliver|ddp|dap/i.test(b.x.basis || "") ? 0 : 1);
+      const best = benches.map((b) => ({ ...b, gbp: b.l.price * fx[b.x.currency || "GBP"] })).sort((a, b) => rank(a) - rank(b) || b.l.date.localeCompare(a.l.date));
+      const ext = best.filter((b) => !b.x.computed);
+      const ref = best[0];
+      const diff = quotedGbp - ref.gbp;
+      add("Against the market", `${signed(diff, "GBP")}/t vs ${ref.x.source}`, diff <= 0 ? "good" : diff / ref.gbp > 0.03 ? "risk" : "watch",
+        `${ref.x.name}: ${money(ref.gbp)}/t on ${fmt.date(ref.l.date)}.${ext.length > 1 ? ` ${ext.length} market series on Market prices.` : ""}${ext.length ? "" : " Add MEPS or Kallanish prices for an outside view."}`);
+    } else add("Against the market", "No benchmark yet", "muted", "Import MEPS or Kallanish prices on Market prices to check this quote against the market.");
+    // 3 Duty & quota
+    if (s.origin === "UK") add("Duty & quota", "None — UK steel", "good", "No import, so no quota, steel duty or customs paperwork.");
+    else if (!e.buyerImports) add("Duty & quota", "Supplier imports", "watch", "They clear customs and pay any duty — but may delay or cancel if the quota runs out. Get that in the contract.");
+    else if (e.quota) add("Duty & quota", `${pctFmt(e.quota.probability)} chance of 50% duty`, e.quota.probability >= 0.5 ? "risk" : e.quota.probability >= 0.15 ? "watch" : "good",
+      `Expected ${money(d.effectivePerT - d.bestPerT, cur)}/t; if the quota runs out before ${fmt.date(d.inputs.importDate)} it's ${money(d.worstPerT, cur)}/t. ${e.quota.basis || ""}`);
+    else add("Duty & quota", "Ordinary duty only", "good", "This product isn't in a steel-measure quota category.");
+    // 4 Origin evidence
+    if (choices.euMembers.includes(s.origin)) add("Proof of origin", "Needed for 0% duty", "watch", "EU steel enters duty-free under the UK–EU trade agreement only with a statement on origin on the invoice — ask for it with every load.");
+    else if (s.origin && s.origin !== "UK") add("Proof of origin", "Check", "watch", "Origin (country of melt and pour) decides the quota line and duty — get mill certificates.");
+    // 5 Payment terms
+    const terms = d.adjustments.find((a) => a.key === "terms");
+    if (s.paymentDays !== null) add("Payment terms", `${s.paymentDays} days`, s.paymentDays >= 60 ? "good" : s.paymentDays >= 30 ? "watch" : "risk",
+      `${terms ? `Worth ${money(-terms.perTonne, cur)}/t at ${d.inputs.ratePct}% cost of capital.` : ""}${s.paymentNote ? ` ${s.paymentNote}.` : ""}`);
+    else add("Payment terms", "Not recorded", "muted", "Add their terms — longer credit is worth real money.");
+    // 6 Lead time
+    if (d.inputs.leadDays) add("Lead time", lead(s), d.inputs.leadDays <= 7 ? "good" : d.inputs.leadDays <= 28 ? "watch" : "risk", `Order today, arrives about ${fmt.date(d.inputs.importDate)}.${d.inputs.leadDays > 28 ? " Long lead times tie up more safety stock." : ""}`);
+    else add("Lead time", "Not recorded", "muted", "Add a lead time to work out arrival dates and safety stock.");
+    // 7 MOQ
+    const moqAdj = d.adjustments.find((a) => a.key === "moq");
+    add("Minimum order", s.moqNote || moq(s), moqAdj ? "watch" : "good", moqAdj ? `${moqAdj.label} — costs ${money(moqAdj.perTonne, cur)}/t to carry.` : `${d.inputs.tonnage} t meets their minimum.`);
+    // 8 Reliability
+    if (s.onTimePct !== null) add("Reliability", `${s.onTimePct}% on time`, s.onTimePct >= 90 ? "good" : s.onTimePct >= 75 ? "watch" : "risk",
+      `${100 - s.onTimePct}% of loads late — hold extra safety stock${d.adjustments.find((a) => a.key === "reliability") ? ` (≈ ${money(d.adjustments.find((a) => a.key === "reliability").perTonne, cur)}/t)` : ""}.`);
+    else add("Reliability", "Not recorded", "muted", "Add their on-time % from your delivery records.");
+    // 9 Currency
+    add("Currency", cur, cur === "GBP" ? "good" : "watch", cur === "GBP" ? "Quoted in sterling — no exchange-rate risk." : `Converted at ${e.fx.rate} — the rate on payment day will differ.`);
+    // 10 Quote freshness
+    if (m.priceChannel === "list") add("Quote freshness", "From supplier list", "watch", "Not a dated quote — request a current price before ordering.");
+    else if (m.priceExpired) add("Quote freshness", "Expired", "risk", "The latest quote has passed its validity date.");
+    else add("Quote freshness", ago(m.priceAgeDays), m.priceAgeDays <= 14 ? "good" : "watch", m.priceAgeDays <= 14 ? "Recent quote." : "Over two weeks old — prices move; re-confirm.");
+    return cards;
+  }
+
+  function breakdownPanel(s) {
+    const panel = el("div", { class: "profile-panel bd" });
+    if (bd.key !== s.id && !bd.loading) { bd.data = null; bd.compare = null; loadBreakdown(s, {}); }
+    if (bd.loading && !bd.data) { panel.append(el("div", { class: "empty-state" }, el("h3", { text: "Working out the landed cost…" }), el("p", { text: "Live quota balances and tariff rates from HMRC." }))); return panel; }
+    if (bd.error && !bd.data) {
+      panel.append(el("div", { class: "callout is-muted" }, icon(I.alert, 18), el("div", {}, el("strong", { text: "Can't break this supplier down yet" }), el("p", { text: bd.error }),
+        me.canEdit && /origin/i.test(bd.error) ? el("button", { class: "link-btn", type: "button", text: "Set origin", onclick: () => openSupplierForm(s) }) : null)));
+      return panel;
+    }
+    const d = bd.data;
+    const cur = d.inputs.currency;
+    const supplied = products.filter((p) => (s.supplies || []).includes(p.category));
+    const others = products.filter((p) => !supplied.includes(p));
+    const refresh = (patch) => { loadBreakdown(s, { ...bd.opts, ...patch }); renderBody(s); };
+
+    // controls
+    const productSel = el("select", { "aria-label": "Product" },
+      supplied.length ? el("optgroup", { label: "They supply" }, ...supplied.map((p) => el("option", { value: p.id, text: p.name }))) : null,
+      others.length ? el("optgroup", { label: "Other products" }, ...others.map((p) => el("option", { value: p.id, text: p.name }))) : null);
+    productSel.value = d.product.id;
+    productSel.addEventListener("change", () => refresh({ productId: productSel.value, tonnage: undefined }));
+    const tonOpts = [...new Set([d.product.suggestedOrderT, s.moqMinT, s.moqMaxT, 5, 10, 20, 25, 28, 50, 100, d.inputs.tonnage].filter((v) => v > 0))].sort((a, b) => a - b);
+    const tonSel = el("select", { "aria-label": "Tonnage" }, ...tonOpts.map((v) => el("option", { value: String(v), text: `${v} t${v === d.product.suggestedOrderT ? " (suggested)" : v === s.moqMinT ? " (MOQ)" : ""}` })));
+    tonSel.value = String(d.inputs.tonnage);
+    tonSel.addEventListener("change", () => refresh({ tonnage: Number(tonSel.value) }));
+    const dateIn = el("input", { type: "date", value: d.inputs.importDate, min: todayIso(), "aria-label": "Arrival date" });
+    dateIn.addEventListener("change", () => dateIn.value && refresh({ importDate: dateIn.value }));
+    const rateSel = el("select", { "aria-label": "Cost of capital" }, ...[0, 4, 6, 8, 10, 12, 15].map((v) => el("option", { value: String(v), text: `${v}%` })));
+    rateSel.value = String(d.inputs.ratePct);
+    rateSel.addEventListener("change", () => refresh({ ratePct: Number(rateSel.value) }));
+    const ctl = (label, control, hint) => el("label", { class: "bd-ctl" }, el("span", { text: label }), control, hint ? el("small", { text: hint }) : null);
+    const controls = el("div", { class: "bd-controls" },
+      ctl("Product", productSel), ctl("Tonnage", tonSel), ctl("Arrives", dateIn, d.inputs.leadDays ? `${lead(s)} lead time` : "lead time not set"), ctl("Cost of capital", rateSel),
+      s.transport === "extra" ? ctl("Transport £/t", (() => { const i = el("input", { type: "number", min: "0", step: "1", value: String(d.inputs.transportPerT || ""), placeholder: "0" }); i.addEventListener("change", () => refresh({ transportPerT: Number(i.value) || 0 })); return i; })(), "not in their price") : null);
+
+    // headline
+    const e = d.engine;
+    const quotaRisk = e.quota ? e.quota.probability : null;
+    const hero = el("div", { class: "bd-hero" },
+      el("div", {}, el("span", { class: "bd-label", text: `Effective cost · ${d.inputs.tonnage} t ${d.product.name}` }), el("strong", { class: "bd-price", text: perT(d.effectivePerT, "GBP") }),
+        el("span", { class: "bd-sub", text: `${money(d.effectivePerT * d.inputs.tonnage)} for the order · quoted ${perT(d.inputs.quotedPerT, cur)}` })),
+      el("div", { class: "bd-range" },
+        el("div", {}, el("span", { text: "Best case" }), el("strong", { text: perT(d.bestPerT) })),
+        el("div", {}, el("span", { text: "Worst case" }), el("strong", { class: d.worstPerT > d.bestPerT ? "is-bad" : "", text: perT(d.worstPerT) })),
+        el("div", {}, el("span", { text: "Quota risk" }), el("strong", { text: quotaRisk === null ? "—" : pctFmt(quotaRisk) }))));
+
+    // build-up
+    const engineRows = e.lines.filter((l) => l.key !== "price" && (l.perTonne || 0) !== 0);
+    const inPrice = e.lines.filter((l) => l.status === "in-price" || l.status === "supplier").map((l) => l.label);
+    const allRows = [
+      ...engineRows.map((l) => ({ label: l.label, perTonne: l.perTonne, note: l.source })),
+      ...d.adjustments.map((a) => ({ label: a.label, perTonne: a.perTonne, note: a.formula })),
+    ];
+    const maxAbs = Math.max(1, ...allRows.map((r) => Math.abs(r.perTonne)));
+    let running = e.lines.find((l) => l.key === "price").perTonne;
+    const build = el("div", { class: "bd-build" },
+      el("div", { class: "bd-row is-base" }, el("span", { class: "bd-row-l", text: `Quoted price${cur !== "GBP" ? ` (${d.inputs.quotedPerT} ${cur} × ${e.fx.rate})` : ""}` }), el("span", { class: "bd-row-bar" }), el("strong", { class: "bd-row-v", text: perT(running) })),
+      ...allRows.map((r) => {
+        running += r.perTonne;
+        return el("div", { class: `bd-row ${r.perTonne < 0 ? "is-down" : "is-up"}`, title: r.note || "" },
+          el("span", { class: "bd-row-l" }, el("span", { text: r.label }), r.note ? el("small", { text: r.note }) : null),
+          el("span", { class: "bd-row-bar" }, el("span", { style: `width:${((Math.abs(r.perTonne) / maxAbs) * 100).toFixed(1)}%` })),
+          el("strong", { class: "bd-row-v", text: `${signed(r.perTonne, "GBP")}` }));
+      }),
+      el("div", { class: "bd-row is-total" }, el("span", { class: "bd-row-l", text: "Effective cost" }), el("span", { class: "bd-row-bar" }), el("strong", { class: "bd-row-v", text: perT(d.effectivePerT) })),
+      inPrice.length ? el("p", { class: "bd-inprice", text: `Already in their price or carried by them: ${[...new Set(inPrice)].join(", ").toLowerCase()}.` }) : null);
+
+    // variables
+    const cards = variableCards(s, d);
+    const vars = el("div", { class: "var-grid" }, ...cards.map((c) => el("div", { class: `var-card is-${c.verdict}` },
+      el("div", { class: "var-head" }, el("span", { class: "var-name", text: c.name }), el("span", { class: `var-dot is-${c.verdict}`, "aria-label": { good: "Good", watch: "Watch", risk: "Risk", muted: "Unknown" }[c.verdict] })),
+      el("strong", { class: "var-value", text: c.value }),
+      el("p", { class: "var-note", text: c.note }))));
+    const score = { good: cards.filter((c) => c.verdict === "good").length, watch: cards.filter((c) => c.verdict === "watch").length, risk: cards.filter((c) => c.verdict === "risk").length };
+
+    // compare
+    const cmpRows = bd.compare && bd.compare.rows ? bd.compare.rows : [];
+    const compare = cmpRows.length > 1 ? el("div", { class: "table-scroll" }, el("table", { class: "quota-table bd-compare" },
+      el("thead", {}, el("tr", {}, el("th", { text: "Supplier" }), el("th", { class: "num", text: "Quoted" }), el("th", { class: "num", text: "Effective" }), el("th", { class: "num wide-only", text: "Worst case" }), el("th", { class: "num", text: "Quota risk" }), el("th", { class: "wide-only", text: "Arrives" }))),
+      el("tbody", {}, ...cmpRows.map((r, i) => el("tr", { class: r.id === s.id ? "is-current" : "" },
+        el("td", {}, r.id === s.id ? el("strong", { text: r.name }) : el("button", { class: "link-btn", type: "button", text: r.name, onclick: () => { bd.key = null; openDetail(r.id, "breakdown"); } }), r.error ? el("div", { class: "small muted", text: r.error }) : null),
+        el("td", { class: "num", text: r.error ? "—" : perT(r.quotedPerT) }),
+        el("td", { class: "num" }, r.error ? "—" : el("strong", { class: i === 0 ? "best" : "", text: perT(r.effectivePerT) })),
+        el("td", { class: "num wide-only", text: r.error ? "—" : perT(r.worstPerT) }),
+        el("td", { class: "num", text: r.error || r.probability === null ? "—" : pctFmt(r.probability) }),
+        el("td", { class: "wide-only", text: r.importDate ? fmt.date(r.importDate) : "—" })))))) : null;
+
+    const sec = (title, sub, ...kids) => el("section", { class: "p-sec" }, el("div", { class: "p-sec-head" }, el("h3", { text: title }), sub ? el("span", { class: "small muted", text: sub }) : null), ...kids);
+    panel.append(...[
+      controls,
+      bd.loading ? el("p", { class: "small muted bd-updating", text: "Updating…" }) : null,
+      hero,
+      sec("What to weigh up", `${score.good} good · ${score.watch} to watch · ${score.risk} risk`, vars),
+      sec("How the price builds up", "per tonne", build),
+      compare ? sec(`Same order from each supplier`, "each at their own lead time", compare) : null,
+      (e.checks || []).length || (e.warnings || []).length ? sec("Before you order", null, el("ul", { class: "bd-checks" }, ...[...(e.warnings || []), ...(e.checks || [])].map((c) => el("li", { text: c })))) : null,
+      el("p", { class: "small muted", style: "margin:0", text: `Estimates only — not customs advice. Duty and quota from HMRC's live data; quota risk is the chance the ${s.origin === "UK" ? "" : "origin's "}quota line runs out before arrival.` })].filter(Boolean));
+    return panel;
+  }
+
   const ACTION = {
     created: ["Added", "is-created"], edited: ["Edited", ""], "quote logged": ["Quote received", "is-quote"], "quote requested": ["Quote requested", "is-stock"],
     "quote removed": ["Quote removed", ""], "updated from supplier sheet": ["Updated from supplier sheet", ""], "contact added": ["Contact added", ""], "contact updated": ["Contact updated", ""], "contact removed": ["Contact removed", ""], archived: ["Archived", ""],
@@ -781,7 +976,7 @@
   }
 
   function renderTabs(s) {
-    const tabs = [["overview", "Overview", null], ["quotes", "Quotes", (s.quotes || []).length], ["contacts", "Contacts", (s.contacts || []).length], ["audit", "Audit trail", (s.activity || []).length]];
+    const tabs = [["overview", "Overview", null], ["breakdown", "Cost breakdown", null], ["quotes", "Quotes", (s.quotes || []).length], ["contacts", "Contacts", (s.contacts || []).length], ["audit", "Audit trail", (s.activity || []).length]];
     $("profile-tabs").replaceChildren(...tabs.map(([key, label, n]) => el("button", {
       class: "profile-tab", type: "button", role: "tab", id: `tab-${key}`, "aria-selected": String(tab === key), "aria-controls": "view-detail", tabindex: tab === key ? "0" : "-1",
       onclick: () => { tab = key; renderTabs(s); renderBody(s); },
@@ -795,7 +990,7 @@
   }
 
   function renderBody(s) {
-    $("view-detail").replaceChildren(tab === "quotes" ? quotesPanel(s) : tab === "contacts" ? contactsPanel(s) : tab === "audit" ? auditPanel(s) : overviewPanel(s));
+    $("view-detail").replaceChildren(tab === "breakdown" ? breakdownPanel(s) : tab === "quotes" ? quotesPanel(s) : tab === "contacts" ? contactsPanel(s) : tab === "audit" ? auditPanel(s) : overviewPanel(s));
     $("view-detail").setAttribute("aria-labelledby", `tab-${tab}`);
   }
 
@@ -834,6 +1029,7 @@
       const r = await api("/api/suppliers");
       suppliers = r.suppliers;
       choices = r.choices;
+      bd.key = null; // supplier data changed — recalculate the breakdown
       renderSummary();
       renderTable();
       if (mode === "detail" && detailId) openDetail(detailId);
