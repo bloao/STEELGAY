@@ -1686,9 +1686,10 @@ async function supplierBreakdown(s, opts = {}) {
     engine: { lines: engine.lines, totals: engine.totals, quota: engine.quota ? { probability: engine.quota.probability, basis: engine.quota.basis, orderNumber: quotaLine?.source } : null, category: engine.category, buyerImports: engine.buyerImports, checks: engine.checks, warnings: engine.warnings, customsValuePerT: engine.customsValuePerT, fx: engine.fx },
     adjustments,
     scenarioInputs: engine.inputs,
-    effectivePerT: round2(engine.totals.expectedPerT + adj),
-    worstPerT: round2(worstPerT + adj),
-    bestPerT: round2(engine.totals.expectedPerT - (quotaLine?.perTonne || 0) + adj),
+    // one set of numbers everywhere: the cost model's totals
+    effectivePerT: model ? model.totals.expected : round2(engine.totals.expectedPerT + adj),
+    worstPerT: model ? model.totals.worst : round2(worstPerT + adj),
+    bestPerT: model ? model.totals.best : round2(engine.totals.expectedPerT - (quotaLine?.perTonne || 0) + adj),
   };
 }
 const round2 = (v) => (v === null || v === undefined || !Number.isFinite(v) ? v : Math.round(v * 100) / 100);
@@ -1832,7 +1833,7 @@ async function handleSupplierApi(request, response, url) {
     const rows = await Promise.all(pool.map(async (x) => {
       const b = await supplierBreakdown(x, { ...body, importDate: body.arrival === "fixed" ? body.importDate : undefined }).catch((e) => ({ ok: false, error: e.message }));
       return b.ok ? { id: x.id, name: x.name, origin: x.origin, quotedPerT: b.engine.lines.find((l) => l.key === "price").perTonne, expectedPerT: b.engine.totals.expectedPerT,
-        effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, probability: b.engine.quota ? b.engine.quota.probability : null, importDate: b.inputs.importDate, adjustments: b.adjustments }
+        effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, missPerT: b.model ? b.model.totals.missPerT : round2(b.worstPerT - b.bestPerT), missing: b.model ? b.model.totals.missing : [], tonnage: b.inputs.tonnage, productName: b.product.name, probability: b.engine.quota ? b.engine.quota.probability : null, importDate: b.inputs.importDate, adjustments: b.adjustments }
         : { id: x.id, name: x.name, origin: x.origin, error: b.error };
     }));
     return sendJson(response, 200, { rows: rows.sort((a, b) => (a.effectivePerT ?? 1e9) - (b.effectivePerT ?? 1e9)) });

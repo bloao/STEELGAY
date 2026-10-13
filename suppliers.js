@@ -19,6 +19,7 @@
   const SIZE_KEY = "agx-profile-size";
 
   let suppliers = [];
+  let costs = {}; // supplier id → full cost model totals (expected / if missed)
   let listOrder = []; // ids in the order the table shows them (for prev / next)
   let choices = null;
   let products = [];
@@ -77,7 +78,7 @@
   // ---------------------------------------------------------------- list
   function sorted(list) {
     const by = $("sort").value;
-    const val = (s) => (by === "quoted" ? s.metrics.pricePerT : by === "ontime" ? -(s.onTimePct ?? -1) : s.metrics.worstCasePerT);
+    const val = (s) => (by === "quoted" ? s.metrics.pricePerT : by === "ontime" ? -(s.onTimePct ?? -1) : by === "worst" ? (costs[s.id]?.worstPerT ?? s.metrics.worstCasePerT) : (costs[s.id]?.effectivePerT ?? s.metrics.worstCasePerT));
     if (by === "name") return [...list].sort((a, b) => a.name.localeCompare(b.name));
     return [...list].sort((a, b) => (val(a) ?? 1e9) - (val(b) ?? 1e9) || a.name.localeCompare(b.name));
   }
@@ -94,7 +95,7 @@
       return [s.name, s.origin, s.type, ...(s.supplies || []), ...(s.contacts || []).map((c) => c.name)].some((v) => String(v || "").toLowerCase().includes(q));
     }));
     listOrder = list.map((x) => x.id);
-    const best = Math.min(...suppliers.map((s) => s.metrics.worstCasePerT).filter(Number.isFinite));
+    const best = Math.min(...suppliers.map((s) => costs[s.id]?.effectivePerT).filter(Number.isFinite));
     $("rows").replaceChildren(...list.map((s) => {
       const m = s.metrics;
       const qline = quotaFor(s)[0];
@@ -114,9 +115,21 @@
         el("td", { class: "num" },
           el("strong", { text: perT(m.pricePerT, m.currency) }),
           el("div", { class: "row-sub" }, el("span", { class: `tag ${m.covers === "everything" ? "" : "tag-warn"}`, text: coversShort(m.covers) }), m.priceExpired ? el("span", { class: "tag tag-bad", text: "expired" }) : null)),
-        el("td", { class: "num" },
-          el("strong", { class: m.worstCasePerT === best ? "best" : "", text: perT(m.worstCasePerT, m.currency) }),
-          el("div", { class: "row-sub" }, m.dutyUnknown ? "set origin to check" : m.dutyExposed ? quotaChip(qline) || "+50% duty" : m.covers === "everything" && isImport(s) ? "supplier carries duty" : isImport(s) ? "" : "no steel duty")),
+        (() => {
+          const c = costs[s.id];
+          const sub = m.dutyUnknown ? "set origin to check" : m.covers === "everything" && isImport(s) && !m.dutyExposed ? "supplier carries duty" : !isImport(s) ? "no steel duty" : "";
+          if (!c) return el("td", { class: "num" }, el("strong", { class: c === null ? "" : "is-pending", text: c === null ? "—" : "…" }), el("div", { class: "row-sub" }, sub));
+          return el("td", { class: "num", title: `Every cost counted for ${c.tonnage} t of ${c.productName}${c.missing && c.missing.length ? ` · not yet costed: ${c.missing.join(", ").toLowerCase()}` : ""}` },
+            el("strong", { class: c.effectivePerT === best ? "best" : "", text: perT(c.effectivePerT) }),
+            el("div", { class: "row-sub" }, c.probability > 0.005 ? `${Math.round(c.probability * 100)}% quota risk priced in` : c.missPerT > 0.5 ? "quota lasts to arrival" : sub || "all costs in"));
+        })(),
+        (() => {
+          const c = costs[s.id];
+          if (!c || !(c.missPerT > 0.5)) return el("td", { class: "num" }, el("span", { class: "muted", text: c ? "nothing to miss" : "" }), el("div", { class: "row-sub" }, m.dutyExposed ? null : ""));
+          return el("td", { class: "num" },
+            el("strong", { class: "is-bad", text: `+${perT(c.missPerT)}` }),
+            el("div", { class: "row-sub" }, quotaChip(qline) || `${money(c.missPerT * c.tonnage)} on ${c.tonnage} t`));
+        })(),
         el("td", { text: s.moqNote || moq(s) }),
         el("td", { class: "num", text: s.onTimePct === null ? "—" : `${s.onTimePct}%` }),
         el("td", {}, el("span", { text: terms(s) }), el("div", { class: "row-sub", text: lead(s) })),
@@ -127,7 +140,7 @@
           el("div", { class: "row-sub", text: m.primaryContact ? m.primaryContact.name : "No contact yet" })),
         chev());
     }));
-    if (!list.length) $("rows").replaceChildren(el("tr", {}, el("td", { colspan: "8", class: "empty", text: suppliers.length ? "No suppliers match these filters." : "No suppliers yet." })));
+    if (!list.length) $("rows").replaceChildren(el("tr", {}, el("td", { colspan: "9", class: "empty", text: suppliers.length ? "No suppliers match these filters." : "No suppliers yet." })));
   }
 
   function renderSummary() {
@@ -584,7 +597,7 @@
       return el("div", { class: `callout ${bad ? "is-bad" : "is-warn"}` }, icon(I.alert, 18),
         el("div", {},
           el("strong", { text: "You carry the duty risk on this price" }),
-          el("p", { text: `${perT(m.pricePerT, m.currency)} is quoted without duty. If the quota is used up before your load clears customs, the 50% steel duty applies: about ${perT(m.worstCasePerT, m.currency)}.` }),
+          el("p", { text: `${perT(m.pricePerT, m.currency)} is quoted without duty. If the quota is used up before your load clears customs, the 50% steel duty applies: about ${perT(costs[s.id] ? costs[s.id].worstPerT : m.worstCasePerT)} landed.` }),
           lineBlock));
     }
     return el("div", { class: "callout is-info" }, icon(I.shield, 18),
@@ -610,7 +623,8 @@
     const supplied = products.filter((p) => (s.supplies || []).includes(p.category));
     const needs = (p) => ["critical", "reorder", "low"].includes(p.metrics && p.metrics.status);
     const gaps = missing(s);
-    const rank = suppliers.filter((x) => Number.isFinite(x.metrics.worstCasePerT)).sort((a, b) => a.metrics.worstCasePerT - b.metrics.worstCasePerT);
+    const rank = suppliers.filter((x) => costs[x.id] && Number.isFinite(costs[x.id].effectivePerT)).sort((a, b) => costs[a.id].effectivePerT - costs[b.id].effectivePerT);
+    const c = costs[s.id];
     const pos = rank.findIndex((x) => x.id === s.id);
     const sec = (title, action, ...kids) => el("section", { class: "p-sec" }, el("div", { class: "p-sec-head" }, el("h3", { text: title }), action || null), ...kids);
     const onTime = s.onTimePct;
@@ -619,8 +633,10 @@
       el("div", { class: "metric-row" },
         el("div", { class: "metric" }, el("span", { text: "Quoted" }), el("strong", { text: perT(m.pricePerT, m.currency) }),
           el("small", {}, el("span", { class: `tag ${m.covers === "everything" ? "" : "tag-warn"}`, text: coversShort(m.covers) }), " ", m.priceChannel === "list" ? "supplier list" : ago(m.priceAgeDays))),
-        el("div", { class: "metric" }, el("span", { text: "Worst case" }), el("strong", { class: m.dutyExposed ? "is-warn" : "", text: perT(m.worstCasePerT, m.currency) }),
-          el("small", { text: pos >= 0 ? (pos === 0 ? "cheapest of your suppliers" : `#${pos + 1} of ${rank.length} · +${money(m.worstCasePerT - rank[0].metrics.worstCasePerT)}`) : "set origin to compare" })),
+        el("div", { class: "metric" }, el("span", { text: "Expected cost" }), el("strong", { text: c ? perT(c.effectivePerT) : "…" }),
+          el("small", { text: !c ? "pricing every cost…" : pos === 0 ? "cheapest of your suppliers, all costs in" : pos > 0 ? `#${pos + 1} of ${rank.length} · +${money(c.effectivePerT - costs[rank[0].id].effectivePerT)}/t` : "" })),
+        el("div", { class: "metric" }, el("span", { text: "If quota missed" }), el("strong", { class: c && c.missPerT > 0.5 ? "is-warn" : "", text: !c ? "…" : c.missPerT > 0.5 ? `+${perT(c.missPerT)}` : "£0" }),
+          el("small", { text: !c ? "" : c.missPerT > 0.5 ? `${money(c.missPerT * c.tonnage)} on ${c.tonnage} t` : "no steel duty to miss" })),
         el("div", { class: "metric" }, el("span", { text: "On time" }), el("strong", { text: onTime === null ? "—" : `${onTime}%` }),
           onTime === null ? el("small", { text: "not recorded" }) : meter(onTime / 100, onTime >= 85 ? "is-good" : onTime >= 75 ? "" : "is-warn")),
         el("div", { class: "metric" }, el("span", { text: "Lead time" }), el("strong", { text: lead(s) }), el("small", { text: s.moqNote || (s.moqMinT !== null ? `MOQ ${moq(s)}` : "MOQ not set") }))),
@@ -1182,9 +1198,22 @@
       renderSummary();
       renderTable();
       if (mode === "detail" && detailId) openDetail(detailId);
+      loadCosts();
     } catch (error) {
-      $("rows").replaceChildren(el("tr", {}, el("td", { colspan: "8", class: "empty", text: `Could not load suppliers: ${error.message}` })));
+      $("rows").replaceChildren(el("tr", {}, el("td", { colspan: "9", class: "empty", text: `Could not load suppliers: ${error.message}` })));
     }
+  }
+
+  // Price every supplier through the full cost model (expected value of the
+  // quota duty, terms, MOQ, reliability…) so the list ranks on real cost.
+  async function loadCosts() {
+    const r = await api("/api/suppliers/compare", { method: "POST", body: { arrival: "lead" } }).catch(() => null);
+    const next = {};
+    for (const s of suppliers) next[s.id] = null;
+    for (const row of (r && r.rows) || []) if (Number.isFinite(row.effectivePerT)) next[row.id] = row;
+    costs = next;
+    renderTable();
+    if (mode === "detail" && detailId && tab === "overview") { const s = suppliers.find((x) => x.id === detailId); if (s) renderBody(s); }
   }
 
   // ---------------------------------------------------------------- events

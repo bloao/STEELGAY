@@ -1128,3 +1128,17 @@ button.bd2-rank-name { font-size: 14px; }
 @media (prefers-reduced-motion: reduce) {
   .bd3-answer, .scen, .scen::before, .miss-banner, .cm-row { animation: none !important; }
 }
+.suppliers-table .is-bad { color: var(--bad-ink); }
+.suppliers-table .is-pending { color: var(--muted); font-weight: 500; }
+/* five metrics: three money figures on top, on-time and lead time below */
+.metric-row:has(> .metric:nth-child(5)) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.metric-row:has(> .metric:nth-child(5)) > .metric:nth-child(-n+3) { grid-column: span 2; }
+.metric-row:has(> .metric:nth-child(5)) > .metric:nth-child(n+4) { grid-column: span 3; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
+.metric-row:has(> .metric:nth-child(5)) > .metric:nth-child(4) { border-left: 0; }
+.metric-row:has(> .metric:nth-child(5)) > .metric:nth-child(n+4) strong { font-size: 16px; }
+.metric-row:has(> .metric:nth-child(5)) > .metric:nth-child(n+4) .meter { flex-basis: 100%; }
+@media (max-width: 600px) {
+  .metric-row:has(> .metric:nth-child(5)) > .metric:nth-child(-n+3) { grid-column: span 6; border-left: 0; border-top: 1px solid var(--line); }
+  .metric-row:has(> .metric:nth-child(5)) > .metric:first-child { border-top: 0; }
+  .metric-row:has(> .metric:nth-child(5)) > .metric:nth-child(5) { border-left: 1px solid var(--line); }
+}

@@ -70,7 +70,8 @@
           <select id="flt-supplies" aria-label="Filter by what they supply"><option value="">Everything they supply</option></select>
           <select id="flt-origin" aria-label="Filter by origin"><option value="">All origins</option><option value="uk">UK only</option><option value="import">Imports only</option></select>
           <select id="sort" aria-label="Sort by">
-            <option value="price">Sort: price (worst case)</option>
+            <option value="price">Sort: expected cost</option>
+            <option value="worst">Sort: if quota missed</option>
             <option value="quoted">Sort: quoted price</option>
             <option value="ontime">Sort: on-time</option>
             <option value="name">Sort: name</option>
@@ -82,7 +83,8 @@
               <tr>
                 <th>Supplier</th>
                 <th class="num">Quoted</th>
-                <th class="num">If quota runs out</th>
+                <th class="num">Expected cost</th>
+                <th class="num">If quota missed</th>
                 <th>MOQ</th>
                 <th class="num">On time</th>
                 <th>Terms</th>
@@ -94,7 +96,7 @@
           </table>
         </div>
       </section>
-      <p class="small muted" id="foot-note">Prices in £/t. "If quota runs out" adds the 50% steel duty for imports quoted without duty — the risk sits with you once the origin's quota line is used up. Suppliers quoting everything covered carry that risk themselves (but may not deliver if quota is exhausted).</p>
+      <p class="small muted" id="foot-note">Prices in £/t. "Expected cost" runs each supplier's latest quote through the full cost model for their usual product and order size — freight, duty, the chance the quota runs out × the 50% steel duty, payment terms, MOQ and reliability. "If quota missed" is the extra per tonne if the quota line is used up before your load clears. Open a supplier for the working behind every number.</p>
       </div>
 
       <div id="pane-market" role="tabpanel" aria-labelledby="ptab-market" hidden>
