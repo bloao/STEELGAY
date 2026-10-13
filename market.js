@@ -1,7 +1,10 @@
 (function () {
   "use strict";
   const { api, fmt, el, toast, loadMe } = window.OrderTool;
-  const $ = (id) => document.getElementById(id);
+  // Lives inside the Suppliers page (Market prices sub-tab) with its own drawer.
+  const ID = { drawer: "mk-drawer", backdrop: "mk-backdrop", "view-form": "mk-form", "view-detail": "mk-detail", "drawer-title": "mk-title", "drawer-eyebrow": "mk-eyebrow",
+    "drawer-foot": "mk-foot", "drawer-close": "mk-close", "drawer-size": "mk-size", "drawer-avatar": "mk-avatar", "drawer-tags": "mk-tags", "profile-tabs": "mk-tabs" };
+  const $ = (id) => document.getElementById(ID[id] || id);
   const drawer = $("drawer");
   const form = $("view-form");
   const field = (n) => form.elements.namedItem(n);
@@ -321,7 +324,7 @@
         toast(s ? "Series updated" : "Series added"); dirty = false; await load(); closeDrawer(true); openSeries(saved.id);
       } catch (error) { showErrors((error.data && error.data.errors) || {}); toast(error.message, true); }
     };
-    footer(el("span", { class: "spacer" }), cancelBtn(s ? () => { closeDrawer(true); openSeries(s.id); } : null), el("button", { class: "btn btn-primary", type: "submit", form: "view-form", text: s ? "Save" : "Add series" }));
+    footer(el("span", { class: "spacer" }), cancelBtn(s ? () => { closeDrawer(true); openSeries(s.id); } : null), el("button", { class: "btn btn-primary", type: "submit", form: "mk-form", text: s ? "Save" : "Add series" }));
     field("name").focus();
   }
 
@@ -352,7 +355,7 @@
         toast("Price added"); dirty = false; await load(); closeDrawer(true);
       } catch (error) { showErrors((error.data && error.data.errors) || {}); toast(error.message, true); }
     };
-    footer(el("span", { class: "spacer" }), cancelBtn(), el("button", { class: "btn btn-primary", type: "submit", form: "view-form", text: "Add price" }));
+    footer(el("span", { class: "spacer" }), cancelBtn(), el("button", { class: "btn btn-primary", type: "submit", form: "mk-form", text: "Add price" }));
     (sel.value === "new" ? field("name") : field("price")).focus();
   }
 
@@ -413,7 +416,7 @@
         reviewImport(payload, preview, { source: field("source").value, group: field("group").value });
       } catch (error) { toast(error.message, true); }
     };
-    footer(el("span", { class: "spacer" }), cancelBtn(), el("button", { class: "btn btn-primary", type: "submit", form: "view-form", text: "Check prices" }));
+    footer(el("span", { class: "spacer" }), cancelBtn(), el("button", { class: "btn btn-primary", type: "submit", form: "mk-form", text: "Check prices" }));
   }
 
   function reviewImport(payload, preview, ctx) {
@@ -454,7 +457,7 @@
         dirty = false; await load(); closeDrawer(true);
       } catch (error) { toast(error.message, true); }
     };
-    footer(el("button", { class: "btn", type: "button", text: "Back", onclick: () => openImport(ctx) }), el("span", { class: "spacer" }), el("button", { class: "btn btn-primary", type: "submit", form: "view-form", text: "Import prices" }));
+    footer(el("button", { class: "btn", type: "button", text: "Back", onclick: () => openImport(ctx) }), el("span", { class: "spacer" }), el("button", { class: "btn btn-primary", type: "submit", form: "mk-form", text: "Import prices" }));
   }
 
   // ---------------------------------------------------------------- data
@@ -480,6 +483,17 @@
     $("range").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     renderChart();
   }));
-  loadMe().then((m) => { me = m; if (!me.canEdit) { $("import-btn").hidden = true; $("add-price-btn").hidden = true; } });
-  load();
+  let started = false;
+  window.MarketTab = {
+    open() {
+      if (started) return;
+      started = true;
+      loadMe().then((m) => { me = m; if (!me.canEdit) { $("import-btn").hidden = true; $("add-price-btn").hidden = true; } });
+      load();
+    },
+    refresh() { if (started) load(); },
+  };
+  // opened straight to suppliers.html#market (this script loads after the tab was shown)
+  const pane = document.getElementById("pane-market");
+  if (pane && !pane.hidden) window.MarketTab.open();
 })();

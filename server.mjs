@@ -1607,12 +1607,16 @@ async function supplierBreakdown(s, opts = {}) {
   const tonnage = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : Math.max(metrics.suggestedOrderT || 0, s.moqMinT || 0) || 25;
   const transportPerT = s.transport === "extra" ? Math.max(Number(opts.transportPerT) || 0, 0) : 0;
   const latest = [...(s.quotes || [])].sort((a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || "")))[0];
-  const engine = await runScenario({
+  const scenarioInputs = {
     title: `${product.name} from ${s.name}`, commodityCode: product.commodityCode, origin: engineOrigin(s.origin), tonnage, importDate,
     incoterm: engineIncoterm(s), importerOfRecord: m.covers === "everything" ? "supplier" : "us",
     priceAmount: latest.pricePerT, priceCurrency: latest.currency || "GBP", supplier: s.name, inlandFreightPerT: transportPerT,
-    leadTimeWeeks: leadDays ? Math.round(leadDays / 7) : null,
-  });
+    leadTimeWeeks: leadDays ? Math.max(1, Math.round(leadDays / 7)) : null,
+    paymentTerms: s.paymentDays !== null && s.paymentDays !== undefined ? `${s.paymentDays} days` : "",
+    quoteValidUntil: latest.validUntil || "",
+    notes: `From the supplier cost breakdown (${latest.channel === "list" ? "supplier list price" : `quote of ${latest.date}`}).`,
+  };
+  const engine = await runScenario(scenarioInputs);
   if (!engine.ok) return { ok: false, error: Object.values(engine.errors || {})[0] || "Could not price this order.", errors: engine.errors };
 
   const pricePerT = engine.lines.find((l) => l.key === "price").perTonne;
@@ -1622,7 +1626,9 @@ async function supplierBreakdown(s, opts = {}) {
   // Credit terms are worth money: paying in N days instead of on delivery.
   if (s.paymentDays !== null && s.paymentDays !== undefined) {
     adjustments.push({ key: "terms", label: `Payment terms credit (${s.paymentDays} days)`, perTonne: -round2(pricePerT * rate * (s.paymentDays / 365)),
-      formula: `price × ${ratePct}% cost of capital × ${s.paymentDays}/365` });
+      formula: `price × ${ratePct}% cost of capital × ${s.paymentDays}/365`,
+      working: `£${round2(pricePerT)} × ${ratePct}% × ${s.paymentDays} ÷ 365 = £${round2(pricePerT * rate * (s.paymentDays / 365))} saved per tonne`,
+      why: "Paying later keeps cash in the business; this is what that credit is worth at your cost of capital." });
   }
   // Buying above what you need ties up cash until it's used.
   const moqMin = s.moqMinT || 0;
@@ -1630,14 +1636,18 @@ async function supplierBreakdown(s, opts = {}) {
     const extra = moqMin - tonnage;
     const months = usage > 0 ? extra / usage : 6;
     adjustments.push({ key: "moq", label: `Minimum order: ${round2(extra)} t more than you need`, perTonne: round2((extra * pricePerT * rate * (months / 12)) / tonnage),
-      formula: `${round2(extra)} t extra × price × ${ratePct}% × ${round2(months)} months to use it ÷ ${tonnage} t` });
+      formula: `${round2(extra)} t extra × price × ${ratePct}% × ${round2(months)} months to use it ÷ ${tonnage} t`,
+      working: `${round2(extra)} t × £${round2(pricePerT)} × ${ratePct}% × ${round2(months)}/12 months ÷ ${tonnage} t = £${round2((extra * pricePerT * rate * (months / 12)) / tonnage)} per tonne`,
+      why: "Their minimum is more than you need, so the extra sits in stock until you use it." });
   }
   // Late deliveries mean holding extra safety stock.
   if (s.onTimePct !== null && s.onTimePct !== undefined && s.onTimePct < 100 && usage > 0 && leadDays) {
     const late = 1 - s.onTimePct / 100;
     const bufferT = late * usage * ((leadDays / 2) / 30.44);
     adjustments.push({ key: "reliability", label: `Reliability buffer (${s.onTimePct}% on time)`, perTonne: round2((bufferT * pricePerT * rate) / (usage * 12)),
-      formula: `${Math.round(late * 100)}% late × cover for half the lead time (${round2(bufferT)} t) × price × ${ratePct}% ÷ ${round2(usage * 12)} t a year` });
+      formula: `${Math.round(late * 100)}% late × cover for half the lead time (${round2(bufferT)} t) × price × ${ratePct}% ÷ ${round2(usage * 12)} t a year`,
+      working: `${Math.round(late * 100)}% × ${round2(usage)} t/month × ${round2(leadDays / 2)} days ÷ 30.4 = ${round2(bufferT)} t extra safety stock; ${round2(bufferT)} t × £${round2(pricePerT)} × ${ratePct}% ÷ ${round2(usage * 12)} t a year = £${round2((bufferT * pricePerT * rate) / (usage * 12))} per tonne`,
+      why: "Late loads mean holding more safety stock; this is the cost of carrying it, spread over a year's purchases." });
   }
   const quotaLine = engine.lines.find((l) => l.key === "quota");
   const quotaApplies = engine.buyerImports && engine.quota;
@@ -1650,6 +1660,7 @@ async function supplierBreakdown(s, opts = {}) {
     inputs: { tonnage, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel },
     engine: { lines: engine.lines, totals: engine.totals, quota: engine.quota ? { probability: engine.quota.probability, basis: engine.quota.basis, orderNumber: quotaLine?.source } : null, category: engine.category, buyerImports: engine.buyerImports, checks: engine.checks, warnings: engine.warnings, customsValuePerT: engine.customsValuePerT, fx: engine.fx },
     adjustments,
+    scenarioInputs: engine.inputs,
     effectivePerT: round2(engine.totals.expectedPerT + adj),
     worstPerT: round2(worstPerT + adj),
     bestPerT: round2(engine.totals.expectedPerT - (quotaLine?.perTonne || 0) + adj),

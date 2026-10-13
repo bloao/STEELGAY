@@ -126,7 +126,7 @@ API: `GET/POST /api/suppliers`, `GET/PUT /api/suppliers/:id`, `POST /api/supplie
 
 **Cost breakdown** (supplier profile tab): runs the supplier's latest quote through the landed-cost engine for a chosen product, tonnage and arrival date (live HMRC duty and quota), then adds payment-terms credit, MOQ carrying cost and a reliability buffer at your cost of capital (Settings). Shows effective / best / worst case, ten "what to weigh up" checks (price vs others, against the market, duty & quota, proof of origin, terms, lead time, MOQ, reliability, currency, quote freshness) and the same order priced from every supplier. API: `POST /api/suppliers/:id/breakdown`, `POST /api/suppliers/compare`.
 
-### Market prices (`/market.html`)
+### Market prices (Suppliers → Market prices, `/suppliers.html#market`)
 
 Benchmark price series saved in `var/benchmarks.json`, compared with every supplier's latest quote (matrix + price-history chart).
 

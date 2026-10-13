@@ -21,7 +21,6 @@
     { key: "orders", label: "Orders", href: "orders.html" },
     { key: "products", label: "Products", href: "products.html" },
     { key: "suppliers", label: "Suppliers", href: "suppliers.html" },
-    { key: "market", label: "Market prices", href: "market.html" },
     { key: "quotas", label: "Live quotas", href: "quotas.html" },
   ];
   // Pinned to the bottom of the menu.
