@@ -6,6 +6,7 @@
   let products = [];
   let plan = null;
   let chosen = null; // supplier id picked for saving (defaults to the recommendation)
+  let chosenByUser = false; // a supplier picked in the table overrides a recommended split
   let appetite = "balanced";
   let timer = null;
   let seq = 0;
@@ -72,7 +73,7 @@
       plan = r;
       if (!r.ok) { $("plan").replaceChildren(el("p", { class: "muted", text: r.error })); return; }
       // keep a supplier you picked, unless it can no longer price this order
-      if (!keepInputs || !chosen || !r.options.some((o) => o.id === chosen)) chosen = r.recommendation.ok ? r.recommendation.best.id : null;
+      if (!keepInputs || !chosen || !r.options.some((o) => o.id === chosen)) { chosen = r.recommendation.ok ? r.recommendation.best.id : null; chosenByUser = false; }
       if (document.activeElement !== $("pf-tonnes")) $("pf-tonnes").value = r.inputs.tonnage;
       $("pf-needby").value = r.inputs.needBy;
       fillHints(r);
@@ -113,10 +114,64 @@
       $("plan").replaceChildren(el("div", { class: "empty-state" }, el("h3", { text: "No supplier prices for this product" }), el("p", {}, rec.reason, " ", el("a", { href: "suppliers.html", text: "Open Suppliers →" }))));
       return;
     }
-    $("plan").replaceChildren(hero(r, rec), el("div", { class: "plan-grid" }, stockCard(r), priceCard(r), compCard(r), quotaCard(r), holdCard(r), intelCard(r)), optionsCard(r, rec));
+    $("plan").replaceChildren(hero(r, rec), splitCard(r, rec), el("div", { class: "plan-grid" }, stockCard(r), priceCard(r), compCard(r), quotaCard(r), holdCard(r), intelCard(r)), optionsCard(r, rec));
+  }
+
+  const splitWins = (r, rec) => r.split && r.split.better && Math.abs(rec.recTonnes - r.inputs.tonnage) < 0.01 ? r.split.better : null;
+  const splitName = (sp) => sp.parts.map((p) => `${p.tonnes} t ${p.name}`).join(" + ");
+
+  function splitHero(r, rec, sp) {
+    const t = rec.timing, total = r.inputs.tonnage;
+    const first = sp.parts.reduce((a, p) => (!a || (p.arrival && p.arrival < a) ? p.arrival : a), null);
+    return el("section", { class: "plan-hero card is-split" },
+      el("div", { class: "ph-top" },
+        el("span", { class: `sig ${TIMING[t.action] || ""}`, text: t.label }),
+        el("span", { class: "sig is-go", text: "Split" }),
+        el("span", { class: "small muted", text: `${(r.appetites[r.inputs.appetite] || {}).label}${r.inputs.cbam ? " · UK CBAM" : ""}` })),
+      el("h2", { class: "ph-title" }, ...sp.parts.flatMap((p, i) => [i ? " + " : "", el("b", { text: `${p.tonnes} t` }), ` ${p.name}`])),
+      el("div", { class: "ph-figs" },
+        el("div", {}, el("span", { text: "Landed cost" }), el("strong", { text: gbpT(sp.spend / total) }), el("small", { text: `${total} t` })),
+        el("div", {}, el("span", { text: "Order total" }), el("strong", { text: gbp(sp.spend) }), el("small", { text: `${sp.parts.length} orders` })),
+        el("div", {}, el("span", { text: "Vs one supplier" }), el("strong", { class: "is-good", text: `−${gbp(sp.saving)}` }), el("small", { text: r.split.single.name })),
+        el("div", {}, el("span", { text: "First arrives" }), el("strong", { text: first ? fmt.date(first) : "—" }), el("small", { text: `need by ${fmt.date(r.inputs.needBy)}` }))),
+      el("div", { class: "ph-actions" },
+        me.canEdit ? el("button", { class: "btn btn-primary", type: "button", text: "Save split order", onclick: (e) => saveSplit(e.currentTarget, sp) }) : null,
+        me.canEdit ? el("button", { class: "link-btn", type: "button", text: "+ Log market intel", onclick: () => window.openMarketIntel({ scope: "product", targetId: r.product.id }) }) : null));
+  }
+
+  function splitCard(r, rec) {
+    const sp = r.split;
+    if (!sp || !sp.single || !sp.splits || !sp.splits.length) return null;
+    const total = r.inputs.tonnage;
+    const row = (label, perT, spend, diff, action, best) => el("tr", { class: best ? "is-chosen" : "" },
+      el("td", {}, el("strong", { text: label })),
+      el("td", { class: "num", text: gbpT(perT) }),
+      el("td", { class: "num", text: gbp(spend) }),
+      el("td", { class: `num ${diff < 0 ? "is-good" : diff > 0 ? "is-bad" : "muted"}`, text: diff === 0 ? "—" : `${diff < 0 ? "−" : "+"}${gbp(Math.abs(diff))}` }),
+      el("td", { class: "num" }, action || ""));
+    const winner = sp.better;
+    return el("section", { class: "card mk-card plan-split" },
+      el("div", { class: "card-head" }, el("h2", { text: `One supplier or split? · ${total} t` })),
+      el("div", { class: "table-scroll" }, el("table", { class: "quota-table" },
+        el("thead", {}, el("tr", {}, el("th", { text: "Option" }), el("th", { class: "num", text: "Score /t" }), el("th", { class: "num", text: "Spend" }), el("th", { class: "num", text: "Vs one supplier" }), el("th", {}))),
+        el("tbody", {},
+          row(`${total} t ${sp.single.name}`, sp.single.perT, sp.single.spend, 0, null, !winner),
+          ...sp.splits.map((x) => row(splitName(x), x.perT, x.spend, -x.saving,
+            me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Save", onclick: (e) => saveSplit(e.currentTarget, x) }) : null, winner === x || (winner && splitName(winner) === splitName(x))))))));
+  }
+
+  async function saveSplit(btn, sp) {
+    btn.disabled = true; const was = btn.textContent; btn.textContent = "Saving…";
+    try {
+      const res = await api("/api/orders/plan/save-split", { method: "POST", body: { productId: plan.product.id, cbam: plan.inputs.cbam, timing: plan.recommendation.timing.action, reasons: [`Split: ${splitName(sp)}, saves ${gbp(sp.saving)} against one supplier.`], parts: sp.parts.map((p) => ({ supplierId: p.id, tonnage: p.tonnes, name: p.name })) } });
+      toast(`Saved ${res.ids.length} draft orders`);
+      location.href = "orders.html";
+    } catch (error) { toast(error.message, true); btn.disabled = false; btn.textContent = was; }
   }
 
   function hero(r, rec) {
+    const spw = splitWins(r, rec);
+    if (spw && !chosenByUser) return splitHero(r, rec, spw);
     const b = rec.best, t = rec.timing;
     const pick = r.options.find((o) => o.id === chosen) || b;
     const tonnes = rec.recTonnes;
@@ -228,8 +283,8 @@
       el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }))),
       el("div", { class: "table-scroll" }, el("table", { class: "quota-table plan-table" },
         el("thead", {}, el("tr", {}, el("th", {}), el("th", { text: "Supplier" }), el("th", { class: "num", text: "Landed cost" }), el("th", { class: "num", text: "If quota missed" }), el("th", { class: "num", text: "Terms" }), el("th", { class: "num", text: "Score" }), el("th", { text: "Arrives" }), el("th", { text: "Notes" }))),
-        el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; render(); } },
-          el("td", {}, el("input", { type: "radio", name: "pick", "aria-label": `Choose ${o.name}`, ...(o.id === chosen ? { checked: "" } : {}), onchange: () => { chosen = o.id; render(); } })),
+        el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; chosenByUser = true; render(); } },
+          el("td", {}, el("input", { type: "radio", name: "pick", "aria-label": `Choose ${o.name}`, ...(o.id === chosen ? { checked: "" } : {}), onchange: () => { chosen = o.id; chosenByUser = true; render(); } })),
           el("td", {}, el("strong", { text: o.name }), el("div", { class: "row-sub" }, `${o.origin || ""}${o.covers === "everything" ? " · all-in" : o.covers === "except-duty" ? " · + duty" : ""}`, ...tags(o).map(([l, c]) => el("span", { class: `sig ${c} plan-tag`, text: l })))),
           el("td", { class: "num" }, el("strong", { text: gbpT(o.effectivePerT) }), el("div", { class: "row-sub", text: `quoted ${gbpT(o.quotedPerT)}` })),
           el("td", { class: "num" }, el("span", { class: o.quotaExposure > 1 ? "is-bad" : "muted", text: o.quotaExposure > 1 ? `+${gbpT(o.quotaExposure)}` : "—" })),

@@ -53,3 +53,30 @@ test("thresholds you set change the decision", () => {
   assert.ok(!scoreOptions(opts, { needBy: "2026-12-14", thresholds: { onTimeWarnPct: 85 } }).find((o) => o.id === "a").warnings.some((w) => /on time/.test(w)));
   assert.ok(scoreOptions(opts, { needBy: "2026-12-14", thresholds: { onTimeWarnPct: 92 } }).find((o) => o.id === "a").warnings.some((w) => /on time/.test(w)));
 });
+
+test("splitting: a quick supplier bridges the gap until a cheaper late one lands", async () => {
+  const { bestSplits, splitTonnages } = await import("../lib/orderplan.mjs");
+  const base = (id, name, perT, arrival, leadDays, extra = {}) => ({ id, name, effectivePerT: perT, worstPerT: perT, arrival, leadDays, onTimePct: 95, paymentDays: 30, ...extra });
+  const quick = (t) => base("quick", "Quick UK", 800, "2026-10-20", 5);
+  const cheap = (t) => base("cheap", "Cheap import", 700, "2026-12-01", 45);
+  const singles = scoreOptions([quick(20), cheap(20)], { needBy: "2026-11-01", appetite: "balanced" });
+  const tonnages = splitTonnages(20, singles, 10);
+  assert.ok(tonnages.length >= 3);
+  const res = bestSplits({ total: 20, needBy: "2026-11-01", usagePerMonth: 10, appetite: "balanced", singles, extraOrderCost: 150,
+    table: (id, t) => (id === "quick" ? quick(t) : cheap(t)) });
+  assert.ok(res.better, "a split should win");
+  const [first, second] = res.better.parts;
+  assert.equal(first.id, "quick");
+  assert.equal(second.id, "cheap");
+  assert.equal(second.lateDays, 0);
+  assert.ok(res.better.saving > 0);
+});
+
+test("splitting: no split when one supplier is simply best", async () => {
+  const { bestSplits } = await import("../lib/orderplan.mjs");
+  const o = (id, perT) => ({ id, name: id, effectivePerT: perT, worstPerT: perT, arrival: "2026-10-20", leadDays: 5, onTimePct: 95, paymentDays: 30 });
+  const singles = scoreOptions([o("a", 700), o("b", 760)], { needBy: "2026-11-01" });
+  const res = bestSplits({ total: 20, needBy: "2026-11-01", usagePerMonth: 10, singles, table: (id) => o(id, id === "a" ? 700 : 760) });
+  assert.equal(res.better, null);
+  assert.equal(res.single.id, "a");
+});

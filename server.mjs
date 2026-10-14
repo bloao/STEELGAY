@@ -2833,12 +2833,13 @@ async function orderPlan(body = {}) {
   // suppliers, priced for this exact product, tonnage and their own lead time
   const rows = await compareSuppliers({ productId: product.id, tonnage, arrival: "lead", cbam, assume });
   const sups = new Map((await supplierStore.list()).map((x) => [x.id, x]));
-  const options = rows.map((r) => {
+  const toOption = (r) => {
     const s = sups.get(r.id) || {};
     const leadDays = s.leadTimeMax != null ? s.leadTimeMax * (s.leadTimeUnit === "days" ? 1 : 7) : s.leadTimeMin != null ? s.leadTimeMin * (s.leadTimeUnit === "days" ? 1 : 7) : null;
     const latest = [...(s.quotes || [])].sort((a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || "")))[0];
     return { ...r, arrival: r.importDate || null, leadDays, onTimePct: s.onTimePct ?? null, quoteAgeDays: r.quoteDate ? Math.max(0, Math.round((Date.parse(today) - Date.parse(r.quoteDate)) / 86_400_000)) : null, validUntil: latest ? latest.validUntil || null : null, moqNote: s.moqNote || "", paymentDays: s.paymentDays ?? null };
-  });
+  };
+  const options = rows.map(toOption);
   const priced = options.filter((o) => Number.isFinite(o.effectivePerT)).sort((a, b) => a.effectivePerT - b.effectivePerT);
 
   // forecast for this product, from today's best landed price
@@ -2890,8 +2891,20 @@ async function orderPlan(body = {}) {
     .concat((await liveNotes()).filter((n) => n.scope === "supplier" && priced.some((o) => o.id === n.targetId) && NEWS.noteActive(n, needBy) && n.effectUnit !== "none"));
   const productFacts = { id: product.id, name: product.name, category: product.category, commodityCode: product.commodityCode, steelCategory: view.steelCategory, costPerT: product.costPerT, targetBuyPrice: product.targetBuyPrice ?? null,
     monthlyUsageT: product.monthlyUsageT, stockT: m.stockNowT, coverMonths: m.coverMonths, stockOutDate: m.stockOutDate, latestOrderDate: m.latestOrderDate, suggestedOrderT: m.suggestedOrderT, moqT: product.moqT ?? null, status: m.status, reason: m.reason };
+  // Would two suppliers beat one? Price each candidate at the split tonnages.
+  let split = null;
+  try {
+    const singles = PLAN.scoreOptions(options, { needBy, appetite, thresholds: { ...assume, approaches: assumptions.approaches } });
+    const tonnages = PLAN.splitTonnages(tonnage, singles, product.monthlyUsageT || 0);
+    const table = new Map();
+    const priceRuns = await Promise.all(tonnages.map((t) => compareSuppliers({ productId: product.id, tonnage: t, arrival: "lead", cbam, assume }).then((rs) => [t, rs])));
+    for (const [t, rs] of priceRuns) for (const r of rs) if (Number.isFinite(r.effectivePerT)) table.set(`${r.id}|${t}`, toOption(r));
+    split = PLAN.bestSplits({ total: tonnage, needBy, usagePerMonth: product.monthlyUsageT || 0, appetite, thresholds: { ...assume, approaches: assumptions.approaches }, singles,
+      table: (id, t) => table.get(`${id}|${t}`) || null, extraOrderCost: assume.splitOrderCost ?? 150 });
+  } catch (error) { split = { error: error.message, splits: [] }; }
+
   const rec = PLAN.recommend({ product: productFacts, tonnage, needBy, appetite, options, forecast, aheadOptions, stockpile, quota, market, competition, intel, thresholds: { ...assume, approaches: assumptions.approaches } });
-  return { ok: true, today, product: productFacts, inputs: { tonnage, needBy, appetite, cbam }, appetites: PLAN.APPETITE, assumptions, options: rec.scored || [], unpriced: options.filter((o) => !Number.isFinite(o.effectivePerT)).map((o) => ({ id: o.id, name: o.name, error: o.error })),
+  return { ok: true, today, product: productFacts, inputs: { tonnage, needBy, appetite, cbam }, appetites: PLAN.APPETITE, assumptions, split, options: rec.scored || [], unpriced: options.filter((o) => !Number.isFinite(o.effectivePerT)).map((o) => ({ id: o.id, name: o.name, error: o.error })),
     forecast, aheadOptions, stockpile, market, competition, quota, quotaLines, intel: intel.map((n) => ({ id: n.id, title: n.title, scope: n.scope, targetName: n.targetName || n.targetId, effectUnit: n.effectUnit, effectValue: n.effectValue, effectiveFrom: n.effectiveFrom, by: n.by })), recommendation: rec };
 }
 
@@ -2960,6 +2973,21 @@ async function handleOrdersApi(request, response, url) {
     const out = await Promise.all(list.map(async (p) => { const v = await productView(p); return { id: p.id, name: p.name, category: p.category, status: v.metrics.status, reason: v.metrics.reason, suggestedOrderT: v.metrics.suggestedOrderT, coverMonths: v.metrics.coverMonths, stockOutDate: v.metrics.stockOutDate, latestOrderDate: v.metrics.latestOrderDate, monthlyUsageT: p.monthlyUsageT, stockT: v.metrics.stockNowT }; }));
     const rank = { critical: 0, reorder: 1, low: 2, ok: 3, "no-usage": 4 };
     return sendJson(response, 200, { products: out.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || (a.coverMonths ?? 99) - (b.coverMonths ?? 99)) });
+  }
+  if (url.pathname === "/api/orders/plan/save-split" && request.method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
+    const body = await readJsonBody(request);
+    const parts = Array.isArray(body.parts) ? body.parts.slice(0, 4) : [];
+    if (parts.length < 2) return sendJson(response, 422, { ok: false, error: "A split needs at least two suppliers." });
+    const ids = [];
+    for (const [i, part] of parts.entries()) {
+      // eslint-disable-next-line no-await-in-loop
+      const r = await createPlannedOrder({ productId: body.productId, supplierId: part.supplierId, tonnage: part.tonnage, cbam: body.cbam === true, timing: body.timing, reasons: body.reasons,
+        note: `Split order, part ${i + 1} of ${parts.length}: ${parts.map((p) => `${p.tonnage} t ${p.name || ""}`.trim()).join(" + ")}.`, by: user.name });
+      if (!r.ok) return sendJson(response, 422, { ...r, saved: ids });
+      ids.push(r.id);
+    }
+    return sendJson(response, 201, { ok: true, ids });
   }
   if (url.pathname === "/api/orders/plan/save" && request.method === "POST") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");

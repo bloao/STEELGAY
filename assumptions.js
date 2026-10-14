@@ -30,6 +30,7 @@
       ["costOfCapitalPct", "Cost of capital", "", "%/yr", 0, 20, 0.25],
       ["forecastStoragePerTMonth", "Storage", "£", "/t/month", 0, 20, 0.5],
       ["deliveryPerT", "Delivery", "£", "/t", 0, 100, 1],
+      ["splitOrderCost", "Each extra order (split)", "£", "", 0, 1000, 25],
     ]],
     ["Flag when", [
       ["staleQuoteDays", "Quote older than", "", " days", 7, 120, 1],

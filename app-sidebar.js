@@ -1,4 +1,5 @@
-// Left-hand section menu for the order tool. Include right after an
+// Page launcher for the order tool: a button that opens square tiles for every
+// page, plus tabs across the top for the current section. Include right after an
 // <aside class="sidebar" data-active="orders"></aside> so it renders
 // before first paint.
 (function () {
@@ -8,6 +9,11 @@
   if (!aside) return;
 
   var ICONS = {
+    plan: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h8"/>',
+    assumptions: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    prices: '<path d="M20 12 12 20l-8-8V4h8z"/><circle cx="8.5" cy="8.5" r="1.5"/>',
+    intel: '<path d="M12 5v14M5 12h14"/>',
+    grid: '<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>',
     orders: '<path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M8 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="M9 11h6M9 15h6"/>',
     suppliers: '<path d="M3 21V10l5 3V10l5 3V6l8 4v11z"/><path d="M3 21h18"/><path d="M7 17h1M12 17h1M17 17h1"/>',
     products: '<path d="M12 3 4 7v10l8 4 8-4V7z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/>',
@@ -26,23 +32,23 @@
     { key: "assistant", label: "Assistant", href: "assistant.html", icon: "assistant" },
     { key: "orders", label: "Orders", href: "orders.html", icon: "orders", hint: "What to buy, quota and what's on its way",
       children: [
-        { key: "orders", label: "Orders", href: "orders.html" },
-        { key: "plan", label: "Plan an order", href: "plan.html" },
-        { key: "assumptions", label: "Assumptions", href: "assumptions.html" },
-        { key: "quotas", label: "Live quotas", href: "quotas.html" },
-        { key: "arrivals", label: "Arrivals", href: "arrivals.html" },
+        { key: "orders", label: "Orders", href: "orders.html", icon: "orders" },
+        { key: "plan", label: "Plan an order", href: "plan.html", icon: "plan" },
+        { key: "assumptions", label: "Assumptions", href: "assumptions.html", icon: "assumptions" },
+        { key: "quotas", label: "Live quotas", href: "quotas.html", icon: "quotas" },
+        { key: "arrivals", label: "Arrivals", href: "arrivals.html", icon: "arrivals" },
       ] },
     { key: "products", label: "Products", href: "products.html", icon: "products" },
     { key: "suppliers", label: "Suppliers", href: "suppliers.html", icon: "suppliers", ownTabs: true,
       children: [
-        { key: "suppliers", label: "Suppliers", href: "suppliers.html" },
-        { key: "market-prices", label: "Market prices", href: "suppliers.html#market" },
+        { key: "suppliers", label: "Suppliers", href: "suppliers.html", icon: "suppliers" },
+        { key: "market-prices", label: "Market prices", href: "suppliers.html#market", icon: "prices" },
       ] },
     { key: "market", label: "Market", href: "forecast.html", icon: "forecast", hint: "Where prices are heading and why",
       children: [
-        { key: "forecast", label: "Steel forecast", href: "forecast.html" },
-        { key: "news", label: "News & regulation", href: "news.html" },
-        { key: "competition", label: "Competition", href: "competition.html" },
+        { key: "forecast", label: "Steel forecast", href: "forecast.html", icon: "forecast" },
+        { key: "news", label: "News & regulation", href: "news.html", icon: "news" },
+        { key: "competition", label: "Competition", href: "competition.html", icon: "competition" },
       ] },
   ];
   // Pinned to the bottom of the menu.
@@ -56,30 +62,27 @@
   function icon(name) {
     return '<svg class="sidebar__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + "</svg>";
   }
-  function sectionLink(sec) {
-    var on = inSection(sec);
-    var html = '<li class="sidebar__sec' + (on ? " is-open" : "") + '"><a class="sidebar__link' + (on ? " is-active" : "") + '" href="' + sec.href + '"' +
-      (on && !sec.children ? ' aria-current="page"' : "") + ">" + icon(sec.icon) + "<span>" + sec.label + "</span>" +
-      (sec.children ? '<svg class="sidebar__chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>' : "") + "</a>";
-    if (sec.children && on) {
-      html += '<ul class="sidebar__sub">';
-      sec.children.forEach(function (c) {
-        var here = c.key === active;
-        html += '<li><a class="sidebar__sublink' + (here ? " is-active" : "") + '" href="' + c.href + '"' + (here ? ' aria-current="page"' : "") + ">" + c.label + "</a></li>";
-      });
-      html += "</ul>";
-    }
-    return html + "</li>";
+  // A small launcher: one button opens a pop-up of square tiles, grouped by section.
+  function tile(item, extraCls) {
+    var here = item.key === active;
+    return '<a class="lt' + (here ? " is-active" : "") + (extraCls ? " " + extraCls : "") + '" href="' + item.href + '"' + (here ? ' aria-current="page"' : "") + ">" +
+      icon(item.icon) + "<span>" + item.label + "</span></a>";
   }
-
-  var html = '<nav class="sidebar__nav" aria-label="Order tool sections"><p class="sidebar__title">Procurement</p><ul>';
-  SECTIONS.forEach(function (sec) { html += sectionLink(sec); });
-  html += '</ul><button type="button" class="sidebar__intel" id="sidebar-intel">' +
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>' +
-    '<span>Log market intel</span></button>';
-  html += '</nav><nav class="sidebar__foot" aria-label="Workspace"><ul>';
-  FOOT.forEach(function (item) { html += sectionLink(item); });
-  html += "</ul></nav>";
+  var groups = SECTIONS.map(function (sec) { return { label: sec.label, items: sec.children || [sec] }; });
+  // Assistant sits with Settings and intel at the end
+  var assistant = groups.filter(function (g) { return g.label === "Assistant"; })[0];
+  groups = groups.filter(function (g) { return g !== assistant; });
+  var cur = current ? (current.children ? (current.children.filter(function (c) { return c.key === active; })[0] || current) : current) : (FOOT.filter(function (f) { return f.key === active; })[0] || null);
+  var html = '<button type="button" class="launcher-btn" id="launcher-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="launcher" title="Menu">' +
+    icon("grid") + '<span class="launcher-cur">' + (cur ? cur.label : "Menu") + "</span></button>" +
+    '<div class="launcher" id="launcher" role="dialog" aria-label="Pages" hidden><div class="launcher-groups">' +
+    groups.map(function (g) {
+      return '<section class="lg"><h2>' + g.label + '</h2><div class="lg-tiles">' + g.items.map(function (it) { return tile(it); }).join("") + "</div></section>";
+    }).join("") +
+    '<section class="lg"><h2>Workspace</h2><div class="lg-tiles">' +
+      (assistant ? tile(assistant.items[0]) : "") + FOOT.map(function (f) { return tile(f); }).join("") +
+      '<button type="button" class="lt is-intel" id="sidebar-intel">' + icon("intel") + "<span>Log market intel</span></button>" +
+    "</div></section></div></div>";
 
   // Tabs across the top of the page for the current section's sub-pages.
   function sectionTabs() {
@@ -100,16 +103,37 @@
   window.addEventListener("hashchange", function () {
     if (aside.getAttribute("data-active") !== "suppliers") return;
     var mk = location.hash === "#market";
-    aside.querySelectorAll(".sidebar__sublink").forEach(function (a) {
+    aside.querySelectorAll(".lt[href^='suppliers.html']").forEach(function (a) {
       var isMk = /#market$/.test(a.getAttribute("href"));
       a.classList.toggle("is-active", isMk === mk);
       if (isMk === mk) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
   });
   aside.innerHTML = html;
+  aside.classList.add("is-launcher");
+  var lbtn = document.getElementById("launcher-btn"), panel = document.getElementById("launcher");
+  function setOpen(open) {
+    panel.hidden = !open;
+    lbtn.setAttribute("aria-expanded", String(open));
+    if (open) { var a = panel.querySelector(".lt.is-active") || panel.querySelector(".lt"); if (a) a.focus(); }
+  }
+  lbtn.addEventListener("click", function () { setOpen(panel.hidden); });
+  document.addEventListener("click", function (e) { if (!panel.hidden && !aside.contains(e.target)) setOpen(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !panel.hidden) { setOpen(false); lbtn.focus(); } });
+  // arrow keys move between tiles
+  panel.addEventListener("keydown", function (e) {
+    if (["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].indexOf(e.key) < 0) return;
+    var tiles = Array.prototype.slice.call(panel.querySelectorAll(".lt"));
+    var i = tiles.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    var step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "ArrowDown" ? 3 : -3;
+    tiles[Math.max(0, Math.min(tiles.length - 1, i + step))].focus();
+  });
   // The intel form loads on first use, so pages stay light.
   var btn = document.getElementById("sidebar-intel");
   if (btn) btn.addEventListener("click", function () {
+    setOpen(false);
     if (window.MarketIntel) { window.MarketIntel.open({}); return; }
     var sc = document.createElement("script");
     sc.src = "intel.js";
