@@ -81,6 +81,20 @@
         </div>
       </section>
 
+      <section class="card mk-card" id="stockpile-card" aria-labelledby="sp-title">
+        <div class="card-head">
+          <div>
+            <h2 id="sp-title">Which products to stockpile</h2>
+            <p class="small muted" id="sp-sub" style="margin:2px 0 0">Ranked by how safe extra stock is: widely used, easy to sell on if plans change, a steady price, and how fast you use it.</p>
+          </div>
+          <div class="seg" role="group" aria-label="Rank by" id="sp-mode">
+            <button type="button" data-mode="score" aria-pressed="true">Stockpile score</button>
+            <button type="button" data-mode="volatility" aria-pressed="false">Price volatility</button>
+          </div>
+        </div>
+        <div id="stockpile"><p class="muted">Scoring your products…</p></div>
+      </section>
+
       <section class="card" id="quota-card" hidden>
         <div class="card-head">
           <h2>Quota lines for your products</h2>

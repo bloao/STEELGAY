@@ -130,9 +130,9 @@
       item("flat", "Normal ups and downs", `±${m.volatilityPct.toFixed(1)}% a month`, "How much the index typically moves in a month. It sets how wide the likely range is."),
       ...data.drivers.map((d) => d.kind === "cbam"
         ? item("up", "UK CBAM from January 2027", pct(d.pct), `Imports pick up about £${Math.round(d.costPerT)}/t of carbon charge. The model assumes UK prices absorb ${d.passThroughPct}% of that, phased in over three months.`)
-        : item(d.pct > 0 ? "up" : "down", d.label, pct(d.pct), `Team insight from ${fmt.date(d.date)}${d.by ? ` (${d.by})` : ""}, built in over ${d.rampMonths} month${d.rampMonths === 1 ? "" : "s"}.`)),
+        : item(d.pct > 0 ? "up" : "down", d.label, pct(d.pct), `Market intel${d.scope === "group" ? ` for ${d.targetId}` : ""} from ${fmt.date(d.date)}${d.by ? ` (${d.by})` : ""}, built in over ${d.rampMonths} month${d.rampMonths === 1 ? "" : "s"}.`)),
     ];
-    if (!data.drivers.some((d) => d.kind === "insight")) list.push(el("li", { class: "drv-empty" }, "No team insight in the forecast yet. ", el("a", { href: "news.html", text: "Log what you're hearing on Market news →" })));
+    if (!data.drivers.some((d) => d.kind === "insight")) list.push(el("li", { class: "drv-empty" }, "No team insight in the forecast yet. ", el("button", { type: "button", class: "link-btn", text: "Log market intel →", onclick: () => window.MarketIntel && window.MarketIntel.open({ scope: "market" }) })));
     $("drivers").replaceChildren(...list);
     const f = $("assume");
     const s = data.settings;

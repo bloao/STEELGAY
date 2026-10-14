@@ -211,3 +211,21 @@ Data: `var/competition-data.json` (HMRC), `var/competitors.json` (who you follow
 - **Where your steel comes in**: from the HMRC BDSimp files (Competition → Load HMRC history), tonnes for your codes by UK port code and route (sea, road/Ro-Ro, rail). Volumes saved before ports were recorded are fetched again on the next sync.
 
 API: `GET /api/arrivals`, `POST /api/arrivals/shipments`, `PUT …/:id`, `POST …/:id/arrived`, `POST …/:id/archive`.
+
+## Stockpiling ranking (Products page and each product's Market prices tab)
+
+`lib/stockpile.mjs` scores each product 0–100 for how safe extra stock is. Weights: multi-purpose 25%, UK buyers 20%, UK demand 15%, price steadiness 20%, your turnover 20%.
+- **Multi-purpose**: 1–5 from the catalogue family (e.g. flat bar, equal angle and SHS are 5). Click the dots to set your own.
+- **UK buyers**: companies importing that commodity code (HMRC importer lists; before download, the 2024–26 summary).
+- **UK demand**: UK import tonnes over 12 months and how steady they are (HMRC trade data).
+- **Price volatility**: monthly swings in HMRC's import unit value (£/t) for the code, or the ONS index when there's no code-level data. Also ranked on its own.
+- **Your turnover**: monthly usage and months of stock.
+API: `GET /api/products/stockpile`, `POST /api/products/:id/versatility {score}`.
+
+## Market intel (word of mouth)
+
+**Log market intel** in the sidebar (and buttons on suppliers, products, news and forecast) opens one form: what you heard, who it affects (whole market, product group, one product, one supplier), the change in £/t or %, from when and for how long. Notes with a number:
+- appear as **Market intel** lines in each affected supplier's cost model, with the working, so expected costs, rankings and product prices move. Market-wide and group news doesn't change a quote that's fixed beyond the arrival date;
+- move the steel forecast (whole market and product-group notes);
+- are listed on Market news and on the product's Market prices tab.
+Stored with team insight in `var/news-notes.json`.

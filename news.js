@@ -55,7 +55,7 @@
     }
     const today = new Date().toISOString().slice(0, 10);
     box.replaceChildren(...notes.map((n) => {
-      const until = new Date(Date.parse(`${n.date}T00:00:00Z`)); until.setUTCMonth(until.getUTCMonth() + n.horizonMonths);
+      const until = new Date(Date.parse(`${n.effectiveFrom || n.date}T00:00:00Z`)); until.setUTCMonth(until.getUTCMonth() + n.horizonMonths);
       const live = n.impact !== "neutral" && until.toISOString().slice(0, 10) > today;
       return el("li", { class: `note is-${n.impact}` },
         el("span", { class: `note-dir is-${n.impact}`, title: data.choices.impacts[n.impact] }, svg(ICON[n.impact], 16)),
@@ -67,9 +67,11 @@
           n.body ? el("p", { class: "note-body", text: n.body }) : null,
           el("div", { class: "note-meta" },
             el("span", { text: fmt.date(n.date) }), n.by ? el("span", { text: n.by }) : null, el("span", { text: n.topic }),
-            n.impact !== "neutral" ? el("span", { text: `${data.choices.strengths[n.strength].split(" (")[0]} · over ${n.horizonMonths} month${n.horizonMonths === 1 ? "" : "s"}` }) : null,
+            n.effectUnit && n.effectUnit !== "none" && Number.isFinite(n.effectValue)
+              ? el("span", { class: "note-effect", text: `${n.effectUnit === "pct" ? `${n.effectValue > 0 ? "+" : ""}${n.effectValue}%` : `${n.effectValue > 0 ? "+" : "−"}£${Math.abs(n.effectValue)}/t`} · ${n.scope === "market" || !n.scope ? "whole market" : n.targetName || n.targetId} · from ${fmt.date(n.effectiveFrom || n.date)} for ${n.horizonMonths} mo` })
+              : n.impact !== "neutral" ? el("span", { text: `${data.choices.strengths[n.strength].split(" (")[0]} · over ${n.horizonMonths} month${n.horizonMonths === 1 ? "" : "s"}` }) : null,
             n.source ? (n.url ? el("a", { href: n.url, target: "_blank", rel: "noopener", text: n.source }) : el("span", { text: n.source })) : null,
-            live ? el("span", { class: "note-live", text: `In the forecast until ${fmt.date(until.toISOString().slice(0, 10))}` }) : null)));
+            live ? el("span", { class: "note-live", text: n.effectUnit && n.effectUnit !== "none" ? `In the cost equations until ${fmt.date(until.toISOString().slice(0, 10))}` : `In the forecast until ${fmt.date(until.toISOString().slice(0, 10))}` }) : null)));
     }));
   }
 
@@ -137,7 +139,8 @@
     }
   }
 
-  $("add-note-btn").addEventListener("click", openNoteForm);
+  $("add-note-btn").addEventListener("click", () => window.openMarketIntel({}));
+  window.addEventListener("agx:intel", () => load());
   $("refresh-btn").addEventListener("click", async (e) => {
     const b = e.currentTarget; b.disabled = true; b.textContent = "Checking…";
     try { const r = await api("/api/news/refresh", { method: "POST" }); toast(r.added ? `${r.added} new item${r.added === 1 ? "" : "s"}` : "No new items"); await load(); }

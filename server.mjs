@@ -20,6 +20,7 @@ import * as NEWS from "./lib/news.mjs";
 import * as FC from "./lib/forecast.mjs";
 import * as COMP from "./lib/competition.mjs";
 import * as ARR from "./lib/arrivals.mjs";
+import * as STOCK from "./lib/stockpile.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -1446,6 +1447,35 @@ async function productView(p) {
   };
 }
 
+
+// ------------------------------------------------------------ stockpiling ranking
+let catalogueCache = null;
+async function steelCatalogue() {
+  if (catalogueCache) return catalogueCache;
+  const context = { window: {} };
+  vm.createContext(context);
+  for (const f of ["steel-commodities.js", "steel-trade-measure.js", "steel-catalogue.js"]) vm.runInContext(await readFile(join(root, f), "utf8"), context);
+  catalogueCache = context.window.STEEL_CATALOGUE;
+  return catalogueCache;
+}
+async function stockpileView() {
+  const CAT = await steelCatalogue().catch(() => null);
+  const list = (await productStore.list()).filter((p) => p.status !== "archived");
+  const products = list.map((p) => {
+    const m = stockMetrics({ ...p, stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || undefined });
+    let family = p.catalog && p.catalog.family;
+    if (!family && CAT && CAT.match) { const hit = CAT.match(p.name, p.commodityCode); family = hit && hit.family; }
+    return { id: p.id, name: p.name, category: p.category, commodityCode: p.commodityCode, monthlyUsageT: p.monthlyUsageT, stockT: m.stockNowT, versatility: Number.isFinite(p.versatility) ? p.versatility : null, family };
+  });
+  const data = await getCompData();
+  const months = COMP.monthsList(Object.keys(data.importerMonths), 12);
+  const ons = (await liveSeries()).find((x) => x.feedKey === "ons:GHAV");
+  const onsVol = ons ? FC.stdev(FC.logReturns(FC.monthly(ons.points || []).slice(-25))) * 100 : null;
+  const rows = STOCK.scoreProducts(products, { trade: data.trade, companies: months.length ? data.companies : null, months, summary: data.summary, marketVolPct: onsVol });
+  return { rows, weights: STOCK.WEIGHTS, families: Object.fromEntries(Object.entries(STOCK.FAMILY_VERSATILITY).map(([k, v]) => [k, v[1]])),
+    sources: { tradeMonths: Object.keys(data.trade || {}).length, importerMonths: months.length, summaryCompanies: (data.summary || []).length, onsVolPct: onsVol } };
+}
+
 async function handleProductApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   const method = request.method;
@@ -1515,6 +1545,16 @@ async function handleProductApi(request, response, url) {
     const saved = await productStore.create({ ...product, status: "active" }, user.name);
     sendJson(response, 201, await productView(saved));
     return;
+  }
+  if (url.pathname === "/api/products/stockpile" && method === "GET") return sendJson(response, 200, await stockpileView());
+  const vers = url.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/versatility$/);
+  if (vers && method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot edit products.");
+    const body = await readJsonBody(request);
+    const v = body.score === null || body.score === "" ? null : Number(body.score);
+    if (v !== null && !(Number.isInteger(v) && v >= 1 && v <= 5)) return sendJson(response, 422, { ok: false, error: "Use 1 to 5." });
+    const saved = await productStore.update(vers[1], (p) => { if (v === null) delete p.versatility; else p.versatility = v; }, user.name, "versatility set", v === null ? "reset to catalogue" : `${v}/5`);
+    return sendJson(response, 200, { ok: true, versatility: saved.versatility ?? null });
   }
   if (url.pathname === "/api/products/market" && method === "POST") {
     // best landed price now for every product (for the products list)
@@ -1717,7 +1757,9 @@ async function supplierBreakdown(s, opts = {}) {
   const quotaApplies = engine.buyerImports && engine.quota;
   const worstPerT = quotaApplies ? round2(engine.totals.expectedPerT - (quotaLine.perTonne || 0) + engine.customsValuePerT * 0.5) : engine.totals.expectedPerT;
   const adj = adjustments.reduce((t, a) => t + a.perTonne, 0);
-  const model = buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV, cbamInfo });
+  // Word-of-mouth market intel that applies to this supplier, product or group at this arrival date
+  const intel = NEWS.notesFor(await liveNotes(), { supplierId: s.id, productId: product.id, group: product.category, date: importDate });
+  const model = buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV, cbamInfo, intel, importDate });
   return {
     ok: true,
     model,
@@ -1738,7 +1780,7 @@ const round2 = (v) => (v === null || v === undefined || !Number.isFinite(v) ? v 
 // Every cost variable for an order, always listed — even when it's zero, in
 // the supplier's price, carried by the supplier or not applicable — each with
 // its equation and the data points behind it.
-function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV, cbamInfo = { on: false } }) {
+function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV, cbamInfo = { on: false }, intel = [], importDate = "" }) {
   const L = (k) => engine.lines.find((l) => l.key === k) || { perTonne: 0, status: "n/a", source: "" };
   const cv = engine.customsValuePerT;
   const cur = latest.currency || "GBP";
@@ -1838,6 +1880,23 @@ function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pri
     add("Quota risk", "quotaMiss", "If the quota is missed", 0, "n/a", eqs({ parts: why, result: res("Extra", 0) }), "Nothing to miss.");
   }
 
+  // ---- Market intel from word of mouth. A locked quote isn't changed by market-wide news.
+  {
+    const locked = latest.validUntil && importDate && latest.validUntil >= importDate;
+    const scopeTxt = (n) => (n.scope === "supplier" ? `${s.name}` : n.scope === "product" ? product.name : n.scope === "group" ? `${n.targetId} prices` : "Market prices");
+    for (const n of intel) {
+      const marketWide = n.scope === "market" || n.scope === "group";
+      const perT = n.effectUnit === "pct" ? (pricePerT * n.effectValue) / 100 : n.effectValue;
+      const valTxt = n.effectUnit === "pct" ? `${n.effectValue > 0 ? "+" : ""}${n.effectValue}%` : `${n.effectValue > 0 ? "+" : "−"}£${Math.abs(n.effectValue)}/t`;
+      const noteV = v(scopeTxt(n), valTxt, "intel", `${n.by || "Team"} · ${n.source || "word of mouth"} · from ${n.effectiveFrom || n.date}`, n.effectValue);
+      const parts = n.effectUnit === "pct" ? [priceV, op("×"), noteV] : [noteV];
+      const label = `Intel: ${n.title}`;
+      if (marketWide && locked) add("Market intel", `intel-${n.id}`, label, 0, "n/a", eqs({ parts, result: res("Not applied", 0) }), `Their quote is fixed until ${latest.validUntil}, so this market move doesn't change it.`);
+      else add("Market intel", `intel-${n.id}`, label, perT, "included", eqs({ parts, result: res(perT >= 0 ? "Added per tonne" : "Taken off per tonne", perT, "£/t", { sign: perT < 0 ? -1 : 1 }) }),
+        `${n.scope === "supplier" ? "Applies to this supplier" : n.scope === "product" ? "Applies to this product" : n.scope === "group" ? `Applies to ${n.targetId}` : "Applies to the whole market"} for arrivals from ${n.effectiveFrom || n.date}, for ${n.horizonMonths} month${n.horizonMonths === 1 ? "" : "s"}.${n.body ? ` ${n.body}` : ""}`);
+    }
+  }
+
   // ---- Finance & terms
   {
     const fxb = L("fxBuffer");
@@ -1864,7 +1923,7 @@ function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pri
   const best = expected - steelEv;
   const worst = best + missPerT;
   return {
-    groups: ["Purchase", "Delivery", "Duty & tax", "Quota risk", "Finance & terms", "Supply"],
+    groups: ["Purchase", "Delivery", "Duty & tax", "Quota risk", "Market intel", "Finance & terms", "Supply"],
     rows,
     totals: {
       expected: round2(expected), best: round2(best), worst: round2(worst),
@@ -1918,6 +1977,7 @@ async function productMarket(product, body = {}) {
     ok: true,
     product: { id: view.id, name: view.name, category: view.category, spec: view.spec, commodityCode: view.commodityCode, costPerT: view.costPerT, targetBuyPrice: view.targetBuyPrice ?? null, monthlyUsageT: view.monthlyUsageT, suggestedOrderT: view.metrics.suggestedOrderT, createdAt: product.createdAt },
     rows, benchmarks: { product: forProduct, group: forGroup, competition }, quotes, costHistory, ons, fx: mv.fx,
+    intel: (await liveNotes()).filter((n) => n.effectUnit && n.effectUnit !== "none" && Number.isFinite(n.effectValue) && NEWS.noteActive(n, rows.find((r) => r.importDate) ? rows.find((r) => r.importDate).importDate : new Date().toISOString().slice(0, 10)) && (n.scope === "market" || (n.scope === "group" && n.targetId === product.category) || (n.scope === "product" && n.targetId === product.id) || (n.scope === "supplier" && rows.some((r) => r.id === n.targetId)))),
   };
 }
 
@@ -2308,7 +2368,9 @@ async function steelForecast(body = {}) {
   const lastDate = monthlyIdx[monthlyIdx.length - 1].date;
   const drivers = [
     FC.cbamDriver({ ratePerT: ws.cbamRatePerT, emissionsPerT: ws.cbamUnknownTPerT, referencePrice: refPrice, passThroughPct: cfg.cbamPassThroughPct }),
-    ...FC.noteDrivers(notes, today, NEWS.STRENGTH_PCT),
+    // market-wide and product-group intel move the index; supplier/product intel goes into their own prices
+    ...FC.noteDrivers(notes.filter((n) => !n.scope || n.scope === "market" || n.scope === "group")
+      .map((n) => ({ ...n, date: n.effectiveFrom || n.date, pct: n.effectUnit === "pct" ? n.effectValue : n.effectUnit === "perT" ? (n.effectValue / refPrice) * 100 : undefined })), today, NEWS.STRENGTH_PCT),
   ].filter(Boolean);
   const horizon = Math.max(12, FC.monthsBetween(lastDate, today) + 12);
   const proj = FC.project(monthlyIdx, { horizon, drivers, settings: cfg });

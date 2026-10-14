@@ -1011,7 +1011,7 @@
     bd.animatedFor = animKey;
 
     // ---- 3. the full cost model — every variable, each with its equation
-    const KIND = { quote: "Quote", supplier: "Supplier", product: "Product", you: "Your choice", live: "Live data", fixed: "Fixed", calc: "Earlier step" };
+    const KIND = { quote: "Quote", supplier: "Supplier", product: "Product", you: "Your choice", live: "Live data", fixed: "Fixed", calc: "Earlier step", intel: "Market intel" };
     const STATUS = { included: ["Included", "st-in"], "in-price": ["In their price", "st-price"], supplier: ["Supplier pays", "st-sup"], "n/a": ["Not applicable", "st-na"], missing: ["Needs input", "st-miss"], scenario: ["If missed", "st-scen"], memo: ["For reference", "st-memo"], off: ["Switched off", "st-na"] };
     const renderEq = (eq, n, total) => {
       let i = 0;
@@ -1059,7 +1059,7 @@
     };
     const groupTotal = (g) => M.rows.filter((r) => r.group === g && r.status === "included" && r.key !== "price").reduce((t, r) => t + r.perTonne, 0);
     const model = M ? el("div", { class: "cm" },
-      ...M.groups.map((g) => {
+      ...M.groups.filter((g) => M.rows.some((r) => r.group === g)).map((g) => {
         const rows = M.rows.filter((r) => r.group === g);
         const sub = g === "Purchase" ? M.rows.find((r) => r.key === "price").perTonne : groupTotal(g);
         return el("section", { class: "cm-group" },
@@ -1069,13 +1069,14 @@
       el("div", { class: "cm-total" },
         el("div", {}, el("span", { text: hasRisk ? "Expected landed cost" : "Landed cost" }), el("small", { text: "Included lines only — reference and if-missed lines aren't added" })),
         el("strong", { text: perT(T.expected) }))) : null;
+    const intelBtn = me.canEdit ? el("button", { class: "link-btn", type: "button", text: `+ Log intel for ${s.name}`, onclick: () => window.openMarketIntel({ scope: "supplier", targetId: s.id }) }) : null;
     const allBtn = el("button", { class: "link-btn", type: "button", text: "Show all working", onclick: (ev) => {
       const open = ev.currentTarget.textContent.startsWith("Show");
       ev.currentTarget.textContent = open ? "Hide all working" : "Show all working";
       rowEls.forEach((x) => openWork(x.btn, x.work, open));
     } });
     const legend = el("div", { class: "eq-legend", "aria-label": "Where the numbers come from" },
-      ...["quote", "supplier", "product", "you", "live", "fixed", "calc"].map((k) => el("span", { class: `eq-chip k-${k}`, text: KIND[k] })));
+      ...["quote", "supplier", "product", "you", "live", "fixed", "calc", "intel"].filter((k) => k !== "intel" || (M && M.rows.some((r) => r.group === "Market intel"))).map((k) => el("span", { class: `eq-chip k-${k}`, text: KIND[k] })));
     // open the quota lines (or the biggest cost) straight away
     requestAnimationFrame(() => {
       const pick = rowEls.find((x) => x.r.key === "steelExpected" && x.r.status === "included") || rowEls.filter((x) => x.r.key !== "price" && x.r.status === "included").sort((a, b2) => Math.abs(b2.r.perTonne) - Math.abs(a.r.perTonne))[0];
@@ -1131,7 +1132,7 @@
         counts.watch ? el("span", { class: "is-watch", text: `${counts.watch} to watch` }) : null,
         counts.muted ? el("span", { class: "is-muted", text: `${counts.muted} missing` }) : null,
         el("span", { class: "is-good", text: `${counts.good} good` })), checklist),
-      sec("Full cost model", allBtn, legend, build),
+      sec("Full cost model", el("div", { class: "bd2-sec-actions" }, intelBtn, allBtn), legend, build),
       compare ? sec("Same order from each supplier", el("span", { class: "small muted", text: "effective £/t, each at their own lead time" }), compare) : null,
       (e.checks || []).length || (e.warnings || []).length ? sec("Before you order", null, el("ul", { class: "bd2-todo" }, ...[...(e.warnings || []), ...(e.checks || [])].map((c) => el("li", { text: c })))) : null,
       el("div", { class: "bd2-actions" }, el("p", { class: "small muted", text: "Estimates only — not customs advice." }), save),

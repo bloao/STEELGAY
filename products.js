@@ -507,6 +507,8 @@
 
     panel.append(
       el("div", { class: "glance-grid pm-glance" }, youCard, bestCard, mkCard),
+      stockpileCard(p),
+      intelCard(p, d),
       el("section", { class: "pm-sec" }, el("div", { class: "pm-head" }, el("div", {}, el("h3", { text: `Every supplier, priced for ${p.name}` }), el("p", { class: "small muted", text: "Dots are the real landed cost, coloured against what you pay now." })), cbamBtn), ladder),
       el("section", { class: "pm-sec" }, el("div", { class: "pm-head" }, el("div", {}, el("h3", { text: "Price history" }), el("p", { class: "small muted", text: "Quotes for this product, market prices and what you've paid." }))), history));
     return panel;
@@ -591,6 +593,76 @@
     });
     wrap.append(el("summary", { class: "link-btn", text: "Add a market price for this product" }), f);
     return wrap;
+  }
+
+  // ---------------------------------------------------------------- stockpiling ranking
+  let stockpile = null;
+  let spMode = "score";
+  const PART_LABEL = { versatility: "Multi-purpose", buyers: "UK buyers", volume: "UK demand", stability: "Price steadiness", turnover: "Your turnover" };
+  const VERDICT_CLS = { good: "is-go", ok: "is-maybe", caution: "", risk: "is-risk" };
+  async function loadStockpile() {
+    try { stockpile = await api("/api/products/stockpile"); } catch { stockpile = { rows: [], sources: {} }; }
+    renderStockpile();
+    if (mode === "detail" && detailId && profileTab === "market") { const p = products.find((x) => x.id === detailId); if (p) renderProfileBody(p); }
+  }
+  const dots = (n, p) => {
+    const box = el("span", { class: "vdots", role: me.canEdit ? "radiogroup" : "img", "aria-label": `Multi-purpose ${n} out of 5` });
+    for (let i = 1; i <= 5; i++) box.append(el(me.canEdit ? "button" : "span", { type: "button", class: `vdot${i <= n ? " is-on" : ""}`, title: me.canEdit ? `Set to ${i} of 5` : "", "aria-label": `${i} of 5`,
+      onclick: me.canEdit ? async (e) => { e.stopPropagation(); try { await api(`/api/products/${p.id}/versatility`, { method: "POST", body: { score: i } }); toast(`${p.name}: multi-purpose set to ${i}/5`); loadStockpile(); } catch (error) { toast(error.message, true); } } : null }));
+    return box;
+  };
+  function renderStockpile() {
+    const box = $("stockpile");
+    if (!box || !stockpile) return;
+    const rows = stockpile.rows;
+    const src = stockpile.sources;
+    $("sp-sub").textContent = `Ranked by how safe extra stock is: widely used, easy to sell on if plans change, a steady price, and how fast you use it. ${src.tradeMonths ? `Market figures from ${src.tradeMonths} months of HMRC data.` : "Load the HMRC history on the Competition page for UK demand and price volatility per product."}`;
+    if (!rows.length) { box.replaceChildren(el("p", { class: "muted", text: "Add products to rank them." })); return; }
+    const list = spMode === "volatility" ? [...rows].sort((a, b) => (b.volatilityPct ?? -1) - (a.volatilityPct ?? -1)) : rows;
+    const maxVol = Math.max(...rows.map((r) => r.volatilityPct || 0)) || 1;
+    box.replaceChildren(el("div", { class: "table-scroll" }, el("table", { class: "quota-table sp-table" },
+      el("thead", {}, el("tr", {}, el("th", { text: "#" }), el("th", { text: "Product" }),
+        spMode === "score" ? el("th", { text: "Stockpile score" }) : el("th", { text: "Price swings a month" }),
+        el("th", { text: "Multi-purpose" }), el("th", { class: "num", text: "UK buyers" }), el("th", { class: "num", text: "UK imports, 12 mo" }), el("th", { class: "num", text: "You use" }), el("th", { text: "Verdict" }))),
+      el("tbody", {}, ...list.map((r, i) => {
+        const p = products.find((x) => x.id === r.id) || { id: r.id, name: r.name };
+        const P = r.parts;
+        return el("tr", { class: "opp-row product-row", style: `--d:${i * 40}ms`, tabindex: "0", onclick: () => openDetail(r.id, "market"), onkeydown: (e) => { if (e.key === "Enter") openDetail(r.id, "market"); } },
+          el("td", {}, el("span", { class: "sp-rank", text: i + 1 })),
+          el("td", {}, el("strong", { text: r.name }), el("div", { class: "row-sub", text: `${fmtCode(r.code + "00").slice(0, 10)}${r.family ? ` · ${r.family.replace(/-/g, " ")}` : ""}` })),
+          spMode === "score"
+            ? el("td", {}, el("div", { class: "sp-score" }, el("span", { class: "sp-bar" }, el("span", { style: `width:${r.score}%` })), el("b", { text: r.score })),
+                el("div", { class: "sp-parts", title: Object.entries(P).map(([k, v]) => `${PART_LABEL[k]}: ${Math.round(v.score)}`).join(" · ") }, ...Object.entries(P).map(([k, v]) => el("span", { class: "sp-part", style: `--v:${Math.round(v.score)}`, title: `${PART_LABEL[k]}: ${Math.round(v.score)}/100` }))))
+            : el("td", {}, r.volatilityPct === null ? el("span", { class: "muted", text: "Not enough data" }) : el("div", { class: "sp-score" }, el("span", { class: "sp-bar is-vol" }, el("span", { style: `width:${(r.volatilityPct / maxVol) * 100}%` })), el("b", { text: `±${r.volatilityPct.toFixed(1)}%` })),
+                el("div", { class: "row-sub", text: P.stability.source })),
+          el("td", {}, dots(P.versatility.value, p), el("div", { class: "row-sub sp-why", title: P.versatility.why, text: P.versatility.why })),
+          el("td", { class: "num" }, el("strong", { text: P.buyers.source === "none" ? "—" : P.buyers.value }), el("div", { class: "row-sub", text: P.buyers.source === "none" ? "load HMRC data" : `${P.buyers.family} in the family` })),
+          el("td", { class: "num" }, el("strong", { text: P.volume.known ? `${P.volume.value.toLocaleString("en-GB")} t` : "—" }), el("div", { class: "row-sub", text: P.volume.known ? (P.volume.steadiness === null ? "" : P.volume.steadiness > 0.7 ? "steady" : P.volume.steadiness > 0.4 ? "uneven" : "lumpy") : "" })),
+          el("td", { class: "num" }, el("strong", { text: `${P.turnover.value} t/mo` }), el("div", { class: "row-sub", text: P.turnover.cover === null ? "" : `${P.turnover.cover.toFixed(1)} mo in stock` })),
+          el("td", {}, el("span", { class: `sig ${VERDICT_CLS[r.verdict.level]}`, text: { good: "Stockpile", ok: "A little extra", caution: "Usage only", risk: "Avoid excess" }[r.verdict.level] }), el("div", { class: "row-sub sp-why", text: r.verdict.text })));
+      })))),
+      el("p", { class: "lad-note", text: `Score = multi-purpose ${stockpile.weights.versatility * 100}% · UK buyers ${stockpile.weights.buyers * 100}% · UK demand ${stockpile.weights.volume * 100}% · price steadiness ${stockpile.weights.stability * 100}% · your turnover ${stockpile.weights.turnover * 100}%. UK buyers = companies importing that commodity code (HMRC); more buyers means it's easier to sell surplus on. Click the dots to adjust how multi-purpose a product is.` }));
+  }
+  function intelCard(p, d) {
+    const notes = d.intel || [];
+    return el("section", { class: "pm-sec intel-card-p" },
+      el("div", { class: "pm-head" }, el("div", {}, el("h3", { text: "Market intel in these prices" }), el("p", { class: "small muted", text: notes.length ? "Word-of-mouth news that's changing the landed costs above." : "Nothing logged that affects this product. Heard something? Log it and the prices update." })),
+        me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Log intel for this product", onclick: () => window.openMarketIntel({ scope: "product", targetId: p.id }) }) : null),
+      notes.length ? el("ul", { class: "intel-list" }, ...notes.map((n) => el("li", {},
+        el("span", { class: `note-dir is-${n.effectValue > 0 ? "up" : "down"}`, "aria-hidden": "true", text: n.effectValue > 0 ? "↑" : "↓" }),
+        el("div", {}, el("strong", { text: n.title }), el("span", { class: "row-sub", text: `${n.effectUnit === "pct" ? `${n.effectValue > 0 ? "+" : ""}${n.effectValue}%` : `${n.effectValue > 0 ? "+" : "−"}£${Math.abs(n.effectValue)}/t`} · ${n.scope === "market" ? "whole market" : n.scope === "group" ? n.targetId : n.scope === "product" ? "this product" : n.targetName} · from ${fmt.date(n.effectiveFrom || n.date)} for ${n.horizonMonths} mo${n.by ? ` · ${n.by}` : ""}` }))))) : null);
+  }
+  function stockpileCard(p) {
+    const r = stockpile && stockpile.rows.find((x) => x.id === p.id);
+    if (!r) return null;
+    const total = stockpile.rows.length;
+    return el("section", { class: "pm-sec sp-card" },
+      el("div", { class: "pm-head" }, el("div", {}, el("h3", { text: `Stockpiling: #${r.rank} of ${total}` }), el("p", { class: "small muted", text: r.verdict.text })),
+        el("span", { class: `sig ${VERDICT_CLS[r.verdict.level]}`, text: `${r.score}/100` })),
+      el("div", { class: "sp-breakdown" }, ...Object.entries(r.parts).map(([k, v]) => el("div", { class: "sp-b" },
+        el("div", { class: "sp-b-head" }, el("span", { text: PART_LABEL[k] }), el("b", { text: Math.round(v.score) })),
+        el("span", { class: "sp-bar" }, el("span", { style: `width:${Math.round(v.score)}%` })),
+        el("span", { class: "row-sub", text: k === "versatility" ? `${v.value}/5 · ${v.why}` : k === "buyers" ? (v.source === "none" ? "Load HMRC data" : `${v.value} UK importers of this code`) : k === "volume" ? (v.known ? `${v.value.toLocaleString("en-GB")} t imported in 12 months` : "Load HMRC data") : k === "stability" ? (v.value === null ? "Not enough data" : `±${v.value.toFixed(1)}% a month (${v.source})${r.volatilityRank ? ` · #${r.volatilityRank} most volatile` : ""}`) : `${v.value} t a month${v.cover !== null ? `, ${v.cover.toFixed(1)} months in stock` : ""}` })))));
   }
 
   function auditPanel(p) {
@@ -1247,6 +1319,11 @@
     }
   });
   ["q", "f-category", "f-status"].forEach((id) => $(id).addEventListener("input", renderTable));
+  $("sp-mode").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    spMode = b.dataset.mode;
+    $("sp-mode").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    renderStockpile();
+  }));
 
   api("/api/settings").then((r) => { settings = r.settings; }).catch(() => { /* defaults */ });
   api("/api/suppliers").then((r) => {
@@ -1257,8 +1334,10 @@
     me = m;
     if (!me.canEdit) { $("add-btn").hidden = true; $("import-btn").hidden = true; }
   });
+  window.addEventListener("agx:intel", () => { marketData.clear(); loadMarketBest(); if (mode === "detail" && detailId && profileTab === "market") { const p = products.find((x) => x.id === detailId); if (p) renderProfileBody(p); } });
   load().then(() => {
     loadMarketBest();
+    loadStockpile();
     const deep = new URLSearchParams(window.location.search).get("product");
     if (deep && products.some((p) => p.id === deep)) openDetail(deep);
     return loadQuota();

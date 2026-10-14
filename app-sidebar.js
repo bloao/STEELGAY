@@ -45,8 +45,27 @@
 
   var html = '<nav class="sidebar__nav" aria-label="Order tool sections"><p class="sidebar__title">Procurement</p><ul>';
   ITEMS.forEach(function (item) { html += link(item); });
-  html += '</ul></nav><nav class="sidebar__foot" aria-label="Workspace"><ul>';
+  html += '</ul><button type="button" class="sidebar__intel" id="sidebar-intel">' +
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>' +
+    '<span>Log market intel</span></button>';
+  html += '</nav><nav class="sidebar__foot" aria-label="Workspace"><ul>';
   FOOT.forEach(function (item) { html += link(item); });
   html += "</ul></nav>";
   aside.innerHTML = html;
+  // The intel form loads on first use, so pages stay light.
+  var btn = document.getElementById("sidebar-intel");
+  if (btn) btn.addEventListener("click", function () {
+    if (window.MarketIntel) { window.MarketIntel.open({}); return; }
+    var sc = document.createElement("script");
+    sc.src = "intel.js";
+    sc.onload = function () { if (window.MarketIntel) window.MarketIntel.open({}); };
+    document.body.appendChild(sc);
+  });
+  window.openMarketIntel = function (pre) {
+    if (window.MarketIntel) return window.MarketIntel.open(pre || {});
+    var sc = document.createElement("script");
+    sc.src = "intel.js";
+    sc.onload = function () { if (window.MarketIntel) window.MarketIntel.open(pre || {}); };
+    document.body.appendChild(sc);
+  };
 })();
