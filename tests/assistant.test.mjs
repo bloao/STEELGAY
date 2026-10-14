@@ -17,8 +17,8 @@ const data = {
   categoryFor: () => "12B",
 };
 
-test("seven read-only tools with valid names", () => {
-  assert.equal(TOOLS.length, 7);
+test("eight read-only tools with valid names", () => {
+  assert.equal(TOOLS.length, 8);
   for (const t of TOOLS) assert.match(t.name, /^[a-zA-Z0-9_-]{1,128}$/);
 });
 
@@ -52,7 +52,7 @@ test("the loop runs tools, returns results to the model, and ends with text", as
   assert.equal(res.reply, "Order **5 t** of 100×50 Flat.");
   assert.deepEqual(res.tools.map((t) => t.name), ["list_products"]);
   assert.equal(res.usage.input_tokens, 30);
-  assert.equal(calls[0].tools.length, 7);
+  assert.equal(calls[0].tools.length, 8);
 });
 
 test("tool errors go back to the model as is_error", async () => {
@@ -70,4 +70,19 @@ test("runaway tool loops stop", async () => {
   const callModel = async () => ({ stop_reason: "tool_use", content: [{ type: "tool_use", id: "t", name: "list_products", input: {} }] });
   const res = await converse({ messages: [{ role: "user", content: "x" }], callModel, data, model: "m", system: "s" });
   assert.equal(res.stopReason, "max_rounds");
+});
+
+test("plan_order finds the product by name and summarises the planner", async () => {
+  const { runTool } = await import("../lib/assistant.mjs");
+  const data = {
+    products: async () => [{ id: "p1", name: "40×10 Flat", metrics: {} }],
+    plan: async (body) => ({ ok: true, product: { name: "40×10 Flat", stockT: 32, coverMonths: 2, stockOutDate: "2026-12-14" }, inputs: { tonnage: 16, needBy: "2026-12-14", appetite: body.appetite, cbam: false },
+      recommendation: { ok: true, best: { name: "Tata Steel UK", effectivePerT: 724.4, arrival: "2026-11-04" }, recTonnes: 16, timing: { action: "order-now", text: "Order now" }, reasons: [], watch: [] },
+      options: [], split: { single: { name: "Tata Steel UK", spend: 11590 }, splits: [], better: null, extraOrderCost: 150 } }),
+  };
+  const r = await runTool("plan_order", { product: "40x10 flat", approach: "speed" }, data);
+  assert.equal(r.ok, true);
+  assert.equal(r.approach, "speed");
+  assert.equal(r.recommendation.supplier, "Tata Steel UK");
+  assert.equal(r.split.splitWins, false);
 });

@@ -1103,7 +1103,7 @@ function isPrivatePath(safePath) {
 }
 
 async function serveStatic(requestUrl, response) {
-  const pathname = requestUrl.pathname === "/" ? "/the-plan.html" : requestUrl.pathname;
+  const pathname = requestUrl.pathname === "/" ? "/assistant.html" : requestUrl.pathname; // the assistant is the home page
   const safePath = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
   const filePath = join(root, safePath);
 
@@ -1403,6 +1403,7 @@ async function handleAssistantApi(request, response, url) {
     scenario: async (id) => store.get(String(id)),
     quotas: () => getMeasureQuotas(),
     price: (inputs) => runScenario(inputs),
+    plan: (body) => orderPlan(body),
     commodities: commodityList,
     categoryFor: (code) => findCategory(code, tradeMeasure.categories)?.id || null,
   };
@@ -3460,7 +3461,7 @@ applySupplierSheet().catch((error) => console.error("Supplier sheet update faile
 
 server.listen(port, bindHost, () => {
   console.log(`Steel ARB live app running at http://${bindHost}:${port}`);
-  console.log(`Order tool:   http://${bindHost}:${port}/orders.html   (engine v${ENGINE_VERSION}, from ${root})`);
+  console.log(`Home:         http://${bindHost}:${port}/   (assistant; engine v${ENGINE_VERSION}, from ${root})`);
   console.log(`HMRC Trade Tariff access: ${tariffAuthMode === "registered" ? "registered credentials loaded" : "public (no credentials)"}`);
   console.log(`Assistant: ${ANTHROPIC_API_KEY ? `ready (${ASSISTANT_MODEL})` : "not set up — add ANTHROPIC_API_KEY to .env"}`);
 });

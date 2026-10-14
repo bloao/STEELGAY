@@ -62,27 +62,59 @@
   function icon(name) {
     return '<svg class="sidebar__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + "</svg>";
   }
+  function sectionLink(sec) {
+    var on = inSection(sec);
+    var html = '<li class="sidebar__sec' + (on ? " is-open" : "") + '"><a class="sidebar__link' + (on ? " is-active" : "") + '" href="' + sec.href + '"' +
+      (on && !sec.children ? ' aria-current="page"' : "") + ">" + icon(sec.icon) + "<span>" + sec.label + "</span>" +
+      (sec.children ? '<svg class="sidebar__chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>' : "") + "</a>";
+    if (sec.children && on) {
+      html += '<ul class="sidebar__sub">';
+      sec.children.forEach(function (c) {
+        var here = c.key === active;
+        html += '<li><a class="sidebar__sublink' + (here ? " is-active" : "") + '" href="' + c.href + '"' + (here ? ' aria-current="page"' : "") + ">" + c.label + "</a></li>";
+      });
+      html += "</ul>";
+    }
+    return html + "</li>";
+  }
+
   // A small launcher: one button opens a pop-up of square tiles, grouped by section.
   function tile(item, extraCls) {
     var here = item.key === active;
     return '<a class="lt' + (here ? " is-active" : "") + (extraCls ? " " + extraCls : "") + '" href="' + item.href + '"' + (here ? ' aria-current="page"' : "") + ">" +
       icon(item.icon) + "<span>" + item.label + "</span></a>";
   }
-  var groups = SECTIONS.map(function (sec) { return { label: sec.label, items: sec.children || [sec] }; });
-  // Assistant sits with Settings and intel at the end
-  var assistant = groups.filter(function (g) { return g.label === "Assistant"; })[0];
-  groups = groups.filter(function (g) { return g !== assistant; });
-  var cur = current ? (current.children ? (current.children.filter(function (c) { return c.key === active; })[0] || current) : current) : (FOOT.filter(function (f) { return f.key === active; })[0] || null);
-  var html = '<button type="button" class="launcher-btn" id="launcher-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="launcher" title="Menu">' +
-    icon("grid") + '<span class="launcher-cur">' + (cur ? cur.label : "Menu") + "</span></button>" +
-    '<div class="launcher" id="launcher" role="dialog" aria-label="Pages" hidden><div class="launcher-groups">' +
-    groups.map(function (g) {
-      return '<section class="lg"><h2>' + g.label + '</h2><div class="lg-tiles">' + g.items.map(function (it) { return tile(it); }).join("") + "</div></section>";
-    }).join("") +
-    '<section class="lg"><h2>Workspace</h2><div class="lg-tiles">' +
-      (assistant ? tile(assistant.items[0]) : "") + FOOT.map(function (f) { return tile(f); }).join("") +
-      '<button type="button" class="lt is-intel" id="sidebar-intel">' + icon("intel") + "<span>Log market intel</span></button>" +
-    "</div></section></div></div>";
+  // Five main tiles; picking one with sub-pages shows them inside the pop-up.
+  var openSec = current || SECTIONS[0];
+  function mainTile(sec) {
+    var on = sec === openSec;
+    var here = inSection(sec);
+    if (!sec.children) return '<a class="lt lt-main' + (here ? " is-active" : "") + '" href="' + sec.href + '"' + (here ? ' aria-current="page"' : "") + ">" + icon(sec.icon) + "<span>" + sec.label + "</span></a>";
+    return '<button type="button" class="lt lt-main' + (here ? " is-here" : "") + (on ? " is-open" : "") + '" data-sec="' + sec.key + '" aria-expanded="' + on + '" aria-controls="launcher-sub">' + icon(sec.icon) + "<span>" + sec.label + "</span>" +
+      '<span class="lt-count">' + sec.children.length + "</span></button>";
+  }
+  function subTiles(sec) {
+    if (!sec || !sec.children) return "";
+    return '<h2>' + sec.label + '</h2><div class="lg-tiles">' + sec.children.map(function (c) { return tile(c); }).join("") + "</div>";
+  }
+  var launcher = '<button type="button" class="launcher-btn" id="launcher-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="launcher" title="All pages">' +
+    icon("grid") + '<span class="launcher-cur">All pages</span></button>' +
+    '<div class="launcher" id="launcher" role="dialog" aria-label="All pages" hidden>' +
+      '<div class="launcher-main">' + SECTIONS.map(mainTile).join("") + "</div>" +
+      '<div class="launcher-sub" id="launcher-sub">' + subTiles(openSec.children ? openSec : SECTIONS.filter(function (x) { return x.children; })[0]) + "</div>" +
+      '<div class="launcher-foot">' + FOOT.map(function (f) { return tile(f, "lt-small"); }).join("") +
+        '<button type="button" class="lt lt-small is-intel js-intel">' + icon("intel") + "<span>Log market intel</span></button></div>" +
+    "</div>";
+
+  // The menu down the left, with the tile launcher at the top
+  var html = '<nav class="sidebar__nav" aria-label="Order tool sections"><div class="sidebar__head"><p class="sidebar__title">Procurement</p>' + launcher + "</div><ul>";
+  SECTIONS.forEach(function (sec) { html += sectionLink(sec); });
+  html += '</ul><button type="button" class="sidebar__intel js-intel">' +
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>' +
+    '<span>Log market intel</span></button>';
+  html += '</nav><nav class="sidebar__foot" aria-label="Workspace"><ul>';
+  FOOT.forEach(function (item) { html += sectionLink(item); });
+  html += "</ul></nav>";
 
   // Tabs across the top of the page for the current section's sub-pages.
   function sectionTabs() {
@@ -103,21 +135,27 @@
   window.addEventListener("hashchange", function () {
     if (aside.getAttribute("data-active") !== "suppliers") return;
     var mk = location.hash === "#market";
-    aside.querySelectorAll(".lt[href^='suppliers.html']").forEach(function (a) {
+    aside.querySelectorAll(".sidebar__sublink").forEach(function (a) {
       var isMk = /#market$/.test(a.getAttribute("href"));
       a.classList.toggle("is-active", isMk === mk);
       if (isMk === mk) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
   });
   aside.innerHTML = html;
-  aside.classList.add("is-launcher");
   var lbtn = document.getElementById("launcher-btn"), panel = document.getElementById("launcher");
   function setOpen(open) {
     panel.hidden = !open;
     lbtn.setAttribute("aria-expanded", String(open));
-    if (open) { var a = panel.querySelector(".lt.is-active") || panel.querySelector(".lt"); if (a) a.focus(); }
+    if (open) { var a = panel.querySelector(".lt-main.is-open, .lt-main.is-active") || panel.querySelector(".lt"); if (a) a.focus(); }
   }
   lbtn.addEventListener("click", function () { setOpen(panel.hidden); });
+  panel.addEventListener("click", function (e) {
+    var t = e.target.closest(".lt-main[data-sec]");
+    if (!t) return;
+    var sec = SECTIONS.filter(function (x) { return x.key === t.getAttribute("data-sec"); })[0];
+    Array.prototype.forEach.call(panel.querySelectorAll(".lt-main[data-sec]"), function (b) { var on = b === t; b.classList.toggle("is-open", on); b.setAttribute("aria-expanded", String(on)); });
+    document.getElementById("launcher-sub").innerHTML = subTiles(sec);
+  });
   document.addEventListener("click", function (e) { if (!panel.hidden && !aside.contains(e.target)) setOpen(false); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !panel.hidden) { setOpen(false); lbtn.focus(); } });
   // arrow keys move between tiles
@@ -131,15 +169,14 @@
     tiles[Math.max(0, Math.min(tiles.length - 1, i + step))].focus();
   });
   // The intel form loads on first use, so pages stay light.
-  var btn = document.getElementById("sidebar-intel");
-  if (btn) btn.addEventListener("click", function () {
+  Array.prototype.forEach.call(aside.querySelectorAll(".js-intel"), function (btn) { btn.addEventListener("click", function () {
     setOpen(false);
     if (window.MarketIntel) { window.MarketIntel.open({}); return; }
     var sc = document.createElement("script");
     sc.src = "intel.js";
     sc.onload = function () { if (window.MarketIntel) window.MarketIntel.open({}); };
     document.body.appendChild(sc);
-  });
+  }); });
   window.openMarketIntel = function (pre) {
     if (window.MarketIntel) return window.MarketIntel.open(pre || {});
     var sc = document.createElement("script");
