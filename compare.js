@@ -53,13 +53,13 @@
       text += ` ${name(cheapestHeadline, scenarios.indexOf(cheapestHeadline))} has the lowest headline price but costs ${fmt.perT(gap)} more once duty, quota risk and costs are included.`;
     }
     verdict.replaceChildren(el("p", { style: "margin:0;font-size:15px", text }),
-      el("a", { class: "btn btn-primary no-print", href: `order-tool.html?id=${best.id}`, text: `Open ${bestName}` }));
+      el("a", { class: "btn btn-primary no-print", href: `order.html?id=${best.id}`, text: `Open ${bestName}` }));
 
     const cls = (i) => (i === bestIdx ? "is-best" : "");
     const head = el("thead", {}, el("tr", {}, el("th", {}),
       ...scenarios.map((s, i) => el("th", { class: cls(i) },
         el("div", { style: "font-family:var(--font-display);font-size:16px;font-weight:800" },
-          el("a", { href: `order-tool.html?id=${s.id}`, style: "color:inherit;text-decoration:none", text: name(s, i) }),
+          el("a", { href: `order.html?id=${s.id}`, style: "color:inherit;text-decoration:none", text: name(s, i) }),
           i === bestIdx ? el("span", { class: "badge badge-good", style: "margin-left:8px", text: "Best" }) : null),
         el("div", { class: "small muted", style: "font-weight:400", text: `${s.inputs.supplier || "—"} · ${s.inputs.origin} · ${s.inputs.incoterm}` }),
         el("div", { style: "margin-top:6px" }, statusBadge(s.status, s.inputs.quoteValidUntil))))));

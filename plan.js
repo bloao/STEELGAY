@@ -95,7 +95,7 @@
     try {
       const res = await api("/api/orders/plan/save", { method: "POST", body: { productId: plan.product.id, supplierId: opt.id, tonnage: tonnes, cbam: plan.inputs.cbam, timing: plan.recommendation.timing.action, reasons: plan.recommendation.reasons } });
       toast("Order saved as a draft. Submit it for approval from the order page.");
-      location.href = `order-tool.html?id=${res.id}`;
+      location.href = `order.html?id=${res.id}`;
     } catch (error) { toast(error.message, true); btn.disabled = false; btn.textContent = "Save order"; }
   }
 

@@ -135,7 +135,7 @@
         el("div", { class: "who" }, el("strong", { text: p.name }), el("span", { text: m.reason })),
         el("div", { class: "when", text: m.latestOrderDate ? `order by ${fmt.date(m.latestOrderDate)}` : `runs out ${fmt.date(m.stockOutDate)}` }),
         el("div", { class: "qty", text: `${m.suggestedOrderT} t · ${fmt.money(m.suggestedOrderValue)}` }),
-        el("a", { class: "btn", href: `order-tool.html?product=${p.id}`, text: "Price it" }));
+        el("a", { class: "btn", href: `order.html?product=${p.id}`, text: "Price it" }));
     }));
     const cats = [...new Set(products.map((p) => p.category))].sort();
     const current = $("f-category").value;
@@ -281,7 +281,7 @@
         ["Stock cost price", `${fmt.money(p.costPerT, true)}/t`],
         ["Stock value", fmt.money(m.stockValue)],
         ["Target buy price", p.targetBuyPrice ? `${fmt.money(p.targetBuyPrice, true)}/t` : null],
-        ["Best saved quote", best ? el("a", { href: `order-tool.html?id=${best.id}`, text: fmt.perT(best.expectedPerT) }) : null,
+        ["Best saved quote", best ? el("a", { href: `order.html?id=${best.id}`, text: fmt.perT(best.expectedPerT) }) : null,
           best ? `${best.supplier || best.title} · ${best.expectedPerT > (p.targetBuyPrice || p.costPerT) ? "above" : "below"} ${p.targetBuyPrice ? "target" : "cost"}` : "No saved quotes for this code"],
       ])),
       p.notes ? el("section", { class: "detail-section span-all" }, el("h3", { text: "Notes" }), el("p", { style: "margin:0;white-space:pre-wrap", text: p.notes })) : null);
@@ -692,7 +692,7 @@
               const sc = e.sc;
               return el("li", {}, el("span", { class: "dot is-quote", "aria-hidden": "true" }),
                 el("div", { class: "t-head" }, el("strong", { text: "Priced" }), el("span", { text: `${sc.createdBy || ""} · ${fmt.dateTime(sc.updatedAt)}` })),
-                el("p", { class: "t-note" }, el("a", { href: `order-tool.html?id=${sc.id}`, text: sc.title }),
+                el("p", { class: "t-note" }, el("a", { href: `order.html?id=${sc.id}`, text: sc.title }),
                   ` — ${sc.supplier || "no supplier"}, ${sc.origin}, ${t(sc.tonnage)} at ${fmt.perT(sc.expectedPerT)} · ${sc.status}`));
             }
             const a = e.a;
@@ -755,7 +755,7 @@
       me.canEdit ? archiveBtn : null,
       el("span", { class: "spacer" }),
       me.canEdit ? el("button", { class: "btn", type: "button", text: "Edit", onclick: () => openForm(p) }) : null,
-      el("a", { class: "btn btn-primary", href: `order-tool.html?product=${p.id}`, text: m.suggestedOrderT ? `Price ${m.suggestedOrderT} t` : "Price an order" }));
+      el("a", { class: "btn btn-primary", href: `order.html?product=${p.id}`, text: m.suggestedOrderT ? `Price ${m.suggestedOrderT} t` : "Price an order" }));
     if (!drawer.contains(document.activeElement)) $(`tab-${profileTab}`).focus();
   }
 

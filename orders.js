@@ -41,12 +41,15 @@
       return el("tr", {},
         el("td", {}, box),
         el("td", {},
-          el("a", { class: "row-title", href: `order-tool.html?id=${s.id}`, text: s.title || s.commodityCode }),
-          s.sample ? el("span", { class: "badge badge-info", style: "margin-left:8px", title: "Priced with sample market data", text: "Sample" }) : null,
+          el("a", { class: "row-title", href: `order.html?id=${s.id}`, text: s.title || s.commodityCode }),
+          s.planned ? el("span", { class: `badge ${s.planRole === "alternative" ? "" : "badge-info"}`, style: "margin-left:8px", title: s.planRole === "alternative" ? "Runner-up from the order planner, to compare against the recommendation" : s.starter ? "The order planner's pick, drafted from your stock levels and supplier quotes" : "Saved from the order planner", text: s.planRole === "alternative" ? "Alternative" : s.starter ? "Recommended" : "Planned" }) : null,
+          s.sample ? el("span", { class: "badge badge-warn", style: "margin-left:8px", title: "Priced with sample market data, not the live feeds", text: "Sample prices" }) : null,
           el("div", { class: "row-sub", text: `${s.commodityCode.replace(/^(\d{4})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4")}${s.categoryId ? ` · Cat ${s.categoryId}` : ""}` })),
         el("td", {}, `${s.supplier || "—"} · ${s.origin}`, el("div", { class: "row-sub", text: s.incoterm })),
         el("td", { class: "num", text: fmt.tonnes(s.tonnage) }),
-        el("td", { class: "num" }, el("strong", { text: fmt.perT(s.expectedPerT) }), el("div", { class: "row-sub", text: fmt.money(s.expectedTotal) })),
+        s.plannedPerT !== null
+          ? el("td", { class: "num", title: `All costs counted (finance, handling, quota-miss risk). Duty and freight alone: ${fmt.perT(s.expectedPerT)}` }, el("strong", { text: fmt.perT(s.plannedPerT) }), el("div", { class: "row-sub", text: fmt.money(s.plannedPerT * s.tonnage) }))
+          : el("td", { class: "num" }, el("strong", { text: fmt.perT(s.expectedPerT) }), el("div", { class: "row-sub", text: fmt.money(s.expectedTotal) })),
         el("td", {}, quotaBadge(s)),
         el("td", { text: fmt.date(s.importDate) }),
         el("td", {}, statusBadge(s.status, s.quoteValidUntil)),
@@ -86,14 +89,14 @@
     }
   }
 
-  document.getElementById("sample-btn").addEventListener("click", async (event) => {
+  document.getElementById("starter-btn").addEventListener("click", async (event) => {
     event.target.disabled = true;
     try {
-      const res = await api("/api/sample-data", { method: "POST" });
-      toast(res.created ? `Loaded ${res.created} sample scenarios` : res.message);
+      const res = await api("/api/orders/starter", { method: "POST" });
+      toast(res.created ? `Drafted ${res.created} order${res.created === 1 ? "" : "s"} from your products and suppliers` : res.message || "Nothing new to draft");
       await load();
     } catch (error) {
-      toast(`Could not load samples: ${error.message}`, true);
+      toast(`Could not draft orders: ${error.message}`, true);
     } finally {
       event.target.disabled = false;
     }

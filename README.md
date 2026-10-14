@@ -88,7 +88,8 @@ http://127.0.0.1:3001
 ## Order tool (v1)
 
 - `/orders.html` — saved order scenarios, filters, CSV export, pick 2–4 to compare
-- `/order-tool.html` — scenario editor with live landed-cost build-up (`?id=` opens a saved one)
+- `/order.html` — order editor with live landed-cost build-up and the planner's reasons (`?id=` opens a saved one). `/order-tool.html` stays as the standalone public intake page.
+- First run: the old demo scenarios (HR coil, galvanised sheet…) are archived on startup and replaced with draft orders for the products that need restocking, priced from your own suppliers: the planner's pick ("Recommended") and the runner-up ("Alternative"). `POST /api/orders/starter` does the same on demand.
 - `/compare.html?ids=a,b` — side-by-side quotes, lowest expected cost highlighted
 
 All maths runs on the server in `lib/calc.mjs` (versioned; tests in `tests/calc.test.mjs`, run `npm test`).

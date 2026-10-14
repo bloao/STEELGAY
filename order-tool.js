@@ -261,6 +261,14 @@
     $("btn-recalc").hidden = !saved || !me.canEdit;
     $("btn-duplicate").hidden = !saved || !me.canEdit;
 
+    const plan = saved && scenario.plan;
+    $("plan-card").hidden = !plan;
+    if (plan) {
+      const timing = { "buy-ahead": "Planner advised buying ahead of need.", wait: "Planner advised holding off if stock allows.", "order-now": "Planner advised ordering now." }[plan.timing] || "";
+      $("plan-timing").textContent = `${scenario.starter ? "Drafted automatically from your stock levels and supplier quotes. " : ""}${timing}`;
+      $("plan-reasons").replaceChildren(...(plan.reasons || []).map((r) => el("li", { text: r })));
+      $("plan-again").href = `plan.html?product=${encodeURIComponent(plan.productId || "")}`;
+    }
     $("activity-card").hidden = !saved;
     if (saved) {
       $("activity").replaceChildren(...[...scenario.activity].reverse().map((a) =>
@@ -292,7 +300,7 @@
       } else {
         scenario = await api("/api/scenarios", { method: "POST", body: { inputs } });
         scenarioId = scenario.id;
-        history.replaceState(null, "", `order-tool.html?id=${scenarioId}`);
+        history.replaceState(null, "", `order.html?id=${scenarioId}`);
         toast("Scenario saved");
       }
       showErrors({});
@@ -389,7 +397,7 @@
   $("btn-duplicate").addEventListener("click", async () => {
     try {
       const copy = await api(`/api/scenarios/${scenarioId}/duplicate`, { method: "POST" });
-      window.location.href = `order-tool.html?id=${copy.id}`;
+      window.location.href = `order.html?id=${copy.id}`;
     } catch (error) { toast(error.message, true); }
   });
   $("btn-recalc").addEventListener("click", async () => {

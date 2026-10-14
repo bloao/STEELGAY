@@ -39,7 +39,7 @@
         <div class="actions">
           <span class="data-status" id="data-status">Checking data…</span>
           <a class="btn" href="/api/scenarios.csv" id="csv-btn" download>Export CSV</a>
-          <a class="btn" href="order-tool.html" id="new-btn">Manual scenario</a>
+          <a class="btn" href="order.html" id="new-btn">Manual scenario</a>
           <a class="btn btn-primary" href="plan.html">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
             Plan an order
@@ -87,11 +87,11 @@
           </table>
         </div>
         <div class="empty" id="empty" hidden>
-          <p style="margin:0 0 6px;font-weight:600;color:var(--ink)">No scenarios yet</p>
-          <p style="margin:0 0 16px">Load six worked examples to see the full flow — quota risk, DDP vs FOB, approvals and comparison — or start your own.</p>
+          <p style="margin:0 0 6px;font-weight:600;color:var(--ink)">No orders yet</p>
+          <p style="margin:0 0 16px">Draft orders for the products that need restocking, priced from your suppliers' quotes with quota risk, CBAM and market intel counted. Or plan one yourself.</p>
           <div class="actions" style="justify-content:center">
-            <button class="btn btn-primary" type="button" id="sample-btn">Load sample scenarios</button>
-            <a class="btn" href="order-tool.html">Create a scenario</a>
+            <button class="btn btn-primary" type="button" id="starter-btn">Draft orders for what needs ordering</button>
+            <a class="btn" href="plan.html">Plan an order</a>
           </div>
         </div>
       </section>

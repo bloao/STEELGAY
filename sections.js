@@ -145,7 +145,7 @@
     if (!priced.length) return el("td", { class: "num", text: "—" });
     const best = minBy(priced, (s) => s.expectedPerT);
     return el("td", { class: "num" },
-      el("a", { href: `order-tool.html?id=${best.id}`, style: "font-weight:600", text: fmt.perT(best.expectedPerT) }),
+      el("a", { href: `order.html?id=${best.id}`, style: "font-weight:600", text: fmt.perT(best.expectedPerT) }),
       el("div", { class: "row-sub", text: best.title }));
   }
 

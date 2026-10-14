@@ -7,7 +7,6 @@ import { spawn } from "node:child_process";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { calculate, validateInputs, findCategory, originMatches, ENGINE_VERSION, ORIGINS, INCOTERMS, CURRENCIES } from "./lib/calc.mjs";
 import { createStore } from "./lib/store.mjs";
-import { buildSampleRecords } from "./lib/demo.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
@@ -2862,6 +2861,62 @@ async function orderPlan(body = {}) {
     forecast, aheadOptions, stockpile, market, competition, quota, quotaLines, intel: intel.map((n) => ({ id: n.id, title: n.title, scope: n.scope, targetName: n.targetName || n.targetId, effectUnit: n.effectUnit, effectValue: n.effectValue, effectiveFrom: n.effectiveFrom, by: n.by })), recommendation: rec };
 }
 
+
+// One draft order from a product + supplier, priced through the full cost model.
+async function createPlannedOrder({ productId, supplierId, tonnage, cbam, timing, reasons, note, by = "system", starter = false, role = "chosen" }) {
+  const s = await supplierStore.get(supplierId);
+  if (!s) return { ok: false, error: "Pick a supplier." };
+  const b = await supplierBreakdown(s, { productId, tonnage: Number(tonnage) || undefined, cbam: cbam === true });
+  if (!b.ok) return { ok: false, error: b.error };
+  const inputs = { ...b.scenarioInputs, notes: `${note ? `${note}\n` : ""}From the order planner: ${s.name}, ${b.inputs.tonnage} t, landed £${Math.round(b.effectivePerT)}/t with every cost counted.` };
+  const result = await runScenario(inputs, cbam === true ? { cbamStartDate: "0000-01-01" } : { cbamEnabled: false });
+  if (!result.ok) return { ok: false, error: Object.values(result.errors || {})[0] || "Could not price this order." };
+  const saved = await store.create({ inputs: result.inputs, result, starter: Boolean(starter), plan: { role: role === "alternative" ? "alternative" : "chosen", supplierId: s.id, productId, effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, timing: timing || null, reasons: Array.isArray(reasons) ? reasons.slice(0, 8).map((x) => String(x).slice(0, 300)) : [] } }, by);
+  return { ok: true, id: saved.id };
+}
+
+// Draft orders for what needs ordering: the planner's pick and the runner-up
+// for each product, from your real suppliers' quotes.
+async function createStarterOrders(by = "system") {
+  const products = (await productStore.list()).filter((p) => p.status !== "archived");
+  const views = await Promise.all(products.map(async (p) => ({ p, m: (await productView(p)).metrics })));
+  let pick = views.filter((x) => ["critical", "reorder", "low"].includes(x.m.status));
+  if (!pick.length) pick = views.slice(0, 3);
+  const existing = (await store.list()).filter((x) => x.plan);
+  let created = 0;
+  const skipped = [];
+  for (const { p } of pick) {
+    // eslint-disable-next-line no-await-in-loop
+    const plan = await orderPlan({ productId: p.id });
+    if (!plan.ok || !plan.recommendation.ok) { skipped.push(p.name); continue; }
+    const rec = plan.recommendation;
+    const chosen = [rec.best, rec.scored.find((o) => o.id !== rec.best.id && !o.lateDays)].filter(Boolean);
+    // runner-up first, so the recommendation sits on top of the newest-first list
+    for (const [i, o] of [...chosen.entries()].reverse()) {
+      if (existing.some((x) => x.plan.productId === p.id && x.plan.supplierId === o.id)) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const r = await createPlannedOrder({ productId: p.id, supplierId: o.id, tonnage: rec.recTonnes, timing: rec.timing.action, by, starter: true, role: i === 0 ? "chosen" : "alternative",
+        reasons: i === 0 ? rec.reasons : [`Runner-up for ${p.name}: £${Math.round(o.effectivePerT)}/t landed.`, ...o.warnings],
+        note: i === 0 ? `Recommended for ${p.name} (${p.reason || "needs ordering"}).` : `Alternative for ${p.name}, to compare with the recommendation.` });
+      if (r.ok) created++;
+    }
+  }
+  return { ok: true, created, skipped };
+}
+
+// The old demo scenarios (HR coil, galvanised sheet …) have nothing to do with
+// this business: retire them once and put real draft orders in their place.
+async function retireDemoScenarios() {
+  const demos = (await store.list()).filter((x) => x.demo);
+  if (!demos.length) return;
+  for (const d of demos) {
+    // eslint-disable-next-line no-await-in-loop
+    await store.update(d.id, (x) => { x.status = "archived"; }, "system", "archived", "Demo scenario replaced by orders built from your products and suppliers");
+  }
+  const r = await createStarterOrders("system");
+  console.log(`Retired ${demos.length} demo scenarios; created ${r.created} draft orders from your products and suppliers.`);
+}
+
 async function handleOrdersApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   if (url.pathname === "/api/orders/plan" && request.method === "POST") return sendJson(response, 200, await orderPlan(await readJsonBody(request)));
@@ -2874,15 +2929,12 @@ async function handleOrdersApi(request, response, url) {
   if (url.pathname === "/api/orders/plan/save" && request.method === "POST") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
     const body = await readJsonBody(request);
-    const s = await supplierStore.get(body.supplierId);
-    if (!s) return sendJson(response, 422, { ok: false, error: "Pick a supplier." });
-    const b = await supplierBreakdown(s, { productId: body.productId, tonnage: Number(body.tonnage) || undefined, cbam: body.cbam === true });
-    if (!b.ok) return sendJson(response, 422, { ok: false, error: b.error });
-    const inputs = { ...b.scenarioInputs, notes: `${body.note ? `${body.note}\n` : ""}From the order planner: ${s.name}, ${b.inputs.tonnage} t, landed £${Math.round(b.effectivePerT)}/t with every cost counted.` };
-    const result = await runScenario(inputs, body.cbam === true ? { cbamStartDate: "0000-01-01" } : { cbamEnabled: false });
-    if (!result.ok) return sendJson(response, 422, result);
-    const saved = await store.create({ inputs: result.inputs, result, plan: { supplierId: s.id, productId: body.productId, effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, timing: body.timing || null, reasons: Array.isArray(body.reasons) ? body.reasons.slice(0, 8).map((x) => String(x).slice(0, 300)) : [] } }, user.name);
-    return sendJson(response, 201, { ok: true, id: saved.id });
+    const r = await createPlannedOrder({ ...body, by: user.name });
+    return r.ok ? sendJson(response, 201, r) : sendJson(response, 422, r);
+  }
+  if (url.pathname === "/api/orders/starter" && request.method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
+    return sendJson(response, 201, await createStarterOrders(user.name));
   }
   return sendError(response, 404, "Not found");
 }
@@ -3028,6 +3080,10 @@ function summarise(s) {
     status: s.status,
     demo: Boolean(s.demo),
     sample: Boolean(r.sources?.sample),
+    planned: Boolean(s.plan),
+    planRole: s.plan ? s.plan.role || "chosen" : null,
+    plannedPerT: s.plan && Number.isFinite(s.plan.effectivePerT) ? s.plan.effectivePerT : null,
+    starter: Boolean(s.starter),
     createdBy: s.createdBy,
     updatedAt: s.updatedAt,
     calculatedAt: r.sources?.calculatedAt || null,
@@ -3107,26 +3163,10 @@ async function handleScenarioApi(request, response, url) {
   }
 
   if (path === "/api/sample-data" && method === "POST") {
+    // Kept for old clients: now builds real draft orders instead of demo data.
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create scenarios.");
-    const existing = (await store.list()).filter((s) => s.demo);
-    const outdated = existing.filter((s) => String(s.result?.quota?.orderNumber || "").startsWith("SAMPLE-"));
-    if (existing.length && !outdated.length) return sendJson(response, 200, { created: 0, message: "Sample scenarios are already loaded." });
-    for (const old of existing) {
-      // eslint-disable-next-line no-await-in-loop
-      await store.update(old.id, (s) => { s.status = "archived"; }, user.name, "archived", "Replaced by updated sample scenarios");
-    }
-    const tradeMeasure = await loadTradeMeasure();
-    const records = buildSampleRecords(tradeMeasure.categories, new Date().toISOString().slice(0, 10));
-    for (const record of records) {
-      const { activity, ...data } = record;
-      // eslint-disable-next-line no-await-in-loop
-      const saved = await store.create(data, "sam");
-      for (const entry of activity) {
-        // eslint-disable-next-line no-await-in-loop
-        await store.update(saved.id, () => {}, entry.by, entry.action, entry.detail);
-      }
-    }
-    sendJson(response, 201, { created: records.length });
+    const r = await createStarterOrders(user.name);
+    sendJson(response, 201, { created: r.created, message: r.created ? "" : "Draft orders for these products already exist." });
     return;
   }
 
@@ -3348,6 +3388,7 @@ server.on("error", (error) => {
 scheduleFeeds();
 scheduleLive();
 startAis().catch((error) => console.error("Ship tracking failed to start:", error.message));
+setTimeout(() => retireDemoScenarios().catch((error) => console.error("Replacing demo scenarios failed:", error.message)), 5_000).unref?.();
 applySupplierSheet().catch((error) => console.error("Supplier sheet update failed:", error.message));
 
 server.listen(port, bindHost, () => {
