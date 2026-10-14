@@ -19,6 +19,7 @@ import { feedConfig, fetchFeed, FEED_SOURCES } from "./lib/benchmark-feed.mjs";
 import * as NEWS from "./lib/news.mjs";
 import * as FC from "./lib/forecast.mjs";
 import * as COMP from "./lib/competition.mjs";
+import * as ARR from "./lib/arrivals.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -31,6 +32,7 @@ const supplierStore = createStore(process.env.DATA_DIR || join(root, "var"), "su
 const benchmarkStore = createStore(process.env.DATA_DIR || join(root, "var"), "benchmarks.json");
 const newsStore = createStore(process.env.DATA_DIR || join(root, "var"), "news-notes.json");
 const competitorStore = createStore(process.env.DATA_DIR || join(root, "var"), "competitors.json");
+const shipmentStore = createStore(process.env.DATA_DIR || join(root, "var"), "shipments.json");
 const settingsStore = createSettingsStore(process.env.DATA_DIR || join(root, "var"));
 const productStore = createStore(process.env.DATA_DIR || join(root, "var"), "products.json", () => SEED_PRODUCTS.map((p) => validateProduct(p).product));
 const allowedOrigin = process.env.ALLOWED_ORIGIN || ""; // e.g. https://app.example.com; empty = same-origin only
@@ -2364,7 +2366,7 @@ let compData = null; // { companies: {id: {name, postcode, town, m: {YYYYMM: [co
 const compSync = { running: false, step: "", done: 0, total: 0, errors: [], lastRun: null, lastAdded: 0 };
 async function getCompData() {
   if (compData) return compData;
-  try { compData = JSON.parse(await readFile(compFile, "utf8")); } catch { compData = { companies: {}, importerMonths: {}, trade: {}, summary: null }; }
+  try { compData = JSON.parse(await readFile(compFile, "utf8")); } catch { compData = { companies: {}, importerMonths: {}, trade: {}, summary: null, tradeVersion: COMP.TRADE_VERSION }; }
   if (!compData.summary) {
     // starter data: the Python pipeline's summary of 2024–2026 importers
     try { compData.summary = COMP.parseActivityCsv(await readFile(join(root, "output", "company_activity.csv"), "utf8")); } catch { compData.summary = []; }
@@ -2394,6 +2396,8 @@ async function syncCompetition({ months = 24 } = {}) {
         Object.assign(links.importers, found.importers); Object.assign(links.imports, found.imports);
       } catch (error) { compSync.errors.push(`${page}: ${error.message}`); }
     }
+    // volumes saved before ports and routes were recorded are fetched again
+    if ((data.tradeVersion || 1) < COMP.TRADE_VERSION) { data.trade = {}; data.tradeVersion = COMP.TRADE_VERSION; }
     const want = (kind, have) => Object.keys(links[kind]).sort().slice(-months).filter((p) => !have[p]);
     const jobs = [...want("importers", data.importerMonths).map((p) => ["importers", p]), ...want("imports", data.trade).map((p) => ["imports", p])];
     compSync.total = jobs.length;
@@ -2572,6 +2576,144 @@ async function handleCompetitionApi(request, response, url) {
   return sendError(response, 404, "Not found");
 }
 
+
+// ------------------------------------------------------------ arrivals (live AIS + HMRC ports)
+const arrFile = join(process.env.DATA_DIR || join(root, "var"), "arrivals.json");
+const ais = { vessels: {}, connected: false, tracked: false, lastMessage: null, messages: 0, error: null, startedAt: null, loaded: false };
+let aisSockets = [], aisRetry = null, aisDirty = false, aisBackoff = 30_000;
+const aisKey = async () => process.env.AISSTREAM_API_KEY || (await settingsStore.get()).aisstreamApiKey || "";
+async function loadArrivals() {
+  if (ais.loaded) return;
+  ais.loaded = true;
+  try { ais.vessels = JSON.parse(await readFile(arrFile, "utf8")).vessels || {}; } catch { ais.vessels = {}; }
+  ARR.pruneVessels(ais.vessels);
+}
+async function saveArrivals() {
+  if (!aisDirty) return;
+  aisDirty = false;
+  ARR.pruneVessels(ais.vessels);
+  await mkdir(dirname(arrFile), { recursive: true });
+  await writeFile(arrFile, JSON.stringify({ vessels: ais.vessels }));
+  broadcast("arrivals", { vessels: Object.keys(ais.vessels).length });
+}
+function stopAis() {
+  clearTimeout(aisRetry);
+  for (const ws of aisSockets) { try { ws.onclose = null; ws.close(); } catch { /* already closed */ } }
+  aisSockets = []; ais.connected = false; ais.tracked = false;
+}
+function openAisSocket(sub, label) {
+  const ws = new WebSocket(ARR.AIS_URL);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => { ws.send(JSON.stringify(sub)); if (label === "area") { ais.connected = true; ais.error = null; aisBackoff = 30_000; } else ais.tracked = true; };
+  ws.onmessage = (ev) => {
+    try {
+      const text = typeof ev.data === "string" ? ev.data : new TextDecoder().decode(ev.data);
+      const msg = JSON.parse(text);
+      if (msg.error) { ais.error = String(msg.error); return; }
+      if (ARR.applyMessage(ais.vessels, msg)) { ais.messages++; ais.lastMessage = new Date().toISOString(); aisDirty = true; }
+    } catch { /* ignore a bad frame */ }
+  };
+  ws.onerror = () => { ais.error = ais.error || "Couldn't reach aisstream.io"; };
+  ws.onclose = (ev) => {
+    if (label === "area") ais.connected = false; else ais.tracked = false;
+    if (ev && ev.code === 1008) ais.error = "aisstream.io refused the key";
+    clearTimeout(aisRetry);
+    aisRetry = setTimeout(() => startAis().catch(() => {}), aisBackoff);
+    aisBackoff = Math.min(aisBackoff * 2, 10 * 60_000);
+  };
+  aisSockets.push(ws);
+}
+async function startAis() {
+  await loadArrivals();
+  stopAis();
+  const key = await aisKey();
+  if (!key) { ais.error = null; return; }
+  if (typeof WebSocket !== "function") { ais.error = "Live ship tracking needs Node.js 22 or newer (run node --version)."; return; }
+  ais.startedAt = new Date().toISOString();
+  openAisSocket(ARR.subscription(key), "area");
+  const mmsis = (await shipmentStore.list()).filter((x) => x.status === "active" && /^\d{9}$/.test(x.mmsi || "")).map((x) => x.mmsi);
+  if (mmsis.length) setTimeout(() => openAisSocket(ARR.trackedSubscription(key, mmsis), "tracked"), 1500);
+}
+setInterval(() => saveArrivals().catch(() => {}), 60_000).unref?.();
+
+function matchVessel(sh) {
+  const vs = Object.values(ais.vessels);
+  if (sh.mmsi && ais.vessels[sh.mmsi]) return ais.vessels[sh.mmsi];
+  if (sh.imo) { const v = vs.find((x) => x.imo === sh.imo); if (v) return v; }
+  if (sh.vessel) { const n = sh.vessel.toUpperCase().replace(/[^A-Z0-9]/g, ""); const v = vs.find((x) => (x.name || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === n); if (v) return v; }
+  return null;
+}
+const vesselView = (v) => v && ({ mmsi: v.mmsi, imo: v.imo || null, name: v.name || null, type: v.type ?? null, length: v.length || null, draught: v.draught || null, draughtUp: v.draughtUp || null,
+  destination: v.destination || null, destPort: v.destPort, destPortName: v.destPort ? ARR.portName(v.destPort) : null, eta: v.eta || null, lat: v.lat, lon: v.lon, sog: v.sog ?? null, at: v.at || null,
+  area: v.area || null, nearPort: v.nearPort ? ARR.portName(v.nearPort) : null, steelPort: v.steelPort || null, inUk: v.inUk || null,
+  nmToPort: v.destPort && Number.isFinite(v.lat) ? Math.round(ARR.distanceNm(v.lat, v.lon, ARR.UK_PORTS.find((p) => p.id === v.destPort).lat, ARR.UK_PORTS.find((p) => p.id === v.destPort).lon)) : null });
+
+async function arrivalsView() {
+  await loadArrivals();
+  const shipments = (await shipmentStore.list()).filter((x) => x.status !== "archived").map((sh) => ({ ...sh, live: vesselView(matchVessel(sh)) }));
+  const tracked = new Set(shipments.map((x) => x.live && x.live.mmsi).filter(Boolean));
+  const rank = { high: 0, medium: 1, watch: 2, low: 3, none: 9 };
+  const likely = Object.values(ais.vessels)
+    .map((v) => ({ v, l: ARR.steelLikelihood(v) }))
+    .filter((x) => x.l.level !== "none" && x.l.level !== "low" && (x.v.type === undefined || ARR.isCargo(x.v.type)))
+    .sort((a, b) => rank[a.l.level] - rank[b.l.level] || String(b.v.at).localeCompare(String(a.v.at)))
+    .slice(0, 80).map((x) => ({ ...vesselView(x.v), likelihood: x.l.level, why: x.l.why, yours: tracked.has(x.v.mmsi) }));
+  const counts = { total: Object.keys(ais.vessels).length, inUk: Object.values(ais.vessels).filter((v) => v.inUk && Date.now() - Date.parse(v.inUk.at) < 3 * 86_400_000).length,
+    atSteelPorts: Object.values(ais.vessels).filter((v) => v.steelPort && Date.now() - Date.parse(v.steelPort.at) < 3 * 86_400_000).length };
+  const data = await getCompData();
+  const codes = await yourCodes();
+  return {
+    ais: { hasKey: Boolean(await aisKey()), connected: ais.connected, tracked: ais.tracked, lastMessage: ais.lastMessage, messages: ais.messages, error: ais.error, nodeOk: typeof WebSocket === "function", counts },
+    shipments, likely,
+    ports: ARR.UK_PORTS.map(({ id, name }) => ({ id, name })), steelPorts: ARR.STEEL_PORTS.map(({ id, name }) => ({ id, name })),
+    hmrc: { ...ARR.portsAndRoutes(data.trade || {}, codes, { months: 12 }), tradeMonths: Object.keys(data.trade || {}).length, oldFormat: (data.tradeVersion || 1) < COMP.TRADE_VERSION && Object.keys(data.trade || {}).length > 0 },
+    suppliers: (await supplierStore.list()).filter((x) => x.status !== "archived").map((x) => ({ id: x.id, name: x.name })),
+    products: (await productStore.list()).filter((x) => x.status !== "archived").map((x) => ({ id: x.id, name: x.name })),
+  };
+}
+
+async function handleArrivalsApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  const method = request.method;
+  if (url.pathname === "/api/arrivals" && method === "GET") return sendJson(response, 200, { ...(await arrivalsView()), canEdit: can(user, "edit") });
+  if (!can(user, "edit")) return sendError(response, 403, "Your account cannot change shipments.");
+  const clean = (b) => {
+    const c = {
+      vessel: String(b.vessel || "").trim().slice(0, 80), mmsi: String(b.mmsi || "").replace(/\D/g, "").slice(0, 9), imo: String(b.imo || "").replace(/\D/g, "").slice(0, 7),
+      supplierId: String(b.supplierId || "").slice(0, 40), product: String(b.product || "").trim().slice(0, 120), tonnes: Number(b.tonnes) > 0 ? Math.round(Number(b.tonnes) * 10) / 10 : null,
+      loadPort: String(b.loadPort || "").trim().slice(0, 80), ukPort: ARR.UK_PORTS.some((p) => p.id === b.ukPort) ? b.ukPort : "",
+      expectedEta: /^\d{4}-\d{2}-\d{2}$/.test(b.expectedEta || "") ? b.expectedEta : "", notes: String(b.notes || "").trim().slice(0, 600),
+    };
+    const errors = {};
+    if (!c.vessel && !c.mmsi && !c.imo) errors.vessel = "Enter the ship's name, MMSI or IMO number.";
+    if (c.mmsi && c.mmsi.length !== 9) errors.mmsi = "MMSI numbers are 9 digits.";
+    if (c.imo && c.imo.length !== 7) errors.imo = "IMO numbers are 7 digits.";
+    return { c, errors };
+  };
+  if (url.pathname === "/api/arrivals/shipments" && method === "POST") {
+    const { c, errors } = clean(await readJsonBody(request));
+    if (Object.keys(errors).length) return sendJson(response, 422, { ok: false, errors });
+    const saved = await shipmentStore.create({ ...c, status: "active" }, user.name);
+    if (c.mmsi) startAis().catch(() => {});
+    return sendJson(response, 201, saved);
+  }
+  const m = url.pathname.match(/^\/api\/arrivals\/shipments\/([0-9a-f-]{36})(?:\/(archive|arrived))?$/);
+  if (m) {
+    const existing = await shipmentStore.get(m[1]);
+    if (!existing || existing.status === "archived") return sendError(response, 404, "Shipment not found");
+    if (!m[2] && method === "PUT") {
+      const { c, errors } = clean(await readJsonBody(request));
+      if (Object.keys(errors).length) return sendJson(response, 422, { ok: false, errors });
+      const saved = await shipmentStore.update(m[1], (x) => Object.assign(x, c), user.name, "edited");
+      if (c.mmsi !== existing.mmsi) startAis().catch(() => {});
+      return sendJson(response, 200, saved);
+    }
+    if (m[2] === "arrived" && method === "POST") return sendJson(response, 200, await shipmentStore.update(m[1], (x) => { x.status = "arrived"; x.arrivedAt = new Date().toISOString(); }, user.name, "arrived"));
+    if (m[2] === "archive" && method === "POST") { await shipmentStore.update(m[1], (x) => { x.status = "archived"; }, user.name, "removed"); return sendJson(response, 200, { ok: true }); }
+  }
+  return sendError(response, 404, "Not found");
+}
+
 async function handleBenchmarkApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   const method = request.method;
@@ -2653,6 +2795,7 @@ async function handleSettingsApi(request, response, url) {
     const before = await settingsStore.get();
     const saved = await settingsStore.save(settings, user.name);
     if (saved.metalsApiKey && saved.metalsApiKey !== before.metalsApiKey) runLive("LME", { force: true }).catch(() => {});
+    if (saved.aisstreamApiKey !== before.aisstreamApiKey) startAis().catch(() => {});
     return sendJson(response, 200, { settings: publicSettings(saved) });
   }
   if (url.pathname === "/api/backup" && request.method === "GET") {
@@ -2970,6 +3113,11 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname.startsWith("/api/arrivals")) {
+      await handleArrivalsApi(request, response, url);
+      return;
+    }
+
     if (url.pathname.startsWith("/api/competition")) {
       await handleCompetitionApi(request, response, url);
       return;
@@ -3021,6 +3169,7 @@ server.on("error", (error) => {
 
 scheduleFeeds();
 scheduleLive();
+startAis().catch((error) => console.error("Ship tracking failed to start:", error.message));
 applySupplierSheet().catch((error) => console.error("Supplier sheet update failed:", error.message));
 
 server.listen(port, bindHost, () => {

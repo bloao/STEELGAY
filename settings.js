@@ -5,7 +5,7 @@
   const form = $("settings-form");
   const field = (n) => form.elements.namedItem(n);
   const CAT = window.STEEL_CATALOGUE;
-  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "cbamRatePerT", "cbamEafTPerT", "cbamBofTPerT", "cbamUnknownTPerT", "metalsApiKey", "companiesHouseApiKey"];
+  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "cbamRatePerT", "cbamEafTPerT", "cbamBofTPerT", "cbamUnknownTPerT", "metalsApiKey", "companiesHouseApiKey", "aisstreamApiKey"];
 
   let saved = null;
   let groups = [];
@@ -107,6 +107,11 @@
       const node = $("conn-ch");
       node.className = `status-dot ${r.status.hasChKey ? "" : "is-warn"}`;
       node.textContent = r.status.hasChKey ? "Key saved" : "Needs a key";
+    }).catch(() => {});
+    api("/api/arrivals").then((r) => {
+      const a = r.ais, node = $("conn-ais");
+      node.className = `status-dot ${!a.hasKey ? "is-warn" : a.connected ? "" : "is-bad"}`;
+      node.textContent = !a.hasKey ? "Needs a key" : !a.nodeOk ? "Needs Node 22+" : a.connected ? "Live" : a.error ? "Not connected" : "Connecting…";
     }).catch(() => {});
     api("/api/assistant/status").then((r) => {
       const node = $("conn-claude");

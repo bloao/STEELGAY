@@ -1495,3 +1495,35 @@ button.bd2-rank-name { font-size: 14px; }
   .sug-list li .sug-stat:nth-of-type(2) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .vol-bar, .comp-row, .sug-list li { animation: none !important; } }
+
+/* ---- arrivals ---- */
+.ship-row { display: grid; grid-template-columns: minmax(0, 1fr) 200px auto; gap: 16px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--line); animation: row-in 0.35s ease both; animation-delay: var(--d, 0ms); }
+.ship-row:last-child { border-bottom: 0; }
+.ship-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ship-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ship-head strong { font-size: 15px; }
+.ship-cargo { margin: 0; font-size: 13px; color: var(--ink); }
+.ship-live { margin: 0; font-size: 12.5px; color: var(--ink-soft); }
+.ship-live .is-stale { color: var(--warn-ink); }
+.ship-eta { display: flex; flex-direction: column; gap: 1px; }
+.ship-eta > span:first-child { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.ship-eta strong { font-size: 14px; }
+.ship-eta .is-up { color: #a5541a; }
+.ship-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.sig-pill.is-go, .sig.is-go { background: var(--good-bg); color: var(--good-ink); }
+.sig-pill.is-maybe { background: var(--warn-bg); color: #8a5a00; }
+.sig.is-watch { background: rgba(98, 80, 214, 0.1); color: #4d3dba; }
+.likely-table td { vertical-align: top; }
+.route-summary { margin-bottom: 14px; }
+.route-summary .glance-l { display: block; margin-bottom: 6px; }
+.route-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--neutral-bg); min-width: 90px; }
+.route-bar span { display: block; height: 100%; transition: width 0.6s ease; }
+.route-summary .route-bar { height: 14px; margin-bottom: 6px; }
+.share-bar { display: inline-block; width: 80px; height: 8px; border-radius: 999px; background: var(--neutral-bg); overflow: hidden; vertical-align: middle; }
+.share-bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.port-spark { display: inline-flex; align-items: flex-end; gap: 2px; height: 24px; }
+.port-spark span { width: 6px; background: #6190ae; border-radius: 2px 2px 0 0; opacity: 0.85; }
+@media (max-width: 760px) {
+  .ship-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .ship-actions { flex-direction: row; align-items: center; }
+}

@@ -203,3 +203,11 @@ Public data only (`lib/competition.mjs`):
 - Before any download, matching and suggestions use the pipeline summary in `output/company_activity.csv` (2024–2026). Company ids match the Python pipeline.
 
 Data: `var/competition-data.json` (HMRC), `var/competitors.json` (who you follow). API: `GET /api/competition`, `GET /api/competition/search?q=`, `GET /api/competition/ch-search?q=`, `POST /api/competition/sync {months}`, `POST /api/competition/competitors`, `PUT …/:id`, `POST …/:id/archive`, `POST …/:id/accounts`.
+
+## Arrivals (`arrivals.html`)
+
+- **Live ships** (`lib/arrivals.mjs`): the server keeps a WebSocket open to aisstream.io (free key in Settings → Connections; needs Node 22+). It watches UK steel-port approaches (Humber & Wash, Tees, Thames, Bristol Channel, Mersey, Forth) and steel-export ports (Iskenderun, Marmara, Aliağa, Bilbao, Gijón/Avilés, Ravenna, Taranto, Gdańsk). Cargo ships (AIS type 70–79) are scored: **likely steel** if seen at a steel-export port with a UK steel-port destination, **possible** if a general cargo ship is bound for one. AIS never carries cargo details, so this is inference. State is kept in `var/arrivals.json` (30 days).
+- **Your shipments**: add ship name plus MMSI or IMO. MMSIs are followed worldwide over a second connection. Shows position, speed, distance to port, the ship's own ETA, and how it compares with the expected date. Stored in `var/shipments.json`.
+- **Where your steel comes in**: from the HMRC BDSimp files (Competition → Load HMRC history), tonnes for your codes by UK port code and route (sea, road/Ro-Ro, rail). Volumes saved before ports were recorded are fetched again on the next sync.
+
+API: `GET /api/arrivals`, `POST /api/arrivals/shipments`, `PUT …/:id`, `POST …/:id/arrived`, `POST …/:id/archive`.

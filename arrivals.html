@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Arrivals · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+        <span class="site-nav__collab" aria-hidden="true">×</span>
+        <img class="site-nav__partner" src="hall-pickles-logo.png" alt="in partnership with Hall &amp; Pickles" width="148" height="26">
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="arrivals"></aside>
+      <script src="app-sidebar.js"></script>
+      <main class="page intel-page">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Market intelligence</p>
+            <h1>Arrivals</h1>
+            <p class="muted lede">Ships heading for UK steel ports, your own shipments on the water, and where steel actually comes in, port by port and by sea, road or rail.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="button" id="add-btn">Track a shipment</button>
+          </div>
+        </div>
+
+        <div class="data-strip" id="ais-strip" aria-live="polite"></div>
+
+        <section class="card mk-card comp-add" id="add-card" hidden aria-labelledby="add-title">
+          <div class="card-head"><div><h2 id="add-title">Track a shipment</h2><p class="small muted" style="margin:2px 0 0">Ask your supplier for the ship's name and its MMSI or IMO number; it's on the booking or bill of lading. With the MMSI, the ship is followed anywhere in the world.</p></div></div>
+          <form id="ship-form" novalidate></form>
+        </section>
+
+        <section class="card mk-card" aria-labelledby="mine-title">
+          <div class="card-head"><div><h2 id="mine-title">Your shipments</h2><p class="small muted" style="margin:2px 0 0">Where each ship is now and when it says it will arrive.</p></div></div>
+          <div id="mine"></div>
+        </section>
+
+        <section class="card mk-card" aria-labelledby="likely-title">
+          <div class="card-head">
+            <div>
+              <h2 id="likely-title">Likely steel heading to the UK</h2>
+              <p class="small muted" style="margin:2px 0 0">Cargo ships seen at big steel-exporting ports with a UK steel port as their destination, plus general cargo ships bound for those ports. Ships don't broadcast their cargo, so this is an informed guess.</p>
+            </div>
+            <div class="topic-chips" id="likely-filter" role="group" aria-label="Filter"></div>
+          </div>
+          <div id="likely"></div>
+        </section>
+
+        <section class="card mk-card" aria-labelledby="ports-title">
+          <div class="card-head">
+            <div>
+              <h2 id="ports-title">Where your steel comes in</h2>
+              <p class="small muted" id="ports-sub" style="margin:2px 0 0">UK import tonnes for your product codes over the last 12 months, by port and route (HMRC, about six weeks behind).</p>
+            </div>
+          </div>
+          <div id="ports"></div>
+        </section>
+
+        <p class="small muted fc-disclaimer">Ship positions come from AIS broadcasts via aisstream.io. Coverage near the coast is good, mid-ocean it's patchy, and crews type the destination by hand. Port and route totals come from HMRC overseas trade statistics; HMRC port codes are shown as published. There is no public tracking of individual lorries.</p>
+      </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="arrivals.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

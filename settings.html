@@ -141,6 +141,13 @@
                   <input name="companiesHouseApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Companies House REST API key"><span class="hint">Stored on your server only.</span><span class="error"></span>
                 </label>
               </div>
+              <div class="conn conn-key">
+                <div><strong>Ship tracking (aisstream.io)</strong><span class="small">Live positions of cargo ships heading to UK steel ports, and your own shipments. Free key from <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a> (sign in with GitHub, then API Keys).</span></div>
+                <span class="status-dot is-muted" id="conn-ais">Checking…</span>
+                <label class="field" data-field="aisstreamApiKey" style="grid-column:1 / -1">API key
+                  <input name="aisstreamApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your aisstream.io API key"><span class="hint">Stored on your server only. Needs Node.js 22 or newer.</span><span class="error"></span>
+                </label>
+              </div>
               <div class="conn"><div><strong>Claude assistant</strong><span class="small" id="conn-claude-model">Answers questions in the Assistant tab</span></div><span class="status-dot is-muted" id="conn-claude">Checking…</span></div>
             </div>
           </section>
