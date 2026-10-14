@@ -175,3 +175,21 @@ After Node.js is installed, you can refresh supporting local data with:
 node scripts/fetch-steel-commodities.mjs
 node scripts/fetch-steel-quotas.mjs
 ```
+
+## Market news & regulation (`news.html`)
+
+- **Coming up**: the next regulatory dates (quota periods, UK CBAM start, registration and return deadlines).
+- **Regulation tracker** (`lib/news.mjs`, `REGULATION`): UK steel trade measure (from 1 July 2026), UK CBAM (from 1 January 2027), EU steel measure, UK–EU origin rules. Each entry has what it means for you, where the tool already models it, and a source link. Update the list as rules change.
+- **Latest from GOV.UK**: free Atom search feeds, checked every 6 hours and filtered to steel, trade and carbon items. API: `GET /api/news`, `POST /api/news/refresh`.
+- **Team insight**: notes on what mills, traders and customers are saying, each marked up, down or neutral, with a strength and time horizon. Stored in `var/news-notes.json`. API: `POST /api/news/notes`, `POST /api/news/notes/:id/archive`.
+
+## Steel forecast (`forecast.html`)
+
+An in-house, transparent model (`lib/forecast.mjs`, v0.1) built from the ONS UK steel producer price index (GHAV):
+- the drift is the average of the 12-month log-linear trend and 3-month momentum, damped 15% a month going forward;
+- an 80% band of ±1.28 × monthly volatility × √months;
+- drivers: UK CBAM from January 2027 (rate × emissions ÷ price × pass-through %) and every live team insight (up or down 1%, 3% or 5%, built in over its horizon);
+- a backtest from the last 12 months against what actually happened, alongside a "no change" guess.
+
+**Stock-up opportunities** price each product at today's best landed cost (with optional UK CBAM) and work out whether buying 1–6 months of usage now beats buying month by month, after cost of capital and storage. Assumptions: Settings → `forecastCbamPassThroughPct` (30%), `forecastStoragePerTMonth` (£2/t a month). API: `POST /api/forecast {months, cbam}`.
+

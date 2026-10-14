@@ -16,6 +16,8 @@ import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
 import * as BM from "./lib/benchmarks.mjs";
 import { feedConfig, fetchFeed, FEED_SOURCES } from "./lib/benchmark-feed.mjs";
+import * as NEWS from "./lib/news.mjs";
+import * as FC from "./lib/forecast.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -26,6 +28,7 @@ const STARTED_AT = new Date().toISOString();
 const store = createStore(process.env.DATA_DIR || join(root, "var"));
 const supplierStore = createStore(process.env.DATA_DIR || join(root, "var"), "suppliers.json", () => SUP.seedSuppliers());
 const benchmarkStore = createStore(process.env.DATA_DIR || join(root, "var"), "benchmarks.json");
+const newsStore = createStore(process.env.DATA_DIR || join(root, "var"), "news-notes.json");
 const settingsStore = createSettingsStore(process.env.DATA_DIR || join(root, "var"));
 const productStore = createStore(process.env.DATA_DIR || join(root, "var"), "products.json", () => SEED_PRODUCTS.map((p) => validateProduct(p).product));
 const allowedOrigin = process.env.ALLOWED_ORIGIN || ""; // e.g. https://app.example.com; empty = same-origin only
@@ -2093,7 +2096,7 @@ async function runLive(source, { force = false } = {}) {
 }
 
 function scheduleLive() {
-  const tick = () => { runLive("ONS").catch(() => {}); runLive("LME").catch(() => {}); };
+  const tick = () => { runLive("ONS").catch(() => {}); runLive("LME").catch(() => {}); refreshNews().catch(() => {}); };
   setTimeout(tick, 8_000).unref?.();
   setInterval(tick, 60 * 60 * 1000).unref?.(); // check hourly; each source runs when it's due
 }
@@ -2203,6 +2206,146 @@ async function marketView() {
     fx, groups, feeds,
     choices: { sources: Object.keys(BM.SOURCES), regions: BM.REGIONS, bases: BM.BASES, currencies: BM.CURRENCIES, groups: CATALOGUE_GROUPS },
   };
+}
+
+
+// ------------------------------------------------------------ market news & regulation
+const NEWS_INTERVAL_H = 6;
+let newsCache = null; // { items, fetchedAt, errors }
+const newsFile = join(process.env.DATA_DIR || join(root, "var"), "news-feed.json");
+async function getNews() {
+  if (newsCache) return newsCache;
+  try { newsCache = JSON.parse(await readFile(newsFile, "utf8")); } catch { newsCache = { items: [], fetchedAt: null, errors: [] }; }
+  return newsCache;
+}
+async function refreshNews({ force } = {}) {
+  const cur = await getNews();
+  if (!force && cur.fetchedAt && Date.now() - Date.parse(cur.fetchedAt) < NEWS_INTERVAL_H * 3_600_000) return cur;
+  const errors = [];
+  const lists = await Promise.all(NEWS.NEWS_FEEDS.map(async (f) => {
+    try {
+      const res = await fetch(f.url, { headers: { accept: "application/atom+xml, application/xml;q=0.9, */*;q=0.5" }, signal: AbortSignal.timeout(15_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return NEWS.parseAtom(await res.text(), f);
+    } catch (error) { errors.push(`${f.id}: ${error.message}`); return []; }
+  }));
+  const fresh = NEWS.mergeNews(lists);
+  const before = new Set(cur.items.map((x) => x.url));
+  const added = fresh.filter((x) => !before.has(x.url)).length;
+  newsCache = { items: NEWS.mergeNews([fresh, cur.items]), fetchedAt: new Date().toISOString(), errors, added };
+  await mkdir(dirname(newsFile), { recursive: true });
+  await writeFile(newsFile, JSON.stringify(newsCache, null, 2));
+  if (added) broadcast("news", { added });
+  return newsCache;
+}
+async function liveNotes() {
+  return (await newsStore.list()).filter((x) => x.status !== "archived").sort((a, b) => b.date.localeCompare(a.date) || String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+async function handleNewsApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  const method = request.method;
+  if (url.pathname === "/api/news" && method === "GET") {
+    const n = await getNews();
+    const today = new Date().toISOString().slice(0, 10);
+    const regulation = NEWS.REGULATION.map((r) => ({ ...r, daysUntil: NEWS.daysUntil(r.date, today), keyDates: r.keyDates.map((k) => ({ ...k, daysUntil: NEWS.daysUntil(k.date, today) })) }));
+    return sendJson(response, 200, { regulation, feed: n.items, fetchedAt: n.fetchedAt, errors: n.errors || [], notes: await liveNotes(),
+      choices: { topics: NEWS.NEWS_TOPICS, impacts: NEWS.IMPACTS, strengths: NEWS.STRENGTHS }, canEdit: can(user, "edit") });
+  }
+  if (url.pathname === "/api/news/refresh" && method === "POST") {
+    const n = await refreshNews({ force: true });
+    return sendJson(response, 200, { ok: !n.errors.length || n.items.length > 0, added: n.added || 0, errors: n.errors });
+  }
+  if (!can(user, "edit")) return sendError(response, 403, "Your account cannot add market insight.");
+  if (url.pathname === "/api/news/notes" && method === "POST") {
+    const { note, errors, valid } = NEWS.validateNote(await readJsonBody(request));
+    if (!valid) return sendJson(response, 422, { ok: false, errors });
+    const saved = await newsStore.create({ ...note, status: "active", by: user.name }, user.name);
+    broadcast("news", { note: saved.id });
+    return sendJson(response, 201, saved);
+  }
+  const m = url.pathname.match(/^\/api\/news\/notes\/([0-9a-f-]{36})(?:\/(archive))?$/);
+  if (m) {
+    const existing = await newsStore.get(m[1]);
+    if (!existing || existing.status === "archived") return sendError(response, 404, "Note not found");
+    if (m[2] === "archive" && method === "POST") { await newsStore.update(m[1], (x) => { x.status = "archived"; }, user.name, "archived"); broadcast("news", {}); return sendJson(response, 200, { ok: true }); }
+    if (!m[2] && method === "PUT") {
+      const { note, errors, valid } = NEWS.validateNote(await readJsonBody(request));
+      if (!valid) return sendJson(response, 422, { ok: false, errors });
+      return sendJson(response, 200, await newsStore.update(m[1], (x) => Object.assign(x, note), user.name, "edited"));
+    }
+  }
+  return sendError(response, 404, "Not found");
+}
+
+// ------------------------------------------------------------ steel forecast
+async function steelForecast(body = {}) {
+  const ws = await settingsStore.get();
+  const cfg = { ...FC.FORECAST_DEFAULTS, cbamPassThroughPct: ws.forecastCbamPassThroughPct, storagePerTMonth: ws.forecastStoragePerTMonth };
+  const series = await liveSeries();
+  const idx = series.find((x) => x.feedKey === "ons:GHAV");
+  const imp = series.find((x) => x.feedKey === "ons:GHCZ");
+  const monthlyIdx = idx ? FC.monthly(idx.points || []) : [];
+  if (monthlyIdx.length < cfg.trendMonths + 1) {
+    return { ok: false, error: idx ? "Not enough ONS history yet: the model needs at least 13 months." : "Waiting for the ONS steel price index, which the live feed pulls in automatically." };
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const products = (await productStore.list()).filter((p) => p.status !== "archived");
+  // reference £/t for the CBAM driver: average of your product costs
+  const refPrice = products.length ? products.reduce((t, p) => t + (p.costPerT || 0), 0) / products.length : 750;
+  const notes = await liveNotes();
+  const lastDate = monthlyIdx[monthlyIdx.length - 1].date;
+  const drivers = [
+    FC.cbamDriver({ ratePerT: ws.cbamRatePerT, emissionsPerT: ws.cbamUnknownTPerT, referencePrice: refPrice, passThroughPct: cfg.cbamPassThroughPct }),
+    ...FC.noteDrivers(notes, today, NEWS.STRENGTH_PCT),
+  ].filter(Boolean);
+  const horizon = Math.max(12, FC.monthsBetween(lastDate, today) + 12);
+  const proj = FC.project(monthlyIdx, { horizon, drivers, settings: cfg });
+  const base = FC.project(monthlyIdx, { horizon, drivers: [], settings: cfg });
+  const bt3 = FC.backtest(monthlyIdx, { h: 3, origins: 12, settings: cfg });
+  const bt6 = FC.backtest(monthlyIdx, { h: 6, origins: 12, settings: cfg });
+  // months from today: ONS data lags, so skip the months already behind us
+  const offset = Math.max(0, FC.monthsBetween(lastDate, today));
+  const fromToday = proj.path.slice(offset);
+  const indexNow = offset > 0 ? proj.path[offset - 1].mid : proj.last;
+  const at = (h) => fromToday[h - 1] || null;
+  const pct = (x) => (x ? ((x.mid / indexNow) - 1) * 100 : null);
+  // per product: today's best landed price → forecast and buy-ahead value
+  const months = [1, 2, 3, 6].includes(Number(body.months)) ? Number(body.months) : 3;
+  const rows = await Promise.all(products.map(async (p) => {
+    const cmp = (await compareSuppliers({ productId: p.id, arrival: "lead", cbam: body.cbam })).filter((r) => Number.isFinite(r.effectivePerT));
+    const best = cmp[0];
+    const priceNow = best ? best.effectivePerT : p.costPerT;
+    const m = stockMetrics({ ...p, stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || undefined });
+    const ba = FC.buyAhead({ priceNow, indexNow, path: fromToday, monthlyUsageT: p.monthlyUsageT, months, costOfCapitalPct: ws.costOfCapitalPct, storagePerTMonth: cfg.storagePerTMonth });
+    const f3 = at(3), f6 = at(6);
+    return { id: p.id, name: p.name, category: p.category, costPerT: p.costPerT, priceNow, priceSource: best ? `${best.name}, landed` : "your cost", supplierId: best ? best.id : null,
+      monthlyUsageT: p.monthlyUsageT, stockT: m.stockNowT, coverMonths: m.coverMonths, status: m.status, suggestedOrderT: m.suggestedOrderT,
+      in3: f3 ? { mid: priceNow * f3.mid / indexNow, low: priceNow * f3.low / indexNow, high: priceNow * f3.high / indexNow } : null,
+      in6: f6 ? { mid: priceNow * f6.mid / indexNow, low: priceNow * f6.low / indexNow, high: priceNow * f6.high / indexNow } : null,
+      buyAhead: ba };
+  }));
+  return {
+    ok: true, modelVersion: FC.MODEL_VERSION, today, settings: cfg, costOfCapitalPct: ws.costOfCapitalPct, months,
+    index: { name: idx.name, source: "ONS", key: "ons:GHAV", points: monthlyIdx, last: monthlyIdx[monthlyIdx.length - 1] },
+    imported: imp ? { name: imp.name, points: FC.monthly(imp.points || []).slice(-36) } : null,
+    model: { ...proj, path: proj.path, base: base.path, offset, indexNow },
+    outlook: { in1: pct(at(1)), in3: pct(at(3)), in6: pct(at(6)), in12: pct(at(12)), band3: at(3) ? [((at(3).low / indexNow) - 1) * 100, ((at(3).high / indexNow) - 1) * 100] : null },
+    drivers: drivers.map((d) => ({ ...d, nowPct: FC.driverPctAt([d], addMonthsIso(today, 3)) })),
+    backtest: { h3: bt3, h6: bt6 },
+    notesUsed: notes.filter((n) => n.impact !== "neutral").length,
+    products: rows,
+  };
+}
+const addMonthsIso = (iso, n) => FC.addMonths(iso, n);
+
+async function handleForecastApi(request, response, url) {
+  if (url.pathname === "/api/forecast" && (request.method === "POST" || request.method === "GET")) {
+    const body = request.method === "POST" ? await readJsonBody(request) : Object.fromEntries(url.searchParams);
+    if (body.cbam === "true") body.cbam = true;
+    return sendJson(response, 200, await steelForecast(body));
+  }
+  return sendError(response, 404, "Not found");
 }
 
 async function handleBenchmarkApi(request, response, url) {
@@ -2595,6 +2738,16 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname.startsWith("/api/suppliers")) {
       await handleSupplierApi(request, response, url);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/news")) {
+      await handleNewsApi(request, response, url);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/forecast")) {
+      await handleForecastApi(request, response, url);
       return;
     }
 
