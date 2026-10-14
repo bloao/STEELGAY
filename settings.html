@@ -95,29 +95,6 @@
             </div>
           </section>
 
-          <section class="settings-section" id="cbam">
-            <div>
-              <h2>UK CBAM</h2>
-              <p>Used when the UK CBAM toggle is on in Suppliers. The charge starts on 1 January 2027 for imported iron and steel, and the importer pays it to HMRC. HMRC hasn't published the steel rate or default emission values yet, so these are estimates. Update them when it does.</p>
-            </div>
-            <div class="settings-fields">
-              <div class="grid-2">
-                <label class="field" data-field="cbamRatePerT">CBAM rate
-                  <input name="cbamRatePerT" type="number" min="0" max="500" step="0.01" inputmode="decimal"><span class="hint">£ per tonne CO₂e. Starts at £62, the UK carbon allowance price in late September 2026, before any free-allocation cut. HMRC publishes the real rate each quarter from January 2027.</span><span class="error"></span>
-                </label>
-                <label class="field" data-field="cbamEafTPerT">Electric-arc steel
-                  <input name="cbamEafTPerT" type="number" min="0" max="5" step="0.01" inputmode="decimal"><span class="hint">t CO₂e per tonne. Scrap-based mills, typical for merchant bar.</span><span class="error"></span>
-                </label>
-                <label class="field" data-field="cbamBofTPerT">Blast-furnace steel
-                  <input name="cbamBofTPerT" type="number" min="0" max="5" step="0.01" inputmode="decimal"><span class="hint">t CO₂e per tonne. Iron-ore-based integrated mills.</span><span class="error"></span>
-                </label>
-                <label class="field" data-field="cbamUnknownTPerT">Route not known
-                  <input name="cbamUnknownTPerT" type="number" min="0" max="5" step="0.01" inputmode="decimal"><span class="hint">Used when a supplier's route isn't set. Kept at the higher figure, as HMRC's defaults are expected to be.</span><span class="error"></span>
-                </label>
-              </div>
-            </div>
-          </section>
-
           <section class="settings-section" id="connections">
             <div>
               <h2>Connections</h2>

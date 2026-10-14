@@ -27,12 +27,11 @@ test("CBAM toggle: off leaves it out, on prices emissions × (rate − relief)",
   assert.equal(cbamLine(uk).perTonne, 0);
 });
 
-test("CBAM settings and supplier fields validate", () => {
+test("CBAM values are fixed by regulation; supplier fields validate", () => {
   assert.equal(SETTINGS_DEFAULTS.cbamRatePerT, 62);
-  const ok = validateSettings({ cbamRatePerT: "70.5", cbamEafTPerT: "0.4" });
-  assert.equal(ok.valid, true);
-  assert.equal(ok.settings.cbamRatePerT, 70.5);
-  assert.equal(validateSettings({ cbamBofTPerT: 9 }).valid, false);
+  const tried = validateSettings({ cbamRatePerT: "70.5", cbamEafTPerT: "0.4" });
+  assert.equal(tried.settings.cbamRatePerT, 62); // settings can't change UK regulation values
+  assert.equal(tried.settings.cbamEafTPerT, 0.5);
   const s = validateSupplier({ name: "Mill", productionRoute: "eaf", emissionsPerT: "0.45", carbonPricePaidPerT: "" });
   assert.equal(s.valid, true);
   assert.deepEqual([s.supplier.productionRoute, s.supplier.emissionsPerT, s.supplier.carbonPricePaidPerT], ["eaf", 0.45, null]);

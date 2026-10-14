@@ -96,7 +96,6 @@
       el("span", { text: `Hold off at −${v.waitTriggerPct}%` }),
       el("span", { text: `Capital ${v.costOfCapitalPct}%` }),
       el("span", { text: `Storage £${v.forecastStoragePerTMonth}/t a month` }),
-      el("span", { text: `CBAM £${v.cbamRatePerT}/t CO₂e` }),
       el("a", { href: "assumptions.html", class: "asm-strip-edit", text: "Edit" }));
     box.hidden = false;
   }

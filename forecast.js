@@ -134,20 +134,11 @@
     ];
     if (!data.drivers.some((d) => d.kind === "insight")) list.push(el("li", { class: "drv-empty" }, "No team insight in the forecast yet. ", el("button", { type: "button", class: "link-btn", text: "Log market intel →", onclick: () => window.MarketIntel && window.MarketIntel.open({ scope: "market" }) })));
     $("drivers").replaceChildren(...list);
-    const f = $("assume");
     const s = data.settings;
-    f.replaceChildren(
-      el("p", { class: "fc-assume-t", text: "Assumptions" }),
-      el("label", {}, el("span", { text: "CBAM passed into UK prices" }), el("span", { class: "fc-in" }, el("input", { name: "forecastCbamPassThroughPct", type: "number", min: "0", max: "100", step: "5", value: String(s.cbamPassThroughPct), disabled: me.canEdit ? null : "" }), "%")),
-      el("label", {}, el("span", { text: "Storage cost" }), el("span", { class: "fc-in" }, "£", el("input", { name: "forecastStoragePerTMonth", type: "number", min: "0", max: "50", step: "0.5", value: String(s.storagePerTMonth), disabled: me.canEdit ? null : "" }), "/t a month")),
-      me.canEdit ? el("button", { class: "btn btn-sm", type: "submit", text: "Update forecast" }) : null,
-      el("p", { class: "small muted", style: "grid-column:1/-1;margin:0" }, "The CBAM rate and emissions come from ", el("a", { href: "settings.html#cbam", text: "Settings → UK CBAM" }), "."));
-    f.onsubmit = async (e) => {
-      e.preventDefault();
-      try { await api("/api/settings", { method: "PUT", body: Object.fromEntries(new FormData(f).entries()) }); toast("Assumptions saved"); load(); }
-      catch (error) { toast(error.message, true); }
-    };
-    if (f.getAttribute("data-dummy")) f.removeAttribute("data-dummy");
+    $("assume").replaceChildren(
+      el("span", { text: `CBAM passed into UK prices ${s.cbamPassThroughPct}%` }),
+      el("span", { text: `Storage £${s.storagePerTMonth}/t a month` }),
+      el("a", { href: "assumptions.html", text: "Assumptions →" }));
   }
 
   function renderBacktest() {

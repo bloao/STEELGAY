@@ -10,7 +10,7 @@ import { createStore } from "./lib/store.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
-import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS } from "./lib/settings.mjs";
+import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS, UK_CBAM } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
 import * as BM from "./lib/benchmarks.mjs";
@@ -2795,7 +2795,15 @@ async function planAssumptions(raw = {}) {
   const values = Object.fromEntries(PLAN_ASSUMPTION_KEYS.map((k) => [k, errors[k] ? defaults[k] : settings[k]]));
   const changed = PLAN_ASSUMPTION_KEYS.filter((k) => values[k] !== defaults[k]);
   return { values, defaults, changed, errors, limits: ASSUMPTION_LIMITS, savedAt: ws.updatedAt || null,
+    cbam: { status: UK_CBAM.status, rows: [
+      { label: "Carbon price", value: `£${UK_CBAM.cbamRatePerT}/t CO₂` },
+      { label: "Electric-arc steel", value: `${UK_CBAM.cbamEafTPerT} t CO₂/t` },
+      { label: "Blast-furnace steel", value: `${UK_CBAM.cbamBofTPerT.toFixed(1)} t CO₂/t` },
+      { label: "Route not known", value: `${UK_CBAM.cbamUnknownTPerT.toFixed(1)} t CO₂/t` },
+      { label: "Starts", value: "1 Jan 2027" },
+    ] },
     fixed: [
+      { label: "CBAM passed into UK prices", value: `${UK_CBAM.forecastCbamPassThroughPct}%`, note: "Forecast model" },
       { label: "Duty if the quota runs out", value: "50% of customs value", note: "UK steel safeguard rate outside quota (Trade Remedies notice)" },
       { label: "Chance the quota runs out", value: "Projected from live HMRC usage", note: "Burn rate so far this quarter, to your arrival date" },
       { label: "Forecast damping", value: `${Math.round(FC.FORECAST_DEFAULTS.damping * 100)}% a month`, note: "Each month ahead keeps this share of the previous month's drift" },

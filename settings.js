@@ -5,7 +5,7 @@
   const form = $("settings-form");
   const field = (n) => form.elements.namedItem(n);
   const CAT = window.STEEL_CATALOGUE;
-  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "cbamRatePerT", "cbamEafTPerT", "cbamBofTPerT", "cbamUnknownTPerT", "metalsApiKey", "companiesHouseApiKey", "aisstreamApiKey"];
+  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "metalsApiKey", "companiesHouseApiKey", "aisstreamApiKey"];
 
   let saved = null;
   let groups = [];
