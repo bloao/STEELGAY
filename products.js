@@ -63,6 +63,17 @@
       el("div", { class: "row-sub", text: m.stockOutDate ? `runs out ${fmt.date(m.stockOutDate)}` : "" }));
   }
 
+  function bestCell(p) {
+    const b = marketBest && marketBest[p.id];
+    if (!marketBest) return el("td", { class: "num" }, el("span", { class: "muted", text: "…" }));
+    if (!b || !Number.isFinite(b.bestPerT)) return el("td", { class: "num" }, el("span", { class: "muted", text: "—" }), el("div", { class: "row-sub", text: "no supplier prices" }));
+    const diff = b.bestPerT - p.costPerT;
+    const cls = Math.abs(diff) < 2 ? "" : diff < 0 ? "is-below" : "is-above";
+    return el("td", { class: "num best-cell", title: `${b.supplier}, all costs in, across ${b.suppliers} supplier${b.suppliers === 1 ? "" : "s"}` },
+      el("strong", { class: cls, text: `£${Math.round(b.bestPerT).toLocaleString("en-GB")}/t` }),
+      el("div", { class: "row-sub" }, Math.abs(diff) < 2 ? `${b.supplier} · in line` : `${b.supplier} · £${Math.round(Math.abs(diff))} ${diff < 0 ? "under" : "over"} your cost`));
+  }
+
   function renderTable() {
     const q = $("q").value.trim().toLowerCase();
     const cat = $("f-category").value;
@@ -80,7 +91,7 @@
       if (p.category !== lastCat) {
         lastCat = p.category;
         const inCat = products.filter((x) => x.category === p.category);
-        rows.push(el("tr", { class: "cat-row" }, el("td", { colspan: "6" }, p.category,
+        rows.push(el("tr", { class: "cat-row" }, el("td", { colspan: "7" }, p.category,
           el("span", { class: "small muted", style: "font-family:var(--font-sans);font-weight:500;margin-left:10px",
             text: `${inCat.length} · ${t(inCat.reduce((s, x) => s + x.metrics.stockNowT, 0))} · ${fmt.money(inCat.reduce((s, x) => s + x.metrics.stockValue, 0))}` }))));
       }
@@ -101,13 +112,14 @@
         el("td", { class: "num" }, el("strong", { text: t(m.stockNowT) }), el("div", { class: "row-sub", text: `${t(p.monthlyUsageT)}/mo` })),
         coverCell(p),
         el("td", { class: "num" }, el("span", { text: fmt.money(m.stockValue) }), el("div", { class: "row-sub", text: `${fmt.money(p.costPerT)}/t` })),
+        bestCell(p),
         el("td", {}, statusDot(m.status), m.suggestedOrderT > 0 ? el("div", { class: "row-sub", text: `order ${m.suggestedOrderT} t` }) : null),
         el("td", { class: "chev", "aria-hidden": "true" }));
       row.lastChild.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>';
       rows.push(row);
     }
     if (!list.length) {
-      rows.push(el("tr", {}, el("td", { colspan: "6", class: "empty" },
+      rows.push(el("tr", {}, el("td", { colspan: "7", class: "empty" },
         products.length ? "No products match these filters." : el("span", {}, "No products yet. ", me.canEdit ? el("button", { class: "btn btn-primary", type: "button", style: "margin-left:8px", text: "Add your first product", onclick: () => openForm(null) }) : null))));
     }
     $("rows").replaceChildren(...rows);
@@ -366,6 +378,221 @@
     return panel;
   }
 
+  // ---------------------------------------------------------------- market prices (per product)
+  const marketData = new Map(); // `${id}:${cbam}` → payload
+  let marketBest = null; // id → best landed price now (products list)
+  const readCbam = () => { try { return localStorage.getItem("agx-cbam") === "on"; } catch { return false; } };
+  const gbpT = (v) => (Number.isFinite(v) ? `£${Math.round(v).toLocaleString("en-GB")}/t` : "—");
+  const gbpN = (v) => (Number.isFinite(v) ? `£${Math.round(v).toLocaleString("en-GB")}` : "—");
+  const gap = (diff, what) => (Math.abs(diff) < 2 ? ["in line with " + what, "is-flat"] : diff < 0 ? [`£${Math.round(-diff)}/t below ${what}`, "is-below"] : [`£${Math.round(diff)}/t above ${what}`, "is-above"]);
+  const PM_SOURCES = ["MEPS", "Kallanish", "Fastmarkets", "Argus", "Market intel", "Other"];
+
+  async function loadMarket(p, { force } = {}) {
+    const key = `${p.id}:${readCbam()}`;
+    if (!force && marketData.has(key)) return marketData.get(key);
+    marketData.set(key, { loading: true });
+    try {
+      const d = await api(`/api/products/${p.id}/market`, { method: "POST", body: { cbam: readCbam() } });
+      marketData.set(key, d);
+    } catch (error) { marketData.set(key, { error: error.message }); }
+    if (mode === "detail" && detailId === p.id && profileTab === "market") renderProfileBody(p);
+    return marketData.get(key);
+  }
+  async function loadMarketBest() {
+    try { marketBest = (await api("/api/products/market", { method: "POST", body: { cbam: readCbam() } })).products; }
+    catch { marketBest = {}; }
+    renderTable();
+  }
+
+  function marketPanel(p) {
+    const panel = el("div", { class: "profile-panel pm" });
+    const d = marketData.get(`${p.id}:${readCbam()}`);
+    if (!d) { loadMarket(p); }
+    if (!d || d.loading) { panel.append(el("div", { class: "pulse-empty" }, el("span", { class: "spinner sm", "aria-hidden": "true" }), el("span", { text: `Pricing ${p.name} from every supplier…` }))); return panel; }
+    if (d.error) { panel.append(el("p", { class: "muted", text: `Couldn't load market prices: ${d.error}` })); return panel; }
+    const cbam = readCbam();
+    const rows = d.rows.filter((r) => Number.isFinite(r.effectivePerT));
+    const failed = d.rows.filter((r) => !Number.isFinite(r.effectivePerT));
+    const your = p.costPerT;
+    const target = p.targetBuyPrice || null;
+    const orderT = p.metrics.suggestedOrderT || (rows[0] && rows[0].tonnage) || 25;
+    const prodBench = d.benchmarks.product.filter((x) => x.latest && Number.isFinite(x.latest.gbp));
+    const groupBench = d.benchmarks.group.filter((x) => x.latest && Number.isFinite(x.latest.gbp));
+    const market = prodBench[0] || groupBench[0] || null;
+    const best = rows[0];
+
+    // ---- 1. at a glance
+    const lastCost = [...d.costHistory].reverse().find((c) => c.cost !== null && c.cost !== undefined);
+    const card = (cls, label, big, bigCls, text, extra) => el("article", { class: `glance ${cls}` },
+      el("span", { class: "glance-l", text: label }), el("strong", { class: `glance-big ${bigCls || ""}`, text: big }),
+      el("p", { class: "glance-t" }, ...[].concat(text)), extra || null);
+    const youCard = card("is-trend", "You pay now", gbpT(your), "",
+      target ? [`Your target is `, el("b", { text: gbpT(target) }), `, ${your > target ? `£${Math.round(your - target)}/t above it` : "and you're at or under it"}.`] : "Your current cost per tonne for this product.",
+      el("p", { class: "glance-src", text: lastCost ? `Changed ${fmt.date(lastCost.date)}${lastCost.from ? ` from ${gbpT(lastCost.from)}` : ""}` : "Set on the Overview tab" }));
+    let bestCard;
+    if (best) {
+      const [g, gc] = gap(best.effectivePerT - your, "what you pay");
+      const saving = (your - best.effectivePerT) * orderT;
+      bestCard = card("is-best", "Best landed price now", gbpT(best.effectivePerT), gc === "is-below" ? "is-down" : gc === "is-above" ? "is-up" : "",
+        [el("b", { text: best.name }), `: ${g}.`, saving > 1 ? ` About ${gbpN(saving)} saved on a ${orderT} t order.` : ""],
+        el("p", { class: "glance-src", text: `${best.quoteScope === "product" ? "Quote for this product" : "Their general price, not one for this product"} · all costs in${cbam ? " incl. UK CBAM" : ""}` }));
+    } else bestCard = card("is-best", "Best landed price now", "—", "is-muted", "No supplier has a price for this product's group yet.");
+    let mkCard;
+    if (market) {
+      const [g, gc] = gap(your - market.latest.gbp, "the market");
+      mkCard = card("is-bench", prodBench[0] ? "Market price · this product" : `Market price · ${p.category}`, gbpT(market.latest.gbp), "",
+        [`You pay ${g}.`, prodBench[0] ? "" : " There's no price for this exact product, so this is the group benchmark."],
+        el("p", { class: "glance-src", text: `${market.source} · ${fmt.date(market.latest.date)}${market.basis ? ` · ${market.basis}` : ""}` }));
+    } else {
+      mkCard = card("is-bench is-setup", "Market price · this product", "Not set", "is-muted", "Add a MEPS, Kallanish or market-intel price for this exact product to see if you're paying over the odds.");
+    }
+    if (me.canEdit) mkCard.append(addPriceForm(p, d));
+
+    // ---- 2. ladder: every supplier priced for this product
+    const refs = [
+      { key: "you", label: "What you pay", v: your, c: "#0c0e12" },
+      target ? { key: "target", label: "Your target", v: target, c: "#2f7d55", dashed: true } : null,
+      market ? { key: "market", label: `${market.source}${prodBench[0] ? "" : " (group)"}`, v: market.latest.gbp, c: "#6250d6" } : null,
+    ].filter(Boolean);
+    let ladder;
+    if (!rows.length) {
+      ladder = el("div", { class: "empty-state" }, el("h3", { text: "No supplier prices for this product yet" }), el("p", {}, `Mark suppliers as supplying ${p.category} and log their quotes on the `, el("a", { href: "suppliers.html", text: "Suppliers page" }), "."));
+    } else {
+      const vals = [...rows.flatMap((r) => [r.effectivePerT, r.quotedPerT]), ...refs.map((r) => r.v)].filter(Number.isFinite);
+      let lo = Math.min(...vals), hi = Math.max(...vals);
+      const pad = Math.max((hi - lo) * 0.1, 10);
+      lo = Math.floor((lo - pad) / 10) * 10; hi = Math.ceil((hi + pad) / 10) * 10;
+      const P = (v) => ((v - lo) / (hi - lo)) * 100;
+      const ticks = Array.from({ length: 5 }, (_, i) => lo + ((hi - lo) * i) / 4);
+      const legend = el("div", { class: "lad-legend" },
+        ...refs.map((r) => el("span", { class: "lad-key" }, el("span", { class: `lad-key-line${r.dashed ? " is-dashed" : ""}`, style: `--c:${r.c}` }), `${r.label} `, el("b", { text: gbpT(r.v) }))),
+        el("span", { class: "lad-key" }, el("span", { class: "lad-key-dot" }), "Landed cost"),
+        el("span", { class: "lad-key" }, el("span", { class: "lad-key-tick" }), "Quoted price"));
+      const axis = el("div", { class: "lad-row lad-axis", "aria-hidden": "true" }, el("span"), el("span"),
+        el("div", { class: "lad-track is-axis" }, ...ticks.map((tk) => el("span", { class: "lad-tick", style: `left:${P(tk)}%`, text: `£${Math.round(tk)}` }))), el("span"));
+      const lrows = rows.map((r, i) => {
+        const [g, gc] = gap(r.effectivePerT - your, "what you pay");
+        const extra = r.effectivePerT - r.quotedPerT;
+        const track = el("div", { class: "lad-track" },
+          ...refs.map((ref) => el("span", { class: `lad-ref${ref.key === "you" ? " is-mine" : ""}${ref.dashed ? " is-dashed" : ""}`, style: `left:${P(ref.v)}%;--c:${ref.c}`, title: `${ref.label} ${gbpT(ref.v)}` })),
+          Math.abs(r.effectivePerT - your) >= 2 ? el("span", { class: `lad-gap ${gc}`, style: `left:${Math.min(P(r.effectivePerT), P(your))}%;width:0%`, "data-w": String(Math.abs(P(r.effectivePerT) - P(your))) }) : null,
+          Number.isFinite(r.quotedPerT) ? el("span", { class: "lad-qtick", style: `left:${P(r.quotedPerT)}%`, title: `Quoted ${gbpT(r.quotedPerT)}` }) : null,
+          el("span", { class: `lad-dot ${gc}`, style: `left:${P(r.effectivePerT)}%`, title: `${r.name} landed ${gbpT(r.effectivePerT)}` }));
+        const scope = r.quoteScope === "product" ? el("span", { class: "tag", text: "quote for this product" })
+          : el("span", { class: "tag tag-muted", text: "general price" });
+        return el("div", { class: "lad-row", style: `--d:${i * 60}ms` },
+          el("div", { class: "lad-who" }, el("a", { href: `suppliers.html?supplier=${r.id}`, class: "sup-link", text: r.name }),
+            el("span", { class: "row-sub" }, r.origin || "", scope)),
+          el("strong", { class: "lad-q", text: gbpT(r.effectivePerT) }),
+          track,
+          el("div", { class: "lad-verdict" },
+            el("strong", { class: gc, text: g.charAt(0).toUpperCase() + g.slice(1) }),
+            el("span", { class: "row-sub" },
+              `Quoted ${gbpT(r.quotedPerT)}${Math.abs(extra) >= 1 ? (extra > 0 ? ` · +£${Math.round(extra)} duty, risk & terms` : ` · £${Math.round(-extra)} less once payment terms are counted`) : ""}`,
+              r.cbamPerT > 0.005 ? el("span", { class: "cbam-tag", text: ` · £${Math.round(r.cbamPerT)} CBAM` }) : null,
+              r.missPerT > 0.5 ? el("span", { class: "miss-tag", text: ` · +£${Math.round(r.missPerT)} if quota missed` }) : null),
+            r.quoteScope !== "product" && me.canEdit ? el("a", { class: "link-btn small", href: `suppliers.html?quote=${r.id}&product=${p.id}`, text: "Log a quote for this product" }) : null));
+      });
+      ladder = el("div", {}, legend, el("div", { class: "ladder" }, axis, ...lrows),
+        failed.length ? el("p", { class: "lad-note", text: `Not priced: ${failed.map((r) => `${r.name} (${(r.error || "").replace(/\.$/, "").toLowerCase()})`).join("; ")}.` }) : null,
+        el("p", { class: "lad-note", text: `Landed cost runs each supplier's price through the full cost model for ${orderT} t: freight, duty, expected quota duty, payment terms, minimum order and reliability${cbam ? ", plus UK CBAM" : ""}. The tick shows the price they quoted.` }));
+      requestAnimationFrame(() => requestAnimationFrame(() => panel.querySelectorAll(".lad-gap").forEach((x) => { x.style.width = `${x.dataset.w}%`; })));
+    }
+    const cbamBtn = el("button", { type: "button", class: `cbam-pill${cbam ? " is-on" : ""}`, role: "switch", "aria-checked": String(cbam), title: "Include the UK carbon border charge (starts 1 January 2027)",
+      onclick: () => { try { localStorage.setItem("agx-cbam", cbam ? "off" : "on"); } catch { /* storage blocked */ } renderProfileBody(p); loadMarketBest(); } },
+      el("span", { class: "cbam-track", "aria-hidden": "true" }, el("span", { class: "cbam-thumb" })), "UK CBAM");
+
+    // ---- 3. price history for this product
+    const history = priceHistory(p, d, refs);
+
+    panel.append(
+      el("div", { class: "glance-grid pm-glance" }, youCard, bestCard, mkCard),
+      el("section", { class: "pm-sec" }, el("div", { class: "pm-head" }, el("div", {}, el("h3", { text: `Every supplier, priced for ${p.name}` }), el("p", { class: "small muted", text: "Dots are the real landed cost, coloured against what you pay now." })), cbamBtn), ladder),
+      el("section", { class: "pm-sec" }, el("div", { class: "pm-head" }, el("div", {}, el("h3", { text: "Price history" }), el("p", { class: "small muted", text: "Quotes for this product, market prices and what you've paid." }))), history));
+    return panel;
+  }
+
+  function priceHistory(p, d, refs) {
+    const series = d.benchmarks.product.filter((x) => x.points.length);
+    const quotesP = d.quotes.filter((q) => Number.isFinite(q.gbp));
+    const costPts = d.costHistory.filter((c) => Number.isFinite(c.cost)).map((c) => ({ date: c.date, v: c.cost }));
+    const today = new Date().toISOString().slice(0, 10);
+    const all = [...series.flatMap((s) => s.points.map((x) => ({ date: x.date, v: x.gbp }))), ...quotesP.map((q) => ({ date: q.date, v: q.gbp })), ...costPts].filter((x) => Number.isFinite(x.v));
+    const dates = new Set(all.map((x) => x.date));
+    const list = quotesP.length ? el("ul", { class: "pm-quotes" }, ...quotesP.slice(0, 8).map((q) => el("li", {},
+      el("span", { class: "pm-q-date", text: fmt.date(q.date) }), el("span", { class: "pm-q-who", text: q.supplier }),
+      el("span", { class: "pm-q-cov", text: ({ everything: "all-in", "except-duty": "+ duty", "ex-works": "ex works", port: "to port" })[q.covers] || "" }),
+      el("strong", { text: gbpT(q.gbp) })))) : null;
+    if (dates.size < 2) {
+      return el("div", {}, el("div", { class: "chart-wait" },
+        el("div", {}, el("strong", { text: all.length ? "History builds up from here" : "No product-specific prices yet" }),
+          el("p", { text: quotesP.length || series.length
+            ? "Each quote logged for this product and each market price you add for it becomes a point here. The trend appears once there are two dates."
+            : "When a supplier quotes for this exact product, log it against the product (Suppliers → Log quote → Product). Add market prices for it from the card above." }))), list);
+    }
+    const t = (s) => Date.parse(`${s}T00:00:00Z`);
+    let x0 = Math.min(...all.map((a) => t(a.date))), x1 = Math.max(t(today), ...all.map((a) => t(a.date)));
+    const ys = [...all.map((a) => a.v), p.costPerT].filter(Number.isFinite);
+    let y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const pad = Math.max((y1 - y0) * 0.15, 15); y0 = Math.floor((y0 - pad) / 10) * 10; y1 = Math.ceil((y1 + pad) / 10) * 10;
+    const W = 720, H = 220, L = 50, R = 16, T = 10, B = 26;
+    const X = (s) => L + ((t(s) - x0) / (x1 - x0 || 1)) * (W - L - R);
+    const Y = (v) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
+    const colors = ["#6250d6", "#2a78d6", "#eb6834", "#1baf7a"];
+    let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Price history for ${p.name}">`;
+    for (let i = 0; i <= 4; i++) { const g = y0 + ((y1 - y0) * i) / 4; svg += `<line x1="${L}" x2="${W - R}" y1="${Y(g).toFixed(1)}" y2="${Y(g).toFixed(1)}" class="mk-grid"/><text x="${L - 6}" y="${(Y(g) + 4).toFixed(1)}" class="mk-axis" text-anchor="end">£${Math.round(g)}</text>`; }
+    const fmtM = (s) => new Date(`${s}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" });
+    svg += `<text x="${L}" y="${H - 6}" class="mk-axis">${fmtM(new Date(x0).toISOString().slice(0, 10))}</text><text x="${W - R}" y="${H - 6}" class="mk-axis" text-anchor="end">${fmtM(today)}</text>`;
+    // what you pay: steps through each change, then flat to today
+    if (Number.isFinite(p.costPerT)) {
+      const steps = costPts.length ? costPts : [{ date: new Date(x0).toISOString().slice(0, 10), v: p.costPerT }];
+      let path = `M${X(steps[0].date).toFixed(1)},${Y(steps[0].v).toFixed(1)}`;
+      for (let i = 1; i < steps.length; i++) path += ` H${X(steps[i].date).toFixed(1)} V${Y(steps[i].v).toFixed(1)}`;
+      path += ` H${X(today).toFixed(1)}`;
+      svg += `<path d="${path}" fill="none" stroke="#0c0e12" stroke-width="2" stroke-dasharray="5 4"/>`;
+    }
+    series.forEach((s, i) => {
+      const pts = s.points.filter((x) => Number.isFinite(x.gbp)).sort((a, b) => a.date.localeCompare(b.date));
+      const c = colors[i % colors.length];
+      svg += `<path d="${pts.map((x, j) => `${j ? "L" : "M"}${X(x.date).toFixed(1)},${Y(x.gbp).toFixed(1)}`).join(" ")}" fill="none" stroke="${c}" stroke-width="2.2" stroke-linejoin="round"/>`;
+      svg += pts.map((x) => `<circle cx="${X(x.date).toFixed(1)}" cy="${Y(x.gbp).toFixed(1)}" r="3.5" fill="${c}" stroke="var(--surface)" stroke-width="1.5"><title>${s.source} ${fmt.date(x.date)}: £${Math.round(x.gbp)}/t</title></circle>`).join("");
+    });
+    svg += quotesP.map((q) => `<rect x="${(X(q.date) - 4).toFixed(1)}" y="${(Y(q.gbp) - 4).toFixed(1)}" width="8" height="8" rx="2" class="mk-quote"><title>${q.supplier} ${fmt.date(q.date)}: £${Math.round(q.gbp)}/t</title></rect>`).join("");
+    svg += "</svg>";
+    const wrap = el("div", { class: "mk-plot" }); wrap.innerHTML = svg;
+    const legend = el("div", { class: "mk-legend" },
+      el("span", { class: "mk-key" }, el("span", { class: "swatch is-dashed", style: "background:#0c0e12" }), "What you pay"),
+      ...series.map((s, i) => el("span", { class: "mk-key" }, el("span", { class: "swatch", style: `background:${colors[i % colors.length]}` }), `${s.source}`)),
+      quotesP.length ? el("span", { class: "mk-key" }, el("span", { class: "swatch is-quote" }), "Supplier quotes for this product") : null);
+    return el("div", {}, legend, wrap, list);
+  }
+
+  function addPriceForm(p, d) {
+    const wrap = el("details", { class: "pm-add" });
+    const f = el("form", { class: "pm-add-form", novalidate: "" },
+      el("label", {}, el("span", { text: "Source" }), el("select", { name: "source" }, ...PM_SOURCES.map((s) => el("option", { value: s, text: s })))),
+      el("label", {}, el("span", { text: "Date" }), el("input", { name: "date", type: "date", value: new Date().toISOString().slice(0, 10), max: new Date().toISOString().slice(0, 10) })),
+      el("label", {}, el("span", { text: "£ per tonne" }), el("input", { name: "price", type: "number", min: "1", step: "0.01", inputmode: "decimal", placeholder: "e.g. 745", required: "" })),
+      el("button", { class: "btn btn-sm btn-primary", type: "submit", text: "Save price" }),
+      el("span", { class: "pm-add-err", "aria-live": "polite" }));
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = f.querySelector(".pm-add-err");
+      const src = f.elements.source.value, price = f.elements.price.value, date = f.elements.date.value;
+      if (!(Number(price) > 0)) { err.textContent = "Enter the price per tonne."; return; }
+      const btn = f.querySelector("button"); btn.disabled = true; err.textContent = "";
+      try {
+        let s = d.benchmarks.product.find((x) => x.source === src);
+        if (!s) s = await api("/api/benchmarks", { method: "POST", body: { name: `${p.name} (${src})`, source: src, group: p.category, productId: p.id, currency: "GBP", basis: "Delivered UK", region: "UK" } });
+        await api(`/api/benchmarks/${s.id}/points`, { method: "POST", body: { date, price } });
+        toast(`${src} price saved for ${p.name}`);
+        await loadMarket(p, { force: true });
+      } catch (error) { err.textContent = error.message; btn.disabled = false; }
+    });
+    wrap.append(el("summary", { class: "link-btn", text: "Add a market price for this product" }), f);
+    return wrap;
+  }
+
   function auditPanel(p) {
     const entries = (p.activity || []).map((a) => ({ kind: "change", at: a.at, a }));
     const priced = productQuotes(p);
@@ -412,6 +639,7 @@
   function renderProfileBody(p) {
     const body = profileTab === "quotas" ? quotasPanel(p)
       : profileTab === "suppliers" ? suppliersPanel(p)
+      : profileTab === "market" ? marketPanel(p)
       : profileTab === "audit" ? auditPanel(p)
       : overviewPanel(p);
     $("view-detail").replaceChildren(body);
@@ -422,6 +650,7 @@
     const lines = quota && p.steelCategory ? quota.lines.filter((l) => l.categoryId === p.steelCategory.id).length : 0;
     const tabs = [
       ["overview", "Overview", null],
+      ["market", "Market prices", null],
       ["quotas", "Quotas", p.steelCategory ? lines || null : 0],
       ["suppliers", "Suppliers", supplierList ? suppliersFor(p).length : null],
       ["audit", "Audit trail", (p.activity || []).length + productQuotes(p).length],
@@ -1029,6 +1258,7 @@
     if (!me.canEdit) { $("add-btn").hidden = true; $("import-btn").hidden = true; }
   });
   load().then(() => {
+    loadMarketBest();
     const deep = new URLSearchParams(window.location.search).get("product");
     if (deep && products.some((p) => p.id === deep)) openDetail(deep);
     return loadQuota();

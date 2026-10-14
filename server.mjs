@@ -1509,6 +1509,23 @@ async function handleProductApi(request, response, url) {
     sendJson(response, 201, await productView(saved));
     return;
   }
+  if (url.pathname === "/api/products/market" && method === "POST") {
+    // best landed price now for every product (for the products list)
+    const body = await readJsonBody(request);
+    const list = (await productStore.list()).filter((p) => p.status !== "archived");
+    const out = {};
+    await Promise.all(list.map(async (p) => {
+      const rows = (await compareSuppliers({ ...body, productId: p.id, arrival: "lead" })).filter((r) => Number.isFinite(r.effectivePerT));
+      out[p.id] = rows.length ? { bestPerT: rows[0].effectivePerT, supplier: rows[0].name, supplierId: rows[0].id, suppliers: rows.length, costPerT: p.costPerT } : { bestPerT: null, suppliers: 0, costPerT: p.costPerT };
+    }));
+    return sendJson(response, 200, { products: out });
+  }
+  const mkt = url.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/market$/);
+  if (mkt && method === "POST") {
+    const p = await productStore.get(mkt[1]);
+    if (!p || p.status === "archived") return sendError(response, 404, "Product not found");
+    return sendJson(response, 200, await productMarket(p, await readJsonBody(request)));
+  }
   const match = url.pathname.match(/^\/api\/products\/([0-9a-f-]{36})(?:\/(archive))?$/);
   if (!match) return sendError(response, 404, "Not found");
   const [, id, action] = match;
@@ -1607,7 +1624,11 @@ async function supplierBreakdown(s, opts = {}) {
   const importDate = /^\d{4}-\d{2}-\d{2}$/.test(opts.importDate || "") ? opts.importDate : addDaysIso(today, leadDays ?? 21);
   const tonnage = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : Math.max(metrics.suggestedOrderT || 0, s.moqMinT || 0) || 25;
   const transportPerT = s.transport === "extra" ? Math.max(Number(opts.transportPerT) || 0, 0) : 0;
-  const latest = [...(s.quotes || [])].sort((a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || "")))[0];
+  // Prefer a quote for this exact product; fall back to their general price.
+  const byNewest = (a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || ""));
+  const productQuote = [...(s.quotes || [])].filter((q) => q.productId === product.id).sort(byNewest)[0];
+  const latest = productQuote || [...(s.quotes || [])].filter((q) => !q.productId).sort(byNewest)[0] || [...(s.quotes || [])].sort(byNewest)[0];
+  const quoteScope = productQuote ? "product" : latest.productId ? "other-product" : "general";
   const scenarioInputs = {
     title: `${product.name} from ${s.name}`, commodityCode: product.commodityCode, origin: engineOrigin(s.origin), tonnage, importDate,
     incoterm: engineIncoterm(s), importerOfRecord: m.covers === "everything" ? "supplier" : "us",
@@ -1696,7 +1717,7 @@ async function supplierBreakdown(s, opts = {}) {
     cbam: cbamInfo,
     supplier: { id: s.id, name: s.name, origin: s.origin },
     product: { id: product.id, name: product.name, commodityCode: product.commodityCode, monthlyUsageT: usage, suggestedOrderT: metrics.suggestedOrderT },
-    inputs: { tonnage, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel },
+    inputs: { tonnage, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel, quoteScope },
     engine: { lines: engine.lines, totals: engine.totals, quota: engine.quota ? { probability: engine.quota.probability, basis: engine.quota.basis, orderNumber: quotaLine?.source } : null, category: engine.category, buyerImports: engine.buyerImports, checks: engine.checks, warnings: engine.warnings, customsValuePerT: engine.customsValuePerT, fx: engine.fx },
     adjustments,
     scenarioInputs: engine.inputs,
@@ -1849,6 +1870,50 @@ function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pri
 const choicesEu = (o) => SUP.EU_MEMBERS.has(o);
 
 
+// Price one order from every supplier that could fill it (full cost model).
+async function compareSuppliers(body = {}) {
+  const all = (await supplierStore.list()).filter((x) => x.status !== "archived" && x.standing !== "hold");
+  const products = await productStore.list();
+  const product = products.find((p) => p.id === body.productId);
+  const pool = product ? all.filter((x) => (x.supplies || []).includes(product.category)) : all;
+  const rows = await Promise.all(pool.map(async (x) => {
+    const b = await supplierBreakdown(x, { ...body, importDate: body.arrival === "fixed" ? body.importDate : undefined }).catch((e) => ({ ok: false, error: e.message }));
+    return b.ok ? { id: x.id, name: x.name, origin: x.origin, quotedPerT: b.engine.lines.find((l) => l.key === "price").perTonne, expectedPerT: b.engine.totals.expectedPerT,
+      effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, missPerT: b.model ? b.model.totals.missPerT : round2(b.worstPerT - b.bestPerT), cbamPerT: round2((b.engine.lines.find((l) => l.key === "cbam") || {}).perTonne || 0), cbam: b.cbam,
+      missing: b.model ? b.model.totals.missing : [], tonnage: b.inputs.tonnage, productName: b.product.name, probability: b.engine.quota ? b.engine.quota.probability : null,
+      importDate: b.inputs.importDate, adjustments: b.adjustments, covers: SUP.supplierMetrics(x).covers, quoteDate: b.inputs.quoteDate, quoteCurrency: b.inputs.currency, quotedRaw: b.inputs.quotedPerT, quoteScope: b.inputs.quoteScope, quoteChannel: b.inputs.quoteChannel }
+      : { id: x.id, name: x.name, origin: x.origin, error: b.error };
+  }));
+  return rows.sort((a, b) => (a.effectivePerT ?? 1e9) - (b.effectivePerT ?? 1e9));
+}
+
+// Everything the product's Market prices tab needs, for one product.
+async function productMarket(product, body = {}) {
+  const view = await productView(product);
+  const rows = await compareSuppliers({ ...body, productId: product.id, arrival: "lead" });
+  const mv = await marketView();
+  const gbp = (price, cur) => (mv.fx[cur || "GBP"] ? price * mv.fx[cur || "GBP"] : null);
+  const pick = (x) => ({ id: x.id, name: x.name, source: x.source, group: x.group, basis: x.basis || "", region: x.region || "", currency: x.currency, computed: Boolean(x.computed), productId: x.productId || null,
+    latest: x.latest ? { ...x.latest, gbp: gbp(x.latest.price, x.currency) } : null,
+    points: (x.points || []).map((pt) => ({ date: pt.date, price: pt.price, gbp: gbp(pt.price, x.currency) })) });
+  const forProduct = mv.series.filter((x) => x.productId === product.id).map(pick);
+  const forGroup = mv.series.filter((x) => !x.productId && x.group === product.category && x.kind !== "index" && x.kind !== "input").map(pick);
+  const competition = mv.competition.filter((x) => x.group === product.category).map(pick);
+  // quotes logged against this exact product
+  const suppliers = (await supplierStore.list()).filter((x) => x.status !== "archived");
+  const quotes = suppliers.flatMap((x) => (x.quotes || []).filter((q) => q.productId === product.id).map((q) => ({ supplierId: x.id, supplier: x.name, origin: x.origin, date: q.date, pricePerT: q.pricePerT, currency: q.currency || "GBP", gbp: gbp(q.pricePerT, q.currency), covers: q.covers || "", tonnage: q.tonnage })))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  // what you've paid over time, from the product's own edit history
+  const costHistory = [{ date: (product.createdAt || "").slice(0, 10), cost: null }, ...(product.activity || []).flatMap((a) => (a.changes || []).filter((c) => c.field === "costPerT").map((c) => ({ date: a.at.slice(0, 10), from: c.from, cost: c.to })))]
+    .filter((x) => x.date);
+  const ons = mv.series.filter((x) => x.feedKey === "ons:GHAV" || x.feedKey === "ons:GHCZ").map((x) => ({ key: x.feedKey, name: x.name, latest: x.latest, changes: x.changes, points: (x.points || []).slice(-24) }));
+  return {
+    ok: true,
+    product: { id: view.id, name: view.name, category: view.category, spec: view.spec, commodityCode: view.commodityCode, costPerT: view.costPerT, targetBuyPrice: view.targetBuyPrice ?? null, monthlyUsageT: view.monthlyUsageT, suggestedOrderT: view.metrics.suggestedOrderT, createdAt: product.createdAt },
+    rows, benchmarks: { product: forProduct, group: forGroup, competition }, quotes, costHistory, ons, fx: mv.fx,
+  };
+}
+
 async function handleSupplierApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   const method = request.method;
@@ -1857,18 +1922,7 @@ async function handleSupplierApi(request, response, url) {
     return sendJson(response, 200, { suppliers: (await live()).map(supplierView), choices: SUPPLIER_CHOICES });
   }
   if (url.pathname === "/api/suppliers/compare" && method === "POST") {
-    const body = await readJsonBody(request);
-    const all = (await live()).filter((x) => x.standing !== "hold");
-    const products = await productStore.list();
-    const product = products.find((p) => p.id === body.productId);
-    const pool = product ? all.filter((x) => (x.supplies || []).includes(product.category)) : all;
-    const rows = await Promise.all(pool.map(async (x) => {
-      const b = await supplierBreakdown(x, { ...body, importDate: body.arrival === "fixed" ? body.importDate : undefined }).catch((e) => ({ ok: false, error: e.message }));
-      return b.ok ? { id: x.id, name: x.name, origin: x.origin, quotedPerT: b.engine.lines.find((l) => l.key === "price").perTonne, expectedPerT: b.engine.totals.expectedPerT,
-        effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, missPerT: b.model ? b.model.totals.missPerT : round2(b.worstPerT - b.bestPerT), cbamPerT: round2((b.engine.lines.find((l) => l.key === "cbam") || {}).perTonne || 0), cbam: b.cbam, missing: b.model ? b.model.totals.missing : [], tonnage: b.inputs.tonnage, productName: b.product.name, probability: b.engine.quota ? b.engine.quota.probability : null, importDate: b.inputs.importDate, adjustments: b.adjustments }
-        : { id: x.id, name: x.name, origin: x.origin, error: b.error };
-    }));
-    return sendJson(response, 200, { rows: rows.sort((a, b) => (a.effectivePerT ?? 1e9) - (b.effectivePerT ?? 1e9)) });
+    return sendJson(response, 200, { rows: await compareSuppliers(await readJsonBody(request)) });
   }
   if (method !== "GET" && !can(user, "edit") && !/\/breakdown$/.test(url.pathname)) return sendError(response, 403, "Your account cannot change suppliers.");
   const clashes = async (name, id) => (await live()).find((x) => x.id !== id && x.name.trim().toLowerCase() === name.trim().toLowerCase());

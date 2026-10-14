@@ -356,7 +356,7 @@
   }
 
   // ---------------------------------------------------------------- quote form
-  function openQuoteForm(s) {
+  function openQuoteForm(s, { productId } = {}) {
     showDrawer("form", `Log a quote — ${s.name}`, "Quote received");
     const supplied = products.filter((p) => (s.supplies || []).includes(p.category));
     const others = products.filter((p) => !supplied.includes(p));
@@ -365,7 +365,8 @@
       supplied.length ? el("optgroup", { label: "They supply" }, ...supplied.map((p) => el("option", { value: p.id, text: p.name }))) : null,
       others.length ? el("optgroup", { label: "Other products" }, ...others.map((p) => el("option", { value: p.id, text: p.name }))) : null);
     const awaiting = (s.rfqs || []).filter((r) => r.status === "open").sort((a, b) => b.at.localeCompare(a.at))[0];
-    if (awaiting && awaiting.lines.length === 1 && awaiting.lines[0].productId) productSel.value = awaiting.lines[0].productId;
+    if (productId) productSel.value = productId;
+    else if (awaiting && awaiting.lines.length === 1 && awaiting.lines[0].productId) productSel.value = awaiting.lines[0].productId;
     form.replaceChildren(
       awaiting ? el("p", { class: "notice", text: `This will answer your quote request from ${fmt.date(awaiting.at.slice(0, 10))} (${awaiting.lines.map((l) => l.name).join(", ")}).` }) : null,
       section("Price",
@@ -1321,6 +1322,7 @@
     const params = new URLSearchParams(window.location.search);
     if (params.get("supplier")) openDetail(params.get("supplier"));
     else if (params.get("rfq")) openRfq({ productId: params.get("rfq") });
+    else if (params.get("quote")) { const s = suppliers.find((x) => x.id === params.get("quote")); if (s) openQuoteForm(s, { productId: params.get("product") || undefined }); }
     api("/api/steel-quotas/live").then((r) => { quota = r; renderTable(); if (mode === "detail" && detailId) { const s = suppliers.find((x) => x.id === detailId); if (s) renderBody(s); } }).catch(() => {});
   });
 })();
