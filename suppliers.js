@@ -1305,8 +1305,10 @@
     }
     $("page-lede").textContent = LEDE[name];
     if (name === "market" && window.MarketTab) window.MarketTab.open();
-    if (push) history.replaceState(null, "", name === "market" ? "#market" : location.pathname + location.search);
+    if (push) { history.replaceState(null, "", name === "market" ? "#market" : location.pathname + location.search); window.dispatchEvent(new HashChangeEvent("hashchange")); }
   }
+  // the sidebar's Suppliers / Market prices links switch panes in place
+  window.addEventListener("hashchange", () => { const want = location.hash === "#market" ? "market" : "suppliers"; if ($(`pane-${want}`).hidden) showPane(want, { push: false }); });
   ["suppliers", "market"].forEach((p) => {
     $(`ptab-${p}`).addEventListener("click", () => showPane(p));
     $(`ptab-${p}`).addEventListener("keydown", (e) => {

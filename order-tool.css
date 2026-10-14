@@ -1586,3 +1586,29 @@ button.vdot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
 .note-effect { color: #8a5a00; font-weight: 600; }
 .bd2-sec-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 600px) { .intel-row { grid-template-columns: 1fr; } }
+
+/* ---- grouped sidebar + section tabs ---- */
+.sidebar__count { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--muted); background: var(--neutral-bg); border-radius: 999px; padding: 1px 7px; }
+.sidebar__sec.is-open > .sidebar__link .sidebar__count { display: none; }
+.sidebar__sub { margin: 2px 0 6px 22px !important; padding-left: 12px !important; border-left: 1px solid var(--line); gap: 1px !important; }
+.sidebar__sublink { display: flex; align-items: center; min-height: 34px; padding: 0 10px; border-radius: 6px; color: var(--ink-soft); text-decoration: none; font-size: 14px; }
+.sidebar__sublink:hover { background: var(--surface-alt); color: var(--ink); }
+.sidebar__sublink.is-active { color: var(--accent-ink); font-weight: 600; background: var(--surface-alt); position: relative; }
+.sidebar__sublink.is-active::before { content: ""; position: absolute; left: -13px; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--accent); }
+.sidebar__sublink:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sidebar__sec:not(.is-open) > .sidebar__link.is-active { background: var(--accent-soft); }
+.sidebar__sec.is-open > .sidebar__link.is-active { background: transparent; color: var(--ink); }
+.section-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 0 0 18px; overflow-x: auto; scrollbar-width: none; }
+.section-tabs::-webkit-scrollbar { display: none; }
+.section-tab { padding: 10px 16px; font-size: 15px; font-weight: 500; color: var(--ink-soft); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.section-tab:hover { color: var(--ink); text-decoration: none; }
+.section-tab.is-active { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+.section-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (max-width: 900px) {
+  .sidebar__sub { display: none !important; }
+  .sidebar__count { display: none; }
+  .sidebar__intel { display: none; }
+}
+.sidebar__chev { margin-left: auto; color: var(--muted); transition: transform 0.2s; }
+.sidebar__sec.is-open > .sidebar__link .sidebar__chev { transform: rotate(90deg); }
+@media (max-width: 900px) { .sidebar__chev { display: none; } }
