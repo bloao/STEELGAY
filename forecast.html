@@ -34,7 +34,6 @@
           <div>
             <p class="eyebrow">Market</p>
             <h1>Steel forecast</h1>
-            <p class="muted lede">Where UK steel prices look to be heading, built from the official price index, the carbon border charge and your team's market insight. Use it to decide when buying ahead of need is worth it.</p>
           </div>
         </div>
 
@@ -47,7 +46,7 @@
           <div class="card-head">
             <div>
               <h2 id="chart-title">UK steel prices: history and forecast</h2>
-              <p class="small muted" id="chart-sub" style="margin:2px 0 0"></p>
+              <p hidden class="small muted" id="chart-sub" style="margin:2px 0 0"></p>
             </div>
           </div>
           <div id="fc-chart"></div>
@@ -57,7 +56,7 @@
           <div class="card-head">
             <div>
               <h2 id="opp-title">Stock-up opportunities</h2>
-              <p class="small muted" style="margin:2px 0 0" id="opp-sub"></p>
+              <p hidden class="small muted" style="margin:2px 0 0" id="opp-sub"></p>
             </div>
             <div class="opp-controls">
               <label class="ref-pick"><span>Buy ahead</span><select id="months" class="pill-select" aria-label="Months of usage to buy ahead">
@@ -71,16 +70,16 @@
 
         <div class="intel-cols">
           <section class="card intel-card" aria-labelledby="drivers-title">
-            <div class="card-head"><div><h2 id="drivers-title">What's driving it</h2><p class="small muted" style="margin:2px 0 0">Each part of the forecast, so you can see why it says what it says.</p></div></div>
+            <div class="card-head"><div><h2 id="drivers-title">What's driving it</h2></div></div>
             <ul class="drivers" id="drivers"></ul>
             <form class="fc-assume" id="assume" novalidate></form>
           </section>
           <section class="card intel-card" aria-labelledby="bt-title">
-            <div class="card-head"><div><h2 id="bt-title">How well has it done?</h2><p class="small muted" style="margin:2px 0 0">The same model run from past months and checked against what prices actually did.</p></div></div>
+            <div class="card-head"><div><h2 id="bt-title">How well has it done?</h2></div></div>
             <div id="backtest"></div>
           </section>
         </div>
-        <p class="small muted fc-disclaimer">Version <span id="model-version"></span> of an in-house model. It's a guide for buying decisions, not a guarantee: steel prices can move sharply on news the model can't see. The ONS index is published with a lag of about two months.</p>
+        <p class="small muted fc-disclaimer">A guide, not a guarantee. Version <span id="model-version"></span>.</p>
       </main>
     </div>
 

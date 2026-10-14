@@ -220,7 +220,7 @@
     const tags = (o) => [o.id === rec.best.id ? ["Best overall", "is-go"] : null, rec.alternatives.cheapest && o.id === rec.alternatives.cheapest.id && o.id !== rec.best.id ? ["Cheapest", "is-maybe"] : null,
       rec.alternatives.safest && o.id === rec.alternatives.safest.id && o.id !== rec.best.id ? ["Lowest risk", ""] : null, rec.alternatives.fastest && o.id === rec.alternatives.fastest.id && o.id !== rec.best.id ? ["Fastest", ""] : null].filter(Boolean);
     return el("section", { class: "card mk-card plan-options" },
-      el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }), el("p", { class: "small muted", style: "margin:2px 0 0", text: `Priced for ${r.inputs.tonnage} t with each supplier's lead time. "Risk-adjusted" adds ${weightOf(r.inputs.appetite) ? `${weightOf(r.inputs.appetite)}%` : "none"} of the quota-miss cost and a penalty for arriving after you run out. Pick one to save it instead.` }))),
+      el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }))),
       el("div", { class: "table-scroll" }, el("table", { class: "quota-table plan-table" },
         el("thead", {}, el("tr", {}, el("th", {}), el("th", { text: "Supplier" }), el("th", { class: "num", text: "Landed cost" }), el("th", { class: "num", text: "If quota missed" }), el("th", { class: "num", text: "Risk-adjusted" }), el("th", { text: "Arrives" }), el("th", { text: "Notes" }))),
         el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; render(); } },

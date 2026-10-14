@@ -34,7 +34,7 @@
         <div>
           <p class="eyebrow">Steel procurement</p>
           <h1>Suppliers</h1>
-          <p class="muted lede" id="page-lede">Who can supply what, at what price, and what it really costs once quota and duty are counted.</p>
+          <p hidden class="muted lede" id="page-lede">Who can supply what, at what price, and what it really costs once quota and duty are counted.</p>
         </div>
         <div class="actions" data-pane="suppliers">
           <button class="btn" type="button" id="rfq-btn">
@@ -101,7 +101,6 @@
           </table>
         </div>
       </section>
-      <p class="small muted" id="foot-note">Prices in £/t. "Expected cost" runs each supplier's latest quote through the full cost model for their usual product and order size — freight, duty, the chance the quota runs out × the 50% steel duty, payment terms, MOQ and reliability. "If quota missed" is the extra per tonne if the quota line is used up before your load clears. Open a supplier for the working behind every number.</p>
       </div>
 
       <div id="pane-market" role="tabpanel" aria-labelledby="ptab-market" hidden>
@@ -116,7 +115,7 @@
         <div class="card-head">
           <div>
             <h2 id="cmp-title">Your quotes against the market</h2>
-            <p class="small muted" id="cmp-sub" style="margin:2px 0 0"></p>
+            <p hidden class="small muted" id="cmp-sub" style="margin:2px 0 0"></p>
           </div>
           <label class="ref-pick"><span>Compare with</span><select id="cmp-ref" class="pill-select" aria-label="Compare quotes with"></select></label>
         </div>
@@ -127,7 +126,6 @@
         <div class="card-head">
           <div>
             <h2 id="pulse-title">Where UK steel prices are heading</h2>
-            <p class="small muted" style="margin:2px 0 0">Official monthly price indices from the ONS, pulled in automatically. Watch the direction: an index of 200 just means prices are double their 2015 level.</p>
           </div>
         </div>
         <div id="pulse"></div>
@@ -137,7 +135,6 @@
         <div class="card-head">
           <div>
             <h2 id="chart-title">Price history</h2>
-            <p class="small muted" style="margin:2px 0 0">£ per tonne. Market prices as lines, each supplier quote as a square.</p>
           </div>
           <div class="seg" role="group" aria-label="Time range" id="range">
             <button type="button" data-range="90" aria-pressed="false">3M</button>
@@ -167,7 +164,6 @@
       </details>
 
       </div>
-
 
       <div class="drawer-backdrop" id="backdrop" hidden></div>
       <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
