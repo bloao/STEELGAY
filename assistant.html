@@ -32,7 +32,7 @@
     <main class="page chat-page">
       <div class="page-head">
         <div>
-          <p class="eyebrow">Ask about stock, quotes and quotas</p>
+          
           <h1>Assistant</h1>
         </div>
         <div class="actions">
@@ -43,7 +43,6 @@
 
       <section class="card" id="setup-card" hidden>
         <h2>Set up the assistant</h2>
-        <p class="muted" style="margin:0 0 12px">The assistant uses Claude from Anthropic. It needs an API key on the server (never in the browser).</p>
         <ol class="checks">
           <li>Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API keys</a> (add billing credit first).</li>
           <li>Add a line to <code>.env</code> in the project folder: <code>ANTHROPIC_API_KEY=sk-ant-…</code></li>
@@ -55,7 +54,6 @@
         <div class="chat-log" id="log" aria-live="polite">
           <div class="chat-empty" id="empty">
             <h2>What do you want to know?</h2>
-            <p class="muted">It reads your products, saved scenarios and HMRC's live quota balances, and can price an order with the same engine as the order tool. It can't change anything.</p>
             <div class="suggestions" id="suggestions">
               <button class="chip" type="button">Which products need ordering, and how much?</button>
               <button class="chip" type="button">What's the live quota position for my merchant bar?</button>

@@ -246,7 +246,7 @@
         el("span", { class: `lad-dot ${gcls}`, style: `left:${P(q)}%`, title: `${sup.name} ${perT(q)}` }));
       const second = mv && !mv.same
         ? `Market ${mv.pct > 0 ? "up" : "down"} ${Math.abs(mv.pct).toFixed(1)}% since this quote${mv.pct < -0.4 ? " — worth asking for a better price" : mv.pct > 0.4 ? " — this price may not last" : ""}`
-        : mv ? "Quote is up to date with the market" : `Quoted ${fmt.date(sup.metrics.priceDate)}`;
+        : mv ? "" : `Quoted ${fmt.date(sup.metrics.priceDate)}`;
       return el("div", { class: "lad-row", style: `--d:${i * 60}ms` },
         el("div", { class: "lad-who" }, el("a", { href: `suppliers.html?supplier=${sup.id}`, class: "sup-link", text: sup.name }),
           el("span", { class: "row-sub" }, sup.origin || "origin not set", covers ? el("span", { class: `tag ${covers === "+ duty" ? "tag-warn" : ""}`, text: covers }) : null)),
@@ -299,7 +299,7 @@
       ? card("is-bench", "Outside benchmark", perT(ext[0].v), "", [`${ext[0].s.name}, ${fmt.date(ext[0].s.latest.date)}.`, ext.length > 1 ? ` Plus ${ext.length - 1} more.` : ""],
           el("p", { class: "glance-src", text: `${ext[0].s.source}${ext[0].s.basis ? ` · ${ext[0].s.basis}` : ""}` }))
       : card("is-bench is-setup", "Outside benchmark", "Not set up", "is-muted",
-          "MEPS or Kallanish prices show what the wider market pays. Without them, your quotes can only be compared with each other.",
+          "",
           me.canEdit ? el("div", { class: "glance-actions" },
             el("button", { class: "btn btn-sm btn-primary", type: "button", text: "Import MEPS prices", onclick: () => openImport({ source: "MEPS" }) }),
             el("button", { class: "btn btn-sm", type: "button", text: "Add a price you've heard", onclick: () => openAddPrice({ source: "Market intel" }) })) : null);

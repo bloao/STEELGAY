@@ -22,13 +22,13 @@
     const beat = bt.mapePct !== null && bt.naiveMapePct !== null ? bt.mapePct <= bt.naiveMapePct : null;
     $("outlook").replaceChildren(
       card("is-trend", "Next 3 months", `${word(o.in3)} ${pct(o.in3)}`, cls(o.in3) === "is-up" ? "is-up" : cls(o.in3) === "is-down" ? "is-down" : "",
-        [`Likely range ${pct(o.band3[0])} to ${pct(o.band3[1])}.`, " Prices for your products are expected to move about the same."],
+        `Range ${pct(o.band3[0])} to ${pct(o.band3[1])}`,
         el("p", { class: "glance-src", text: `From ${monthYear(data.today)} · ONS UK steel producer prices` })),
       card("is-best", "Next 6 and 12 months", `${pct(o.in6)} · ${pct(o.in12)}`, "",
-        [`${word(o.in6)} over six months.`, data.drivers.some((d) => d.kind === "cbam") ? " Includes the UK carbon border charge feeding through from January 2027." : ""],
+        "6 months · 12 months",
         el("p", { class: "glance-src", text: "Further out is less certain: the trend is damped each month" })),
       card("is-bench", "How reliable", bt.mapePct === null ? "—" : `±${bt.mapePct.toFixed(1)}%`, "",
-        bt.mapePct === null ? "Not enough history to test yet." : [`Average miss three months ahead, over the last ${bt.rows.length} months.`, beat === null ? "" : beat ? " That beats assuming prices stay the same." : ` A plain “no change” guess did a little better (±${bt.naiveMapePct.toFixed(1)}%), so treat it as a guide.`],
+        bt.mapePct === null ? "—" : `Average 3-month miss${bt.directionPct === null ? "" : ` · direction right ${Math.round(bt.directionPct)}%`}`,
         el("p", { class: "glance-src", text: bt.directionPct === null ? "" : `Called the direction right ${Math.round(bt.directionPct)}% of the time` })));
     $("model-asof").textContent = `Latest ONS figure: ${monthYear(data.index.last.date)} · model v${data.modelVersion}`;
     $("model-version").textContent = data.modelVersion;

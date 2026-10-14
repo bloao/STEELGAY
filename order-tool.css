@@ -1754,3 +1754,23 @@ button.vdot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
 @media (max-width: 560px) { .as-card { padding: 16px 16px 6px; } .as-savebar { left: 16px; right: 16px; transform: none; padding-left: 14px; font-size: 13px; } .as-savebar span { margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; } .as-savebar .btn { flex: 0 0 auto; padding-left: 12px; padding-right: 12px; } }
 .fc-assume-line { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
 .fc-assume-line a { font-weight: 600; color: var(--accent-ink); }
+
+/* ------------------------------------------------------------------
+   Clean layout: titles, icons and numbers. Explanatory sentences,
+   captions and hints are not shown anywhere in the app.
+   ------------------------------------------------------------------ */
+.page-head .eyebrow,
+.disclaimer, .fc-disclaimer, .lad-note, .ds-hint, .eq-why, .note-text,
+.glance-src, .feed-how, .pulse-top p, .pulse-src,
+.sp-why, .pc-note, .pc-head > .small, .pc-sub,
+.ph-timing, .ph-cols, #pf-appetite-hint, #pf-cbam-hint,
+.plan-table th:last-child, .plan-table td:last-child,
+.notes-empty p, .chart-wait p, .callout p, .drv-main p,
+.reg-sum, .reg-impact, .reg-model, .feed-sum,
+.settings-section > div:first-child > p, .field .hint:not(.is-match):not(.is-bad), .conn .small, #signed-in,
+.as-fixed dd span, #feed-warning, .quota-howto, .gaps > span,
+#plan-timing { display: none !important; }
+.callout { align-items: center; }
+.needs-figs { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.needs-figs b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.glance-t:empty { display: none; }
