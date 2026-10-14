@@ -18,6 +18,7 @@ import * as BM from "./lib/benchmarks.mjs";
 import { feedConfig, fetchFeed, FEED_SOURCES } from "./lib/benchmark-feed.mjs";
 import * as NEWS from "./lib/news.mjs";
 import * as FC from "./lib/forecast.mjs";
+import * as COMP from "./lib/competition.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -29,6 +30,7 @@ const store = createStore(process.env.DATA_DIR || join(root, "var"));
 const supplierStore = createStore(process.env.DATA_DIR || join(root, "var"), "suppliers.json", () => SUP.seedSuppliers());
 const benchmarkStore = createStore(process.env.DATA_DIR || join(root, "var"), "benchmarks.json");
 const newsStore = createStore(process.env.DATA_DIR || join(root, "var"), "news-notes.json");
+const competitorStore = createStore(process.env.DATA_DIR || join(root, "var"), "competitors.json");
 const settingsStore = createSettingsStore(process.env.DATA_DIR || join(root, "var"));
 const productStore = createStore(process.env.DATA_DIR || join(root, "var"), "products.json", () => SEED_PRODUCTS.map((p) => validateProduct(p).product));
 const allowedOrigin = process.env.ALLOWED_ORIGIN || ""; // e.g. https://app.example.com; empty = same-origin only
@@ -2095,8 +2097,15 @@ async function runLive(source, { force = false } = {}) {
   return result;
 }
 
+// Once a day, pick up any new HMRC month (only if history has been loaded once).
+async function autoSyncCompetition() {
+  const d = await getCompData();
+  if (!Object.keys(d.importerMonths).length || compSync.running) return;
+  if (compSync.lastRun && Date.now() - Date.parse(compSync.lastRun) < 24 * 3_600_000) return;
+  await syncCompetition({ months: 3 });
+}
 function scheduleLive() {
-  const tick = () => { runLive("ONS").catch(() => {}); runLive("LME").catch(() => {}); refreshNews().catch(() => {}); };
+  const tick = () => { runLive("ONS").catch(() => {}); runLive("LME").catch(() => {}); refreshNews().catch(() => {}); autoSyncCompetition().catch(() => {}); };
   setTimeout(tick, 8_000).unref?.();
   setInterval(tick, 60 * 60 * 1000).unref?.(); // check hourly; each source runs when it's due
 }
@@ -2344,6 +2353,221 @@ async function handleForecastApi(request, response, url) {
     const body = request.method === "POST" ? await readJsonBody(request) : Object.fromEntries(url.searchParams);
     if (body.cbam === "true") body.cbam = true;
     return sendJson(response, 200, await steelForecast(body));
+  }
+  return sendError(response, 404, "Not found");
+}
+
+
+// ------------------------------------------------------------ competition analysis
+const compFile = join(process.env.DATA_DIR || join(root, "var"), "competition-data.json");
+let compData = null; // { companies: {id: {name, postcode, town, m: {YYYYMM: [codes]}}}, importerMonths: {}, trade: {YYYYMM: {code: {t, v, o}}}, links, summary }
+const compSync = { running: false, step: "", done: 0, total: 0, errors: [], lastRun: null, lastAdded: 0 };
+async function getCompData() {
+  if (compData) return compData;
+  try { compData = JSON.parse(await readFile(compFile, "utf8")); } catch { compData = { companies: {}, importerMonths: {}, trade: {}, summary: null }; }
+  if (!compData.summary) {
+    // starter data: the Python pipeline's summary of 2024–2026 importers
+    try { compData.summary = COMP.parseActivityCsv(await readFile(join(root, "output", "company_activity.csv"), "utf8")); } catch { compData.summary = []; }
+  }
+  return compData;
+}
+async function saveCompData() {
+  await mkdir(dirname(compFile), { recursive: true });
+  await writeFile(compFile, JSON.stringify(compData));
+}
+async function fetchBuffer(url, accept = "*/*") {
+  const res = await fetch(url, { headers: { accept, "user-agent": "DatafabAGX/1.0 (steel procurement tool)" }, signal: AbortSignal.timeout(120_000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url.split("/").pop()}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+// Pull the last `months` of HMRC importer and trade files that aren't loaded yet.
+async function syncCompetition({ months = 24 } = {}) {
+  if (compSync.running) return compSync;
+  Object.assign(compSync, { running: true, step: "Finding HMRC files", done: 0, total: 0, errors: [], lastAdded: 0 });
+  broadcast("competition", { step: compSync.step });
+  try {
+    const data = await getCompData();
+    const links = { importers: {}, imports: {} };
+    for (const page of COMP.HMRC_PAGES) {
+      try {
+        const found = COMP.findBulkLinks((await fetchBuffer(page, "text/html")).toString("utf8"));
+        Object.assign(links.importers, found.importers); Object.assign(links.imports, found.imports);
+      } catch (error) { compSync.errors.push(`${page}: ${error.message}`); }
+    }
+    const want = (kind, have) => Object.keys(links[kind]).sort().slice(-months).filter((p) => !have[p]);
+    const jobs = [...want("importers", data.importerMonths).map((p) => ["importers", p]), ...want("imports", data.trade).map((p) => ["imports", p])];
+    compSync.total = jobs.length;
+    for (const [kind, period] of jobs) {
+      compSync.step = `${kind === "importers" ? "Importer list" : "Import volumes"} for ${period.slice(4)}/${period.slice(0, 4)}`;
+      broadcast("competition", { step: compSync.step, done: compSync.done, total: compSync.total });
+      try {
+        const zip = COMP.readZip(await fetchBuffer(links[kind][period], "application/zip"));
+        const entry = zip.find((e) => /\.txt$/i.test(e.name) && e.data) || zip.find((e) => e.data);
+        if (!entry) throw new Error("empty zip");
+        const text = entry.data.toString("latin1");
+        if (kind === "importers") {
+          const rows = COMP.parseImporters(text);
+          for (const r of rows) {
+            const co = (data.companies[r.id] ||= { name: r.name, postcode: r.postcode, town: r.town, m: {} });
+            co.name = r.name; co.town = r.town || co.town;
+            co.m[r.period] = r.codes;
+          }
+          data.importerMonths[period] = rows.length;
+        } else {
+          const agg = COMP.parseImports(text);
+          for (const [p, codes] of Object.entries(agg)) data.trade[p] = codes;
+          if (!data.trade[period]) data.trade[period] = {};
+        }
+        compSync.lastAdded++;
+        await saveCompData();
+      } catch (error) { compSync.errors.push(`${kind} ${period}: ${error.message}`); }
+      compSync.done++;
+    }
+  } finally {
+    compSync.running = false; compSync.step = ""; compSync.lastRun = new Date().toISOString();
+    broadcast("competition", { finished: true, added: compSync.lastAdded });
+  }
+  return compSync;
+}
+
+// Companies House (free API key: developer.company-information.service.gov.uk)
+const chKey = async () => process.env.COMPANIES_HOUSE_API_KEY || (await settingsStore.get()).companiesHouseApiKey || "";
+async function chGet(url, accept = "application/json") {
+  const key = await chKey();
+  if (!key) throw new Error("Add a Companies House API key in Settings → Connections.");
+  const res = await fetch(url.startsWith("http") ? url : `${COMP.CH_API}${url}`, { headers: { authorization: `Basic ${Buffer.from(`${key}:`).toString("base64")}`, accept }, redirect: "follow", signal: AbortSignal.timeout(30_000) });
+  if (res.status === 401) throw new Error("Companies House rejected the API key.");
+  if (!res.ok) throw new Error(`Companies House returned HTTP ${res.status}`);
+  return accept.includes("json") ? res.json() : res.text();
+}
+async function chAccounts(number) {
+  const hist = await chGet(`/company/${encodeURIComponent(number)}/filing-history?category=accounts&items_per_page=6`);
+  const filings = (hist.items || []).map((f) => ({ date: f.date, description: (f.description || "").replace(/-/g, " "), type: f.type, meta: f.links && f.links.document_metadata })).slice(0, 6);
+  const merged = { stock: new Map(), turnover: new Map(), cash: new Map() };
+  let parsed = 0;
+  for (const f of filings.slice(0, 3)) {
+    if (!f.meta) continue;
+    try {
+      const meta = await chGet(f.meta);
+      if (!meta.resources || !meta.resources["application/xhtml+xml"]) { f.format = "PDF only"; continue; }
+      const doc = await chGet(meta.links.document, "application/xhtml+xml");
+      const a = COMP.parseAccountsIxbrl(doc);
+      for (const k of Object.keys(merged)) for (const x of a[k]) if (!merged[k].has(x.date)) merged[k].set(x.date, x.value);
+      f.format = "digital"; parsed++;
+    } catch (error) { f.error = error.message; }
+  }
+  const list = (m) => [...m.entries()].map(([date, value]) => ({ date, value })).sort((a, b) => b.date.localeCompare(a.date));
+  return { fetchedAt: new Date().toISOString(), filings: filings.map(({ meta, ...rest }) => rest), parsed, stock: list(merged.stock), turnover: list(merged.turnover), cash: list(merged.cash) };
+}
+
+const yourCodes = async () => [...new Set((await productStore.list()).filter((p) => p.status !== "archived").map((p) => String(p.commodityCode || "").slice(0, 8)).filter((c) => /^\d{8}$/.test(c)))];
+function summaryAnalysis(sum, codes) {
+  const overlap = sum.codes.filter((c) => codes.some((y) => c.startsWith(y.slice(0, 6))));
+  return { summaryOnly: true, firstSeen: sum.firstSeen, lastSeen: sum.lastSeen, monthsActive: sum.activeMonths, byYear: sum.byYear, codes: sum.codes, overlapCodes: overlap, newCodes: [], signal: sum.status === "Persistent" ? "steady" : "occasional", note: `Imported in ${sum.activeMonths} months between ${sum.firstSeen.slice(4)}/${sum.firstSeen.slice(0, 4)} and ${sum.lastSeen.slice(4)}/${sum.lastSeen.slice(0, 4)} (${sum.status.toLowerCase() || "pattern unknown"}). Load the monthly history for the month-by-month view.` };
+}
+
+async function competitionView() {
+  const data = await getCompData();
+  const codes = await yourCodes();
+  const months = COMP.monthsList(Object.keys(data.importerMonths), 24);
+  const comps = (await competitorStore.list()).filter((x) => x.status !== "archived");
+  const sumById = new Map((data.summary || []).map((s) => [s.id, s]));
+  const byName = new Map();
+  for (const [id, co] of Object.entries(data.companies)) { const k = COMP.normalizeName(co.name); if (!byName.has(k)) byName.set(k, []); byName.get(k).push(id); }
+  const competitors = comps.map((c) => {
+    // a record picked from the 2024–26 summary also picks up monthly records filed under the same company name
+    const ids = [...new Set((c.importerIds || []).flatMap((id) => {
+      const s = sumById.get(id) || data.companies[id];
+      return [id, ...((s && byName.get(COMP.normalizeName(s.name))) || [])];
+    }))];
+    // merge every matched importer record (some firms import under several names/sites)
+    const merged = { name: c.name, m: {} };
+    for (const id of ids) { const co = data.companies[id]; if (co) for (const [p, list] of Object.entries(co.m)) merged.m[p] = [...new Set([...(merged.m[p] || []), ...list])]; }
+    const hasMonthly = ids.some((id) => data.companies[id]);
+    let analysis = null;
+    if (hasMonthly && months.length) analysis = COMP.analyseCompany(merged, { months, yourCodes: codes });
+    else { const s = ids.map((id) => sumById.get(id)).filter(Boolean)[0]; if (s) analysis = summaryAnalysis(s, codes); }
+    const matched = ids.map((id) => { const co = data.companies[id] || sumById.get(id); return co ? { id, name: co.name, postcode: co.postcode, town: co.town || "" } : { id, name: "(not in data)" }; });
+    return { ...c, matched, analysis };
+  });
+  const tracked = new Set(competitors.flatMap((c) => c.matched.map((m) => m.id)));
+  const suggestions = months.length ? COMP.similarImporters(data.companies, { months: months.slice(-12), yourCodes: codes, exclude: tracked })
+    : (data.summary || []).filter((s) => !tracked.has(s.id)).map((s) => ({ ...s, overlap: s.codes.filter((c) => codes.some((y) => c.startsWith(y.slice(0, 6)))).length }))
+      .filter((s) => s.overlap).sort((a, b) => b.overlap * 2 + b.activeMonths / 3 - (a.overlap * 2 + a.activeMonths / 3)).slice(0, 12)
+      .map((s) => ({ id: s.id, name: s.name, postcode: s.postcode, town: "", overlap: s.overlap, monthsActive: s.activeMonths, summaryOnly: true }));
+  const market = COMP.marketVolume(data.trade, codes).slice(-24);
+  const im = Object.keys(data.importerMonths).sort();
+  const products = (await productStore.list()).filter((p) => p.status !== "archived").map((p) => ({ name: p.name, code: String(p.commodityCode).slice(0, 8) }));
+  return {
+    yourCodes: codes, products, months, competitors, suggestions, market,
+    status: { importerFrom: im[0] || null, importerTo: im[im.length - 1] || null, importerMonths: im.length, tradeMonths: Object.keys(data.trade).length, summaryCompanies: (data.summary || []).length,
+      sync: { running: compSync.running, step: compSync.step, done: compSync.done, total: compSync.total, errors: compSync.errors.slice(-5), lastRun: compSync.lastRun }, hasChKey: Boolean(await chKey()) },
+  };
+}
+
+async function handleCompetitionApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  const method = request.method;
+  if (url.pathname === "/api/competition" && method === "GET") return sendJson(response, 200, { ...(await competitionView()), canEdit: can(user, "edit") });
+  if (url.pathname === "/api/competition/search" && method === "GET") {
+    const q = COMP.matchKey(url.searchParams.get("q") || "");
+    if (q.length < 2) return sendJson(response, 200, { results: [] });
+    const data = await getCompData();
+    const codes = await yourCodes();
+    const pool = new Map();
+    for (const [id, co] of Object.entries(data.companies)) pool.set(id, { id, name: co.name, postcode: co.postcode, town: co.town || "", months: Object.keys(co.m).length, codes: [...new Set(Object.values(co.m).flat())] });
+    for (const s of data.summary || []) if (!pool.has(s.id)) pool.set(s.id, { id: s.id, name: s.name, postcode: s.postcode, town: "", months: s.activeMonths, codes: s.codes });
+    const words = q.split(" ").filter(Boolean);
+    const results = [...pool.values()].map((x) => {
+      const k = COMP.matchKey(x.name);
+      const hit = words.every((w) => k.includes(w));
+      return hit ? { ...x, overlap: x.codes.filter((c) => codes.some((y) => c.startsWith(y.slice(0, 6)))).length, codes: undefined, exact: k === q } : null;
+    }).filter(Boolean).sort((a, b) => Number(b.exact) - Number(a.exact) || b.months - a.months).slice(0, 15);
+    return sendJson(response, 200, { results });
+  }
+  if (url.pathname === "/api/competition/ch-search" && method === "GET") {
+    try { const r = await chGet(`/search/companies?q=${encodeURIComponent(url.searchParams.get("q") || "")}&items_per_page=8`);
+      return sendJson(response, 200, { results: (r.items || []).map((i) => ({ number: i.company_number, name: i.title, address: i.address_snippet, status: i.company_status, created: i.date_of_creation })) }); }
+    catch (error) { return sendJson(response, 200, { results: [], error: error.message }); }
+  }
+  if (url.pathname === "/api/competition/sync" && method === "GET") return sendJson(response, 200, compSync);
+  if (!can(user, "edit")) return sendError(response, 403, "Your account cannot change competitors.");
+  if (url.pathname === "/api/competition/sync" && method === "POST") {
+    const body = await readJsonBody(request);
+    const months = [6, 12, 24, 30].includes(Number(body.months)) ? Number(body.months) : 24;
+    syncCompetition({ months }).catch((error) => { compSync.errors.push(error.message); compSync.running = false; });
+    return sendJson(response, 202, { ok: true, started: true });
+  }
+  const clean = (b) => ({
+    name: String(b.name || "").trim().slice(0, 120),
+    importerIds: [...new Set((Array.isArray(b.importerIds) ? b.importerIds : []).map((x) => String(x).slice(0, 20)).filter((x) => /^[0-9a-f]{12}$/.test(x)))].slice(0, 10),
+    companyNumber: String(b.companyNumber || "").trim().toUpperCase().slice(0, 10),
+    website: String(b.website || "").trim().slice(0, 200),
+    notes: String(b.notes || "").trim().slice(0, 1000),
+  });
+  if (url.pathname === "/api/competition/competitors" && method === "POST") {
+    const c = clean(await readJsonBody(request));
+    if (!c.name) return sendJson(response, 422, { ok: false, errors: { name: "Enter the competitor's name." } });
+    if (c.companyNumber && !/^[A-Z0-9]{6,10}$/.test(c.companyNumber)) return sendJson(response, 422, { ok: false, errors: { companyNumber: "Company numbers are 8 characters, like 01234567." } });
+    const saved = await competitorStore.create({ ...c, status: "active" }, user.name);
+    if (c.companyNumber && (await chKey())) chAccounts(c.companyNumber).then((a) => competitorStore.update(saved.id, (x) => { x.accounts = a; }, "system", "accounts fetched")).then(() => broadcast("competition", {})).catch(() => {});
+    return sendJson(response, 201, saved);
+  }
+  const m = url.pathname.match(/^\/api\/competition\/competitors\/([0-9a-f-]{36})(?:\/(archive|accounts))?$/);
+  if (m) {
+    const existing = await competitorStore.get(m[1]);
+    if (!existing || existing.status === "archived") return sendError(response, 404, "Competitor not found");
+    if (!m[2] && method === "PUT") {
+      const c = clean(await readJsonBody(request));
+      if (!c.name) return sendJson(response, 422, { ok: false, errors: { name: "Enter the competitor's name." } });
+      return sendJson(response, 200, await competitorStore.update(m[1], (x) => Object.assign(x, c), user.name, "edited"));
+    }
+    if (m[2] === "archive" && method === "POST") { await competitorStore.update(m[1], (x) => { x.status = "archived"; }, user.name, "removed"); return sendJson(response, 200, { ok: true }); }
+    if (m[2] === "accounts" && method === "POST") {
+      if (!existing.companyNumber) return sendJson(response, 422, { ok: false, error: "Add the Companies House number first." });
+      try { const a = await chAccounts(existing.companyNumber); await competitorStore.update(m[1], (x) => { x.accounts = a; }, user.name, "accounts fetched"); return sendJson(response, 200, { ok: true, accounts: a }); }
+      catch (error) { return sendJson(response, 200, { ok: false, error: error.message }); }
+    }
   }
   return sendError(response, 404, "Not found");
 }
@@ -2743,6 +2967,11 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname.startsWith("/api/news")) {
       await handleNewsApi(request, response, url);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/competition")) {
+      await handleCompetitionApi(request, response, url);
       return;
     }
 

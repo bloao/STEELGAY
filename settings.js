@@ -5,7 +5,7 @@
   const form = $("settings-form");
   const field = (n) => form.elements.namedItem(n);
   const CAT = window.STEEL_CATALOGUE;
-  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "cbamRatePerT", "cbamEafTPerT", "cbamBofTPerT", "cbamUnknownTPerT", "metalsApiKey"];
+  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "cbamRatePerT", "cbamEafTPerT", "cbamBofTPerT", "cbamUnknownTPerT", "metalsApiKey", "companiesHouseApiKey"];
 
   let saved = null;
   let groups = [];
@@ -102,6 +102,11 @@
       set("conn-ons", ons.ok ? "" : ons.at ? "is-bad" : "is-muted", ons.ok ? `Live · ${fmt.date(ons.at.slice(0, 10))}` : ons.at ? "Unreachable" : "Starting…");
       set("conn-lme", !lme.hasKey ? "is-warn" : lme.ok ? "" : "is-bad", !lme.hasKey ? "Needs a key" : lme.ok ? "Live" : lme.at ? "Key not working" : "Connecting…");
       if (lme.hasKey && lme.error) $("conn-lme-sub").textContent = lme.error;
+    }).catch(() => {});
+    api("/api/competition").then((r) => {
+      const node = $("conn-ch");
+      node.className = `status-dot ${r.status.hasChKey ? "" : "is-warn"}`;
+      node.textContent = r.status.hasChKey ? "Key saved" : "Needs a key";
     }).catch(() => {});
     api("/api/assistant/status").then((r) => {
       const node = $("conn-claude");

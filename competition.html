@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Competition · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+        <span class="site-nav__collab" aria-hidden="true">×</span>
+        <img class="site-nav__partner" src="hall-pickles-logo.png" alt="in partnership with Hall &amp; Pickles" width="148" height="26">
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="competition"></aside>
+      <script src="app-sidebar.js"></script>
+      <main class="page intel-page">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Market intelligence</p>
+            <h1>Competition</h1>
+            <p class="muted lede">What your competitors are importing and when, how much stock they carry at year end, and whether the market as a whole is stocking up. Everything here comes from public HMRC and Companies House data.</p>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button" id="sync-btn">Load HMRC history</button>
+            <button class="btn btn-primary" type="button" id="add-btn">Follow a competitor</button>
+          </div>
+        </div>
+
+        <div class="data-strip" id="data-strip" aria-live="polite"></div>
+
+        <section class="card mk-card comp-add" id="add-card" hidden aria-labelledby="add-title">
+          <div class="card-head"><div><h2 id="add-title">Follow a competitor</h2><p class="small muted" style="margin:2px 0 0">Type their name. Pick the matching importer records (firms often import under more than one name or site), and their Companies House number for their accounts.</p></div></div>
+          <form id="add-form" novalidate></form>
+        </section>
+
+        <section class="card mk-card" aria-labelledby="mkt-title">
+          <div class="card-head">
+            <div>
+              <h2 id="mkt-title">Is the market stocking up?</h2>
+              <p class="small muted" id="mkt-sub" style="margin:2px 0 0">UK import tonnes each month for the products you buy, against the previous 12-month average.</p>
+            </div>
+          </div>
+          <div id="market"></div>
+        </section>
+
+        <section class="card mk-card" aria-labelledby="comp-title">
+          <div class="card-head">
+            <div>
+              <h2 id="comp-title">Competitors you follow</h2>
+              <p class="small muted" style="margin:2px 0 0">Each square is a month: filled when they imported steel, darker when it included products you buy.</p>
+            </div>
+          </div>
+          <div id="competitors"></div>
+        </section>
+
+        <section class="card mk-card" aria-labelledby="sug-title">
+          <div class="card-head">
+            <div>
+              <h2 id="sug-title">Also importing what you buy</h2>
+              <p class="small muted" style="margin:2px 0 0">Companies whose imports overlap most with your product codes over the last year.</p>
+            </div>
+          </div>
+          <div id="suggestions"></div>
+        </section>
+
+        <p class="small muted fc-disclaimer">HMRC importer lists name companies importing from outside the UK each month and the commodity codes they used. They don't give quantities, prices or suppliers. Stock values come from accounts filed at Companies House; small companies often file without a stock figure. Sources: <a href="https://www.uktradeinfo.com/trade-data/latest-bulk-datasets/" target="_blank" rel="noopener">uktradeinfo.com bulk datasets</a>, <a href="https://find-and-update.company-information.service.gov.uk" target="_blank" rel="noopener">Companies House</a>.</p>
+      </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="competition.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

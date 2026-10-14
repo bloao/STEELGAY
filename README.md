@@ -193,3 +193,13 @@ An in-house, transparent model (`lib/forecast.mjs`, v0.1) built from the ONS UK 
 
 **Stock-up opportunities** price each product at today's best landed cost (with optional UK CBAM) and work out whether buying 1–6 months of usage now beats buying month by month, after cost of capital and storage. Assumptions: Settings → `forecastCbamPassThroughPct` (30%), `forecastStoragePerTMonth` (£2/t a month). API: `POST /api/forecast {months, cbam}`.
 
+
+## Competition (`competition.html`)
+
+Public data only (`lib/competition.mjs`):
+- **HMRC importer details** (uktradeinfo.com, monthly): every company importing from outside the UK and the 8-digit codes it used, for chapters 72 and 73. Click **Load HMRC history** to pull the last 24 months; after that the server checks daily for new months. HMRC does not publish tonnage per company, so the page shows import *activity* (which months, which products) and flags patterns: stepping up, widening range, slowing, gone quiet.
+- **HMRC overseas trade bulk data** (BDSimp): UK import tonnes and value by code and origin each month. The "Is the market stocking up?" chart totals your products' codes and flags months 25% or more above the previous 12-month average.
+- **Companies House accounts** (needs a free REST key in Settings → Connections): stock (inventories) and turnover from the latest digital (iXBRL) accounts, year on year.
+- Before any download, matching and suggestions use the pipeline summary in `output/company_activity.csv` (2024–2026). Company ids match the Python pipeline.
+
+Data: `var/competition-data.json` (HMRC), `var/competitors.json` (who you follow). API: `GET /api/competition`, `GET /api/competition/search?q=`, `GET /api/competition/ch-search?q=`, `POST /api/competition/sync {months}`, `POST /api/competition/competitors`, `PUT …/:id`, `POST …/:id/archive`, `POST …/:id/accounts`.
