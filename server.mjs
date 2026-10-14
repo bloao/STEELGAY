@@ -21,6 +21,7 @@ import * as FC from "./lib/forecast.mjs";
 import * as COMP from "./lib/competition.mjs";
 import * as ARR from "./lib/arrivals.mjs";
 import * as STOCK from "./lib/stockpile.mjs";
+import * as PLAN from "./lib/orderplan.mjs";
 import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
@@ -2374,6 +2375,12 @@ async function steelForecast(body = {}) {
   ].filter(Boolean);
   const horizon = Math.max(12, FC.monthsBetween(lastDate, today) + 12);
   const proj = FC.project(monthlyIdx, { horizon, drivers, settings: cfg });
+  if (body.coreOnly) {
+    const offset = Math.max(0, FC.monthsBetween(lastDate, today));
+    const fromToday = proj.path.slice(offset);
+    const indexNow = offset > 0 ? proj.path[offset - 1].mid : proj.last;
+    return { ok: true, core: true, fromToday, indexNow, drivers, settings: cfg, costOfCapitalPct: ws.costOfCapitalPct, model: { trendPerMonthPct: proj.trendPerMonthPct, momentumPerMonthPct: proj.momentumPerMonthPct, volatilityPct: proj.volatilityPct } };
+  }
   const base = FC.project(monthlyIdx, { horizon, drivers: [], settings: cfg });
   const bt3 = FC.backtest(monthlyIdx, { h: 3, origins: 12, settings: cfg });
   const bt6 = FC.backtest(monthlyIdx, { h: 6, origins: 12, settings: cfg });
@@ -2776,6 +2783,110 @@ async function handleArrivalsApi(request, response, url) {
   return sendError(response, 404, "Not found");
 }
 
+
+// ------------------------------------------------------------ order planner
+async function orderPlan(body = {}) {
+  const product = await productStore.get(body.productId);
+  if (!product || product.status === "archived") return { ok: false, error: "Pick a product." };
+  const view = await productView(product);
+  const m = view.metrics;
+  const tonnage = Number(body.tonnage) > 0 ? Math.round(Number(body.tonnage) * 10) / 10 : (m.suggestedOrderT || product.moqT || product.monthlyUsageT || 25);
+  const today = new Date().toISOString().slice(0, 10);
+  const needBy = /^\d{4}-\d{2}-\d{2}$/.test(body.needBy || "") ? body.needBy : (m.stockOutDate && m.stockOutDate > today ? m.stockOutDate : addDaysIso(today, 30));
+  const appetite = PLAN.APPETITE[body.appetite] ? body.appetite : "balanced";
+  const cbam = body.cbam === true;
+  const code8 = String(product.commodityCode).slice(0, 8);
+
+  // suppliers, priced for this exact product, tonnage and their own lead time
+  const rows = await compareSuppliers({ productId: product.id, tonnage, arrival: "lead", cbam });
+  const sups = new Map((await supplierStore.list()).map((x) => [x.id, x]));
+  const options = rows.map((r) => {
+    const s = sups.get(r.id) || {};
+    const leadDays = s.leadTimeMax != null ? s.leadTimeMax * (s.leadTimeUnit === "days" ? 1 : 7) : s.leadTimeMin != null ? s.leadTimeMin * (s.leadTimeUnit === "days" ? 1 : 7) : null;
+    const latest = [...(s.quotes || [])].sort((a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || "")))[0];
+    return { ...r, arrival: r.importDate || null, leadDays, onTimePct: s.onTimePct ?? null, quoteAgeDays: r.quoteDate ? Math.max(0, Math.round((Date.parse(today) - Date.parse(r.quoteDate)) / 86_400_000)) : null, validUntil: latest ? latest.validUntil || null : null, moqNote: s.moqNote || "", paymentDays: s.paymentDays ?? null };
+  });
+  const priced = options.filter((o) => Number.isFinite(o.effectivePerT)).sort((a, b) => a.effectivePerT - b.effectivePerT);
+
+  // forecast for this product, from today's best landed price
+  const fc = await steelForecast({ coreOnly: true }).catch(() => ({ ok: false }));
+  let forecast = null, aheadOptions = [];
+  if (fc.ok) {
+    const pctAt = (h) => (fc.fromToday[h - 1] ? ((fc.fromToday[h - 1].mid / fc.indexNow) - 1) * 100 : null);
+    const priceNow = priced[0] ? priced[0].effectivePerT : product.costPerT;
+    forecast = { in1: pctAt(1), in3: pctAt(3), in6: pctAt(6), priceNow, in3Price: fc.fromToday[2] ? priceNow * fc.fromToday[2].mid / fc.indexNow : null,
+      band3: fc.fromToday[2] ? [priceNow * fc.fromToday[2].low / fc.indexNow, priceNow * fc.fromToday[2].high / fc.indexNow] : null, drivers: fc.drivers.map((d) => ({ label: d.label, pct: d.pct, kind: d.kind })) };
+    aheadOptions = [1, 2, 3].map((n) => { const b = FC.buyAhead({ priceNow, indexNow: fc.indexNow, path: fc.fromToday, monthlyUsageT: product.monthlyUsageT, months: n, costOfCapitalPct: fc.costOfCapitalPct, storagePerTMonth: fc.settings.storagePerTMonth }); return b ? { months: n, netMid: b.netMid, netLow: b.netLow, netHigh: b.netHigh, signal: b.signal, tonnes: b.tonnes } : null; }).filter(Boolean);
+  }
+
+  // how safe it is to hold
+  const sp = (await stockpileView()).rows.find((r) => r.id === product.id);
+  const stockpile = sp ? { score: sp.score, rank: sp.rank, of: (await stockpileView()).rows.length, level: sp.verdict.level, text: sp.verdict.text, volatilityPct: sp.volatilityPct, buyers: sp.parts.buyers.value } : null;
+
+  // market price for this product (its own benchmark first, then the group's)
+  const mv = await marketView();
+  const gbp = (price, cur) => (mv.fx[cur || "GBP"] ? price * mv.fx[cur || "GBP"] : null);
+  const own = mv.series.filter((x) => x.productId === product.id && x.latest).sort((a, b) => b.latest.date.localeCompare(a.latest.date))[0];
+  const grp = mv.series.filter((x) => !x.productId && x.group === product.category && x.latest && x.kind !== "index" && x.kind !== "input")[0];
+  const comp = mv.competition.find((x) => x.group === product.category && /UK/.test(x.source) && x.latest);
+  const bm = own || grp || comp;
+  const market = { benchmark: bm ? gbp(bm.latest.price, bm.currency) : null, benchmarkLabel: bm ? (own ? `${bm.source} price for this product` : bm.computed ? "UK average of your quotes" : `${bm.source} ${product.category} price`) : null, benchmarkDate: bm ? bm.latest.date : null, yourCost: product.costPerT, target: product.targetBuyPrice ?? null };
+
+  // competition on this code
+  const data = await getCompData();
+  const vol = COMP.marketVolume(data.trade || {}, [code8]).slice(-12);
+  const last = vol[vol.length - 1] || null;
+  const months12 = COMP.monthsList(Object.keys(data.importerMonths), 12);
+  const buyers = STOCK.buyerCount(code8, { companies: months12.length ? data.companies : null, months: months12, summary: data.summary });
+  const cv = await competitionView();
+  const rivals = cv.competitors.filter((c) => c.analysis && (c.analysis.codes || []).some((x) => x.slice(0, 6) === code8.slice(0, 6))).map((c) => ({ name: c.name, signal: c.analysis.signal, note: c.analysis.note, stock: c.accounts && c.accounts.stock[0] ? c.accounts.stock[0] : null, stockPrev: c.accounts && c.accounts.stock[1] ? c.accounts.stock[1] : null }));
+  const competition = { volume: vol.map((r) => ({ p: r.p, tonnes: r.tonnes, avg12: r.avg12, perT: r.perT })), month: last ? last.p : null, vsAvgPct: last ? last.vsAvgPct : null, buyers, rivals, steppingUp: rivals.filter((r) => r.signal === "stepping-up").map((r) => r.name), hasData: vol.length > 0 };
+
+  // quota for this product's category
+  let quota = null, quotaLines = [];
+  if (view.steelCategory) {
+    try {
+      const q = await getMeasureQuotas();
+      quotaLines = q.lines.filter((l) => l.categoryId === view.steelCategory.id).map(({ orderNumber, origin, residual, balanceT, usedShare, runOutDate, risk, endDate, nextStartDate }) => ({ orderNumber, origin, residual, balanceT, usedShare, runOutDate, risk, endDate, nextStartDate }));
+      const origins = new Set(priced.map((o) => o.origin));
+      quota = quotaLines.find((l) => origins.has("France") || origins.has("Italy") || origins.has("Spain") ? l.origin === "European Union" : false) || quotaLines.find((l) => l.residual) || quotaLines[0] || null;
+    } catch { /* quota feed down: carry on without it */ }
+  }
+
+  const intel = NEWS.notesFor(await liveNotes(), { productId: product.id, group: product.category, supplierId: "__none__", date: needBy })
+    .concat((await liveNotes()).filter((n) => n.scope === "supplier" && priced.some((o) => o.id === n.targetId) && NEWS.noteActive(n, needBy) && n.effectUnit !== "none"));
+  const productFacts = { id: product.id, name: product.name, category: product.category, commodityCode: product.commodityCode, steelCategory: view.steelCategory, costPerT: product.costPerT, targetBuyPrice: product.targetBuyPrice ?? null,
+    monthlyUsageT: product.monthlyUsageT, stockT: m.stockNowT, coverMonths: m.coverMonths, stockOutDate: m.stockOutDate, latestOrderDate: m.latestOrderDate, suggestedOrderT: m.suggestedOrderT, moqT: product.moqT ?? null, status: m.status, reason: m.reason };
+  const rec = PLAN.recommend({ product: productFacts, tonnage, needBy, appetite, options, forecast, aheadOptions, stockpile, quota, market, competition, intel });
+  return { ok: true, today, product: productFacts, inputs: { tonnage, needBy, appetite, cbam }, appetites: PLAN.APPETITE, options: rec.scored || [], unpriced: options.filter((o) => !Number.isFinite(o.effectivePerT)).map((o) => ({ id: o.id, name: o.name, error: o.error })),
+    forecast, aheadOptions, stockpile, market, competition, quota, quotaLines, intel: intel.map((n) => ({ id: n.id, title: n.title, scope: n.scope, targetName: n.targetName || n.targetId, effectUnit: n.effectUnit, effectValue: n.effectValue, effectiveFrom: n.effectiveFrom, by: n.by })), recommendation: rec };
+}
+
+async function handleOrdersApi(request, response, url) {
+  const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  if (url.pathname === "/api/orders/plan" && request.method === "POST") return sendJson(response, 200, await orderPlan(await readJsonBody(request)));
+  if (url.pathname === "/api/orders/needs" && request.method === "GET") {
+    const list = (await productStore.list()).filter((p) => p.status !== "archived");
+    const out = await Promise.all(list.map(async (p) => { const v = await productView(p); return { id: p.id, name: p.name, category: p.category, status: v.metrics.status, reason: v.metrics.reason, suggestedOrderT: v.metrics.suggestedOrderT, coverMonths: v.metrics.coverMonths, stockOutDate: v.metrics.stockOutDate, latestOrderDate: v.metrics.latestOrderDate, monthlyUsageT: p.monthlyUsageT, stockT: v.metrics.stockNowT }; }));
+    const rank = { critical: 0, reorder: 1, low: 2, ok: 3, "no-usage": 4 };
+    return sendJson(response, 200, { products: out.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || (a.coverMonths ?? 99) - (b.coverMonths ?? 99)) });
+  }
+  if (url.pathname === "/api/orders/plan/save" && request.method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
+    const body = await readJsonBody(request);
+    const s = await supplierStore.get(body.supplierId);
+    if (!s) return sendJson(response, 422, { ok: false, error: "Pick a supplier." });
+    const b = await supplierBreakdown(s, { productId: body.productId, tonnage: Number(body.tonnage) || undefined, cbam: body.cbam === true });
+    if (!b.ok) return sendJson(response, 422, { ok: false, error: b.error });
+    const inputs = { ...b.scenarioInputs, notes: `${body.note ? `${body.note}\n` : ""}From the order planner: ${s.name}, ${b.inputs.tonnage} t, landed £${Math.round(b.effectivePerT)}/t with every cost counted.` };
+    const result = await runScenario(inputs, body.cbam === true ? { cbamStartDate: "0000-01-01" } : { cbamEnabled: false });
+    if (!result.ok) return sendJson(response, 422, result);
+    const saved = await store.create({ inputs: result.inputs, result, plan: { supplierId: s.id, productId: body.productId, effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, timing: body.timing || null, reasons: Array.isArray(body.reasons) ? body.reasons.slice(0, 8).map((x) => String(x).slice(0, 300)) : [] } }, user.name);
+    return sendJson(response, 201, { ok: true, id: saved.id });
+  }
+  return sendError(response, 404, "Not found");
+}
+
 async function handleBenchmarkApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   const method = request.method;
@@ -3172,6 +3283,11 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname.startsWith("/api/news")) {
       await handleNewsApi(request, response, url);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/orders")) {
+      await handleOrdersApi(request, response, url);
       return;
     }
 

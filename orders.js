@@ -59,6 +59,20 @@
     }
   }
 
+  async function loadNeeds() {
+    try {
+      const r = await api("/api/orders/needs");
+      const need = r.products.filter((p) => ["critical", "reorder", "low"].includes(p.status));
+      const box = document.getElementById("needs");
+      if (!need.length) { box.replaceChildren(el("li", { class: "muted", text: "Nothing needs ordering right now. Every product is above its reorder point." })); return; }
+      box.replaceChildren(...need.map((p, i) => el("li", { class: p.status === "low" ? "is-low" : "is-critical", style: `animation-delay:${i * 50}ms` },
+        el("div", { class: "needs-head" }, el("strong", { text: p.name }), el("span", { class: `sig ${p.status === "low" ? "is-maybe" : "is-risk"}`, text: p.status === "low" ? "Order soon" : "Order now" })),
+        el("p", { text: `${p.reason}. ${Math.round(p.stockT)} t in stock, ${p.coverMonths !== null ? `${p.coverMonths.toFixed(1)} months` : "no usage set"}${p.stockOutDate ? `, runs out ${fmt.date(p.stockOutDate)}` : ""}.` }),
+        el("a", { class: "btn btn-sm btn-primary", href: `plan.html?product=${p.id}`, text: p.suggestedOrderT ? `Plan ${p.suggestedOrderT} t` : "Plan an order" }))));
+    } catch { document.getElementById("needs-card").hidden = true; }
+  }
+  loadNeeds();
+
   async function load() {
     try {
       const data = await api("/api/scenarios");

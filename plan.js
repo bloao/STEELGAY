@@ -1,0 +1,204 @@
+(function () {
+  "use strict";
+  const { api, fmt, el, toast, loadMe } = window.OrderTool;
+  const $ = (id) => document.getElementById(id);
+  let me = { canEdit: true };
+  let products = [];
+  let plan = null;
+  let chosen = null; // supplier id picked for saving (defaults to the recommendation)
+  let appetite = "balanced";
+  let timer = null;
+  let seq = 0;
+
+  const readCbam = () => { try { return localStorage.getItem("agx-cbam") === "on"; } catch { return false; } };
+  const gbpT = (v) => (Number.isFinite(v) ? `£${Math.round(v).toLocaleString("en-GB")}/t` : "—");
+  const gbp = (v) => (Number.isFinite(v) ? `£${Math.round(v).toLocaleString("en-GB")}` : "—");
+  const pct = (v) => (Number.isFinite(v) ? `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}%` : "—");
+  const per = (p) => new Date(Date.UTC(Number(p.slice(0, 4)), Number(p.slice(4, 6)) - 1, 1)).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+  const TIMING = { "order-now": "is-go", "buy-ahead": "is-watch", wait: "is-maybe" };
+  const RISK = { critical: ["Close to running out", "is-risk"], high: ["Filling fast", "is-maybe"], medium: ["Watch", "is-maybe"], low: ["Plenty left", "is-go"] };
+
+  // ---------------------------------------------------------------- form
+  function fillForm() {
+    const keep = $("pf-product").value;
+    $("pf-product").replaceChildren(...products.map((p) => el("option", { value: p.id, text: `${p.name}${["critical", "reorder", "low"].includes(p.status) ? " · needs ordering" : ""}` })));
+    $("pf-appetite").replaceChildren(...[["cautious", "Cautious"], ["balanced", "Balanced"], ["bold", "Price first"]].map(([k, l]) => el("button", { type: "button", role: "radio", "aria-checked": String(appetite === k), "aria-pressed": String(appetite === k), text: l, title: k === "cautious" ? "Weights the cost of missing the quota heavily" : k === "bold" ? "Goes on expected cost alone" : "Counts part of the quota-miss cost",
+      onclick: () => { appetite = k; fillForm(); run(); } })));
+    if (keep) $("pf-product").value = keep;
+    const pill = $("pf-cbam"); pill.classList.toggle("is-on", readCbam()); pill.setAttribute("aria-checked", String(readCbam()));
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(run, 350); }
+
+  async function run({ keepInputs = true } = {}) {
+    const id = $("pf-product").value;
+    if (!id) return;
+    const mine = ++seq;
+    $("plan").classList.add("is-loading");
+    const body = { productId: id, appetite, cbam: readCbam() };
+    if (keepInputs && $("pf-tonnes").value) body.tonnage = Number($("pf-tonnes").value);
+    if (keepInputs && $("pf-needby").value) body.needBy = $("pf-needby").value;
+    try {
+      const r = await api("/api/orders/plan", { method: "POST", body });
+      if (mine !== seq) return;
+      plan = r;
+      if (!r.ok) { $("plan").replaceChildren(el("p", { class: "muted", text: r.error })); return; }
+      // keep a supplier you picked, unless it can no longer price this order
+      if (!keepInputs || !chosen || !r.options.some((o) => o.id === chosen)) chosen = r.recommendation.ok ? r.recommendation.best.id : null;
+      $("pf-tonnes").value = r.inputs.tonnage;
+      $("pf-needby").value = r.inputs.needBy;
+      $("pf-tonnes-hint").textContent = r.product.suggestedOrderT ? `suggested ${r.product.suggestedOrderT} t` : `${r.product.monthlyUsageT} t a month`;
+      $("pf-needby-hint").textContent = r.product.stockOutDate ? `you run out ${fmt.date(r.product.stockOutDate)}` : "";
+      history.replaceState(null, "", `plan.html?product=${id}`);
+      render();
+    } catch (error) {
+      $("plan").replaceChildren(el("p", { class: "muted", text: `Couldn't plan this order: ${error.message}` }));
+    } finally { $("plan").classList.remove("is-loading"); }
+  }
+
+  // ---------------------------------------------------------------- render
+  function render() {
+    const r = plan, rec = r.recommendation;
+    if (!rec.ok) {
+      $("plan").replaceChildren(el("div", { class: "empty-state" }, el("h3", { text: "No supplier prices for this product" }), el("p", {}, rec.reason, " ", el("a", { href: "suppliers.html", text: "Open Suppliers →" }))));
+      return;
+    }
+    $("plan").replaceChildren(hero(r, rec), el("div", { class: "plan-grid" }, stockCard(r), priceCard(r), compCard(r), quotaCard(r), holdCard(r), intelCard(r)), optionsCard(r, rec));
+  }
+
+  function hero(r, rec) {
+    const b = rec.best, t = rec.timing;
+    const pick = r.options.find((o) => o.id === chosen) || b;
+    const tonnes = rec.recTonnes;
+    return el("section", { class: "plan-hero card" },
+      el("div", { class: "ph-top" },
+        el("span", { class: `sig ${TIMING[t.action] || ""}`, text: t.label }),
+        el("span", { class: "small muted", text: `${(r.appetites[r.inputs.appetite] || {}).label} approach${r.inputs.cbam ? " · UK CBAM included" : ""}` })),
+      el("h2", { class: "ph-title" }, "Buy ", el("b", { text: `${tonnes} t` }), ` of ${r.product.name} from `, el("b", { text: b.name })),
+      el("div", { class: "ph-figs" },
+        el("div", {}, el("span", { text: "Landed cost" }), el("strong", { text: gbpT(b.effectivePerT) }), el("small", { text: "every cost counted" })),
+        el("div", {}, el("span", { text: "Order total" }), el("strong", { text: gbp(b.effectivePerT * tonnes) }), el("small", { text: `${tonnes} t` })),
+        el("div", {}, el("span", { text: "If quota missed" }), el("strong", { class: b.quotaExposure > 1 ? "is-bad" : "", text: b.quotaExposure > 1 ? `+${gbpT(b.quotaExposure)}` : "£0" }), el("small", { text: b.quotaExposure > 1 ? `${Math.round((b.probability || 0) * 100)}% chance by arrival` : "no quota risk" })),
+        el("div", {}, el("span", { text: "Arrives" }), el("strong", { text: b.arrival ? fmt.date(b.arrival) : "—" }), el("small", { class: b.lateDays ? "is-bad" : "", text: b.lateDays ? `${b.lateDays} days after you run out` : `need it by ${fmt.date(r.inputs.needBy)}` }))),
+      el("p", { class: "ph-timing", text: t.text }),
+      el("div", { class: "ph-cols" },
+        el("div", {}, el("h4", { text: "Why" }), el("ul", { class: "ph-list" }, ...rec.reasons.map((x) => el("li", { text: x })))),
+        rec.watch.length ? el("div", {}, el("h4", { text: "Watch out" }), el("ul", { class: "ph-list is-watch" }, ...rec.watch.map((x) => el("li", { text: x })))) : null),
+      el("div", { class: "ph-actions" },
+        me.canEdit ? el("button", { class: "btn btn-primary", type: "button", text: pick.id === b.id ? `Save order with ${b.name}` : `Save order with ${pick.name}`, onclick: (e) => save(e.currentTarget, pick, tonnes) }) : null,
+        el("a", { class: "btn", href: `suppliers.html?supplier=${pick.id}`, text: "Full cost breakdown" }),
+        me.canEdit && (pick.quoteScope !== "product" || pick.quoteAgeDays > 30) ? el("a", { class: "btn", href: `suppliers.html?rfq=${r.product.id}`, text: "Request fresh quotes" }) : null,
+        me.canEdit ? el("button", { class: "link-btn", type: "button", text: "+ Log market intel", onclick: () => window.openMarketIntel({ scope: "product", targetId: r.product.id }) }) : null));
+  }
+
+  async function save(btn, opt, tonnes) {
+    btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      const res = await api("/api/orders/plan/save", { method: "POST", body: { productId: plan.product.id, supplierId: opt.id, tonnage: tonnes, cbam: plan.inputs.cbam, timing: plan.recommendation.timing.action, reasons: plan.recommendation.reasons } });
+      toast("Order saved as a draft. Submit it for approval from the order page.");
+      location.href = `order-tool.html?id=${res.id}`;
+    } catch (error) { toast(error.message, true); btn.disabled = false; btn.textContent = "Save order"; }
+  }
+
+  const card = (title, sub, ...kids) => el("section", { class: "plan-card" }, el("div", { class: "pc-head" }, el("h3", { text: title }), sub ? el("span", { class: "small muted", text: sub }) : null), ...kids);
+  const fact = (k, v, cls) => el("div", { class: "pc-fact" }, el("span", { text: k }), el("b", { class: cls || "", text: v }));
+
+  function stockCard(r) {
+    const p = r.product;
+    const st = { critical: ["Order now", "is-risk"], reorder: ["Order now", "is-risk"], low: ["Order soon", "is-maybe"], ok: ["OK", "is-go"], "no-usage": ["No usage", ""] }[p.status] || [p.status, ""];
+    return card("Your stock", null,
+      el("span", { class: `sig ${st[1]}`, text: st[0] }), el("p", { class: "pc-note", text: p.reason }),
+      fact("In stock", `${Math.round(p.stockT)} t`), fact("You use", `${p.monthlyUsageT} t a month`),
+      fact("Cover", p.coverMonths !== null ? `${p.coverMonths.toFixed(1)} months` : "—"), fact("Runs out", p.stockOutDate ? fmt.date(p.stockOutDate) : "—"),
+      p.latestOrderDate ? fact("Order by", fmt.date(p.latestOrderDate), p.latestOrderDate <= r.today ? "is-bad" : "") : null);
+  }
+
+  function priceCard(r) {
+    const f = r.forecast, m = r.market, best = r.recommendation.best;
+    const rows = r.aheadOptions || [];
+    return card("Price outlook", f ? `UK steel ${pct(f.in3)} over 3 months` : "No forecast yet",
+      fact("Best landed now", gbpT(best.effectivePerT)), fact("You pay now", gbpT(m.yourCost)),
+      m.benchmark ? fact(m.benchmarkLabel.replace(/^./, (c) => c.toUpperCase()), gbpT(m.benchmark)) : fact("Market price", "Not set"),
+      f && f.in3Price ? fact("Expected in 3 months", `${gbpT(f.in3Price)} (${gbp(f.band3[0])}–${gbp(f.band3[1])})`, f.in3 >= 1 ? "is-up" : f.in3 <= -1 ? "is-down" : "") : null,
+      rows.length ? el("div", { class: "pc-ahead" }, el("span", { class: "pc-sub", text: "Buying ahead, after holding costs" }),
+        ...rows.map((a) => el("div", { class: "pc-ahead-row" }, el("span", { text: `+${a.months} mo (${Math.round(a.tonnes)} t)` }), el("b", { class: a.netMid > 0 ? "is-down" : "is-up", text: `${a.netMid >= 0 ? "+" : "−"}${gbp(Math.abs(a.netMid))}` })))) : null,
+      el("a", { class: "pc-link", href: `products.html?product=${r.product.id}`, text: "Product market prices →" }));
+  }
+
+  function compCard(r) {
+    const c = r.competition;
+    const bars = el("div", { class: "pc-bars", role: "img", "aria-label": "UK imports of this product by month" });
+    const max = Math.max(...c.volume.map((v) => v.tonnes), 1);
+    c.volume.forEach((v) => bars.append(el("span", { class: v.avg12 && v.tonnes > v.avg12 * 1.25 ? "is-hot" : "", style: `height:${Math.max(3, (v.tonnes / max) * 40)}px`, title: `${per(v.p)}: ${v.tonnes.toLocaleString("en-GB")} t` })));
+    return card("Competition", c.hasData ? `UK imports of this code, 12 months` : "Load HMRC history for volumes",
+      c.hasData ? bars : null,
+      c.vsAvgPct !== null ? fact("Latest month vs normal", pct(c.vsAvgPct), c.vsAvgPct >= 25 ? "is-up" : c.vsAvgPct <= -25 ? "is-down" : "") : null,
+      fact("UK companies importing it", c.buyers.source === "none" ? "—" : String(c.buyers.exact)),
+      c.rivals.length ? el("ul", { class: "pc-rivals" }, ...c.rivals.slice(0, 4).map((x) => el("li", {}, el("b", { text: x.name }), ` ${({ "stepping-up": "stepping up", expanding: "widening range", slowing: "slowing", quiet: "gone quiet", steady: "steady" })[x.signal] || x.signal}`,
+        x.stock ? el("span", { class: "row-sub", text: ` · stock £${(x.stock.value / 1e6).toFixed(1)}m${x.stockPrev && x.stockPrev.value ? ` (${x.stock.value >= x.stockPrev.value ? "+" : "−"}${Math.abs(Math.round(((x.stock.value - x.stockPrev.value) / x.stockPrev.value) * 100))}%)` : ""}` }) : null))) : el("p", { class: "pc-note", text: "None of the competitors you follow import this code." }),
+      el("a", { class: "pc-link", href: "competition.html", text: "Competition →" }));
+  }
+
+  function quotaCard(r) {
+    const q = r.quota;
+    if (!r.product.steelCategory) return card("Quota", null, el("p", { class: "pc-note", text: "Not in a steel-measure category, so there's no quota to worry about." }));
+    if (!q) return card("Quota", r.product.steelCategory.name, el("p", { class: "pc-note", text: "Quota data isn't available right now." }));
+    const [rl, rc] = RISK[q.risk] || [q.risk, ""];
+    const arrival = r.recommendation.best.arrival;
+    return card("Quota", `Category ${r.product.steelCategory.id}`,
+      el("span", { class: `sig ${rc}`, text: rl }),
+      fact(`${q.origin || "Line"} ${q.orderNumber}`, `${Math.round(q.balanceT).toLocaleString("en-GB")} t left`),
+      el("span", { class: "sp-bar pc-quota" }, el("span", { style: `width:${Math.round((q.usedShare || 0) * 100)}%` })),
+      q.runOutDate ? fact("Runs out about", fmt.date(q.runOutDate), arrival && q.runOutDate < arrival ? "is-bad" : "") : null,
+      fact("Next quarter opens", fmt.date(q.nextStartDate)),
+      el("a", { class: "pc-link", href: "quotas.html", text: "Live quotas →" }));
+  }
+
+  function holdCard(r) {
+    const s = r.stockpile;
+    if (!s) return card("Safe to hold?", null, el("p", { class: "pc-note", text: "Not scored yet." }));
+    const cls = { good: "is-go", ok: "is-maybe", caution: "", risk: "is-risk" }[s.level];
+    return card("Safe to hold?", `#${s.rank} of ${s.of} products`,
+      el("span", { class: `sig ${cls}`, text: `${s.score}/100` }), el("p", { class: "pc-note", text: s.text }),
+      fact("Price swings", s.volatilityPct !== null ? `±${s.volatilityPct.toFixed(1)}% a month` : "—"),
+      fact("UK buyers of this code", String(s.buyers ?? "—")),
+      el("a", { class: "pc-link", href: "products.html", text: "Stockpiling ranking →" }));
+  }
+
+  function intelCard(r) {
+    return card("Market intel", r.intel.length ? `${r.intel.length} in these prices` : "Nothing logged",
+      r.intel.length ? el("ul", { class: "pc-rivals" }, ...r.intel.slice(0, 5).map((n) => el("li", {}, el("b", { text: n.effectUnit === "pct" ? `${n.effectValue > 0 ? "+" : ""}${n.effectValue}%` : `${n.effectValue > 0 ? "+" : "−"}£${Math.abs(n.effectValue)}/t` }), ` ${n.title}`, el("span", { class: "row-sub", text: ` · ${n.scope === "market" ? "whole market" : n.targetName}` })))) : el("p", { class: "pc-note", text: "Heard something about prices or a supplier? Log it and the plan recalculates." }),
+      me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Log market intel", onclick: () => window.openMarketIntel({ scope: "product", targetId: r.product.id }) }) : null);
+  }
+
+  function optionsCard(r, rec) {
+    const tags = (o) => [o.id === rec.best.id ? ["Best overall", "is-go"] : null, rec.alternatives.cheapest && o.id === rec.alternatives.cheapest.id && o.id !== rec.best.id ? ["Cheapest", "is-maybe"] : null,
+      rec.alternatives.safest && o.id === rec.alternatives.safest.id && o.id !== rec.best.id ? ["Lowest risk", ""] : null, rec.alternatives.fastest && o.id === rec.alternatives.fastest.id && o.id !== rec.best.id ? ["Fastest", ""] : null].filter(Boolean);
+    return el("section", { class: "card mk-card plan-options" },
+      el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }), el("p", { class: "small muted", style: "margin:2px 0 0", text: `Priced for ${r.inputs.tonnage} t with each supplier's lead time. "Risk-adjusted" adds ${r.inputs.appetite === "bold" ? "none" : r.inputs.appetite === "cautious" ? "60%" : "25%"} of the quota-miss cost and a penalty for arriving after you run out. Pick one to save it instead.` }))),
+      el("div", { class: "table-scroll" }, el("table", { class: "quota-table plan-table" },
+        el("thead", {}, el("tr", {}, el("th", {}), el("th", { text: "Supplier" }), el("th", { class: "num", text: "Landed cost" }), el("th", { class: "num", text: "If quota missed" }), el("th", { class: "num", text: "Risk-adjusted" }), el("th", { text: "Arrives" }), el("th", { text: "Notes" }))),
+        el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; render(); } },
+          el("td", {}, el("input", { type: "radio", name: "pick", "aria-label": `Choose ${o.name}`, ...(o.id === chosen ? { checked: "" } : {}), onchange: () => { chosen = o.id; render(); } })),
+          el("td", {}, el("strong", { text: o.name }), el("div", { class: "row-sub" }, `${o.origin || ""}${o.covers === "everything" ? " · all-in" : o.covers === "except-duty" ? " · + duty" : ""}`, ...tags(o).map(([l, c]) => el("span", { class: `sig ${c} plan-tag`, text: l })))),
+          el("td", { class: "num" }, el("strong", { text: gbpT(o.effectivePerT) }), el("div", { class: "row-sub", text: `quoted ${gbpT(o.quotedPerT)}` })),
+          el("td", { class: "num" }, el("span", { class: o.quotaExposure > 1 ? "is-bad" : "muted", text: o.quotaExposure > 1 ? `+${gbpT(o.quotaExposure)}` : "—" })),
+          el("td", { class: "num" }, el("strong", { text: gbpT(o.score) }), o.latePenalty ? el("div", { class: "row-sub is-bad", text: `incl. ${gbpT(o.latePenalty)} late` }) : null),
+          el("td", {}, el("span", { class: o.lateDays ? "is-bad" : "", text: o.arrival ? fmt.date(o.arrival) : "—" }), el("div", { class: "row-sub", text: o.leadDays ? (o.leadDays < 14 ? `${o.leadDays} days lead` : `${Math.round(o.leadDays / 7)} wk lead`) : "" })),
+          el("td", {}, o.warnings.length ? el("ul", { class: "plan-warn" }, ...o.warnings.slice(0, 3).map((w) => el("li", { text: w }))) : el("span", { class: "muted small", text: "No concerns" }))))))),
+      r.unpriced.length ? el("p", { class: "lad-note", text: `Couldn't price: ${r.unpriced.map((u) => `${u.name} (${(u.error || "").replace(/\.$/, "").toLowerCase()})`).join("; ")}.` }) : null);
+  }
+
+  // ---------------------------------------------------------------- start
+  $("plan-form").addEventListener("change", (e) => { if (e.target.id === "pf-product") { $("pf-tonnes").value = ""; $("pf-needby").value = ""; run({ keepInputs: false }); } else schedule(); });
+  $("pf-tonnes").addEventListener("input", schedule);
+  $("pf-cbam").addEventListener("click", () => { try { localStorage.setItem("agx-cbam", readCbam() ? "off" : "on"); } catch { /* blocked */ } fillForm(); run(); });
+  window.addEventListener("agx:intel", () => run());
+  loadMe().then((m) => { me = m; if (plan) render(); }).catch(() => {});
+  api("/api/orders/needs").then((r) => {
+    products = r.products;
+    fillForm();
+    const want = new URLSearchParams(location.search).get("product");
+    if (want && products.some((p) => p.id === want)) $("pf-product").value = want;
+    run({ keepInputs: false });
+  }).catch((error) => { $("plan").replaceChildren(el("p", { class: "muted", text: `Couldn't load products: ${error.message}` })); });
+})();

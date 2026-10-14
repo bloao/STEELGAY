@@ -27,6 +27,7 @@
     { key: "orders", label: "Orders", href: "orders.html", icon: "orders", hint: "What to buy, quota and what's on its way",
       children: [
         { key: "orders", label: "Orders", href: "orders.html" },
+        { key: "plan", label: "Plan an order", href: "plan.html" },
         { key: "quotas", label: "Live quotas", href: "quotas.html" },
         { key: "arrivals", label: "Arrivals", href: "arrivals.html" },
       ] },

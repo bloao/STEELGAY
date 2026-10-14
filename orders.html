@@ -33,17 +33,24 @@
       <div class="page-head">
         <div>
           <p class="eyebrow">Steel procurement</p>
-          <h1>Order scenarios</h1>
+          <h1>Orders</h1>
+          <p class="muted lede">What needs ordering, and the orders you've priced. Plan an order to check every supplier against the market, forecast, competitors, quota and intel before you buy.</p>
         </div>
         <div class="actions">
           <span class="data-status" id="data-status">Checking data…</span>
           <a class="btn" href="/api/scenarios.csv" id="csv-btn" download>Export CSV</a>
-          <a class="btn btn-primary" href="order-tool.html" id="new-btn">
+          <a class="btn" href="order-tool.html" id="new-btn">Manual scenario</a>
+          <a class="btn btn-primary" href="plan.html">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
-            New scenario
+            Plan an order
           </a>
         </div>
       </div>
+
+      <section class="card mk-card" id="needs-card" aria-labelledby="needs-title">
+        <div class="card-head"><div><h2 id="needs-title">What needs ordering</h2><p class="small muted" style="margin:2px 0 0" id="needs-sub">Products at or near their reorder point, most urgent first.</p></div></div>
+        <ul class="needs-list" id="needs"><li class="muted">Checking stock…</li></ul>
+      </section>
 
       <section class="table-card">
         <div class="toolbar">

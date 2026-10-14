@@ -229,3 +229,13 @@ API: `GET /api/products/stockpile`, `POST /api/products/:id/versatility {score}`
 - move the steel forecast (whole market and product-group notes);
 - are listed on Market news and on the product's Market prices tab.
 Stored with team insight in `var/news-notes.json`.
+
+## Orders: plan an order (`plan.html`)
+
+The page that ties everything together. Pick a product (the Orders page lists what needs ordering, most urgent first), how much, when you need it, and an approach:
+- **Every supplier** is priced for that exact product, tonnage and their own lead time through the full cost model: duty, expected quota duty, terms, MOQ, reliability, market intel, and optionally UK CBAM.
+- **Recommendation** (`lib/orderplan.mjs`): risk-adjusted cost = expected cost + appetite × quota-miss cost (cautious 60%, balanced 25%, price first 0%). Options arriving after you run out rank below those that arrive in time, with a stock-out penalty. Best overall, cheapest, lowest-risk and fastest are tagged.
+- **Timing**: buy ahead if the forecast shows more than a 1.5% rise over 3 months, buying ahead pays after holding costs, and the product is safe to hold (stockpile score); hold off if prices look to fall by more than 1.5% and stock covers the lead time; otherwise order now.
+- **Context cards**: your stock, price outlook (best landed, your cost, market price, 3-month forecast, buy-ahead maths), competition (UK imports of the code, number of importers, followed competitors), quota line, stockpile score, market intel.
+- **Save order** creates a draft order scenario (with the plan's reasons) for the usual approval flow.
+API: `GET /api/orders/needs`, `POST /api/orders/plan {productId, tonnage, needBy, appetite, cbam}`, `POST /api/orders/plan/save {productId, supplierId, tonnage, cbam}`.

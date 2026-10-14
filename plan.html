@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Plan an order · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="the-plan.html">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+        <span class="site-nav__collab" aria-hidden="true">×</span>
+        <img class="site-nav__partner" src="hall-pickles-logo.png" alt="in partnership with Hall &amp; Pickles" width="148" height="26">
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="plan"></aside>
+      <script src="app-sidebar.js"></script>
+      <main class="page intel-page plan-page">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Orders</p>
+            <h1>Plan an order</h1>
+            <p class="muted lede">Pick a product and how much you need. Every supplier is priced for it, then checked against the market, the forecast, competitors, quota and your team's intel to find the best way to buy.</p>
+          </div>
+        </div>
+
+        <form class="plan-bar card" id="plan-form" novalidate>
+          <label class="pf pf-product"><span>Product</span><select name="productId" id="pf-product"></select></label>
+          <label class="pf"><span>How much</span><span class="pf-in"><input name="tonnage" id="pf-tonnes" type="number" min="0.1" step="0.1" inputmode="decimal"><b>t</b></span><small id="pf-tonnes-hint"></small></label>
+          <label class="pf"><span>Need it by</span><input name="needBy" id="pf-needby" type="date"><small id="pf-needby-hint"></small></label>
+          <fieldset class="pf pf-appetite"><legend>Approach</legend><div class="seg" id="pf-appetite" role="radiogroup"></div></fieldset>
+          <div class="pf pf-cbam"><span>&nbsp;</span><button type="button" class="cbam-pill" id="pf-cbam" role="switch" aria-checked="false"><span class="cbam-track" aria-hidden="true"><span class="cbam-thumb"></span></span>UK CBAM</button></div>
+        </form>
+
+        <div id="plan"><div class="pulse-empty"><span class="spinner sm" aria-hidden="true"></span><span>Loading…</span></div></div>
+      </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="plan.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>
