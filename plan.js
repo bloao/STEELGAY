@@ -9,6 +9,8 @@
   let appetite = "balanced";
   let timer = null;
   let seq = 0;
+  let overrides = {}; // what-if assumption changes for this plan only
+  let asmBuilt = false;
 
   const readCbam = () => { try { return localStorage.getItem("agx-cbam") === "on"; } catch { return false; } };
   const gbpT = (v) => (Number.isFinite(v) ? `£${Math.round(v).toLocaleString("en-GB")}/t` : "—");
@@ -19,13 +21,41 @@
   const RISK = { critical: ["Close to running out", "is-risk"], high: ["Filling fast", "is-maybe"], medium: ["Watch", "is-maybe"], low: ["Plenty left", "is-go"] };
 
   // ---------------------------------------------------------------- form
-  function fillForm() {
+  const NEEDS = ["critical", "reorder", "low"];
+  const STATUS = { critical: ["Order now", "is-risk"], reorder: ["Order now", "is-risk"], low: ["Order soon", "is-maybe"], ok: ["Stock OK", "is-go"], "no-usage": ["No usage set", ""] };
+  const APPROACHES = [["cautious", "Cautious", "quotaWeightCautiousPct"], ["balanced", "Balanced", "quotaWeightBalancedPct"], ["bold", "Price first", "quotaWeightBoldPct"]];
+  const weightOf = (k) => { const a = plan && plan.assumptions; const key = (APPROACHES.find((x) => x[0] === k) || APPROACHES[1])[2]; return a ? a.values[key] : { cautious: 60, balanced: 25, bold: 0 }[k]; };
+
+  function fillProducts() {
     const keep = $("pf-product").value;
-    $("pf-product").replaceChildren(...products.map((p) => el("option", { value: p.id, text: `${p.name}${["critical", "reorder", "low"].includes(p.status) ? " · needs ordering" : ""}` })));
-    $("pf-appetite").replaceChildren(...[["cautious", "Cautious"], ["balanced", "Balanced"], ["bold", "Price first"]].map(([k, l]) => el("button", { type: "button", role: "radio", "aria-checked": String(appetite === k), "aria-pressed": String(appetite === k), text: l, title: k === "cautious" ? "Weights the cost of missing the quota heavily" : k === "bold" ? "Goes on expected cost alone" : "Counts part of the quota-miss cost",
-      onclick: () => { appetite = k; fillForm(); run(); } })));
+    const need = products.filter((p) => NEEDS.includes(p.status));
+    const rest = products.filter((p) => !NEEDS.includes(p.status));
+    const opt = (p) => el("option", { value: p.id, text: p.name });
+    $("pf-product").replaceChildren(
+      ...(need.length ? [el("optgroup", { label: "Needs ordering" }, ...need.map(opt))] : []),
+      ...(rest.length ? [el("optgroup", { label: need.length ? "Other products" : "Products" }, ...rest.map(opt))] : []));
     if (keep) $("pf-product").value = keep;
-    const pill = $("pf-cbam"); pill.classList.toggle("is-on", readCbam()); pill.setAttribute("aria-checked", String(readCbam()));
+  }
+  function fillForm() {
+    $("pf-appetite").replaceChildren(...APPROACHES.map(([k, l]) => el("button", { type: "button", role: "radio", "aria-checked": String(appetite === k), "aria-pressed": String(appetite === k), tabindex: appetite === k ? "0" : "-1", text: l,
+      onclick: () => { appetite = k; fillForm(); run(); },
+      onkeydown: (e) => { if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return; e.preventDefault(); const i = APPROACHES.findIndex((x) => x[0] === appetite); appetite = APPROACHES[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3][0]; fillForm(); $("pf-appetite").querySelector('[aria-checked="true"]').focus(); run(); } })));
+    const w = weightOf(appetite);
+    $("pf-appetite-hint").textContent = w ? `Counts ${w}% of the quota-miss cost` : "Expected cost only, ignores quota risk";
+    const on = readCbam(), sw = $("pf-cbam");
+    sw.classList.toggle("is-on", on); sw.setAttribute("aria-checked", String(on));
+    sw.querySelector(".pf-switch-text").textContent = on ? "Included" : "Not included";
+    $("pf-cbam-hint").textContent = on ? "Priced as if already in force" : "Charges imports from 1 Jan 2027";
+  }
+  function fillHints(r) {
+    const p = products.find((x) => x.id === r.product.id) || r.product;
+    const [label, cls] = STATUS[r.product.status] || [r.product.status, ""];
+    $("pf-product-hint").replaceChildren(el("span", { class: `pf-dot ${cls}`, "aria-hidden": "true" }), `${label}${r.product.coverMonths !== null ? ` · ${r.product.coverMonths.toFixed(1)} months of cover` : ""}`);
+    const sug = r.product.suggestedOrderT;
+    $("pf-tonnes-hint").replaceChildren(sug && Number(sug) !== Number(r.inputs.tonnage)
+      ? el("button", { type: "button", class: "pf-hint-btn", text: `Use suggested ${sug} t`, onclick: () => { $("pf-tonnes").value = sug; run(); } })
+      : sug ? "Suggested quantity" : `Uses ${p.monthlyUsageT ?? r.product.monthlyUsageT} t a month`);
+    $("pf-needby-hint").textContent = r.product.stockOutDate ? `Runs out ${fmt.date(r.product.stockOutDate)}` : "No run-out date";
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(run, 350); }
 
@@ -34,7 +64,7 @@
     if (!id) return;
     const mine = ++seq;
     $("plan").classList.add("is-loading");
-    const body = { productId: id, appetite, cbam: readCbam() };
+    const body = { productId: id, appetite, cbam: readCbam(), assume: overrides };
     if (keepInputs && $("pf-tonnes").value) body.tonnage = Number($("pf-tonnes").value);
     if (keepInputs && $("pf-needby").value) body.needBy = $("pf-needby").value;
     try {
@@ -44,15 +74,182 @@
       if (!r.ok) { $("plan").replaceChildren(el("p", { class: "muted", text: r.error })); return; }
       // keep a supplier you picked, unless it can no longer price this order
       if (!keepInputs || !chosen || !r.options.some((o) => o.id === chosen)) chosen = r.recommendation.ok ? r.recommendation.best.id : null;
-      $("pf-tonnes").value = r.inputs.tonnage;
+      if (document.activeElement !== $("pf-tonnes")) $("pf-tonnes").value = r.inputs.tonnage;
       $("pf-needby").value = r.inputs.needBy;
-      $("pf-tonnes-hint").textContent = r.product.suggestedOrderT ? `suggested ${r.product.suggestedOrderT} t` : `${r.product.monthlyUsageT} t a month`;
-      $("pf-needby-hint").textContent = r.product.stockOutDate ? `you run out ${fmt.date(r.product.stockOutDate)}` : "";
+      fillHints(r);
+      fillForm();
       history.replaceState(null, "", `plan.html?product=${id}`);
+      renderAssumptions(r);
       render();
     } catch (error) {
       $("plan").replaceChildren(el("p", { class: "muted", text: `Couldn't plan this order: ${error.message}` }));
     } finally { $("plan").classList.remove("is-loading"); }
+  }
+
+  // ---------------------------------------------------------------- assumptions & thresholds
+  // [key, label, help, prefix, suffix, step, context(plan) → text]
+  const ASM = {
+    thresholds: [
+      ["Buying ahead", "Buy more than you need now only when all three hold.", [
+        ["buyAheadTriggerPct", "Prices forecast to rise by at least", "Over the next 3 months", "", "%", 0.1, (r) => (r.forecast && Number.isFinite(r.forecast.in3) ? `Forecast now ${pct(r.forecast.in3)}` : "No forecast yet")],
+        ["buyAheadMinSaving", "Net saving of at least", "After storage and cost of capital", "£", "", 50, (r) => { const best = (r.aheadOptions || []).slice().sort((a, b) => b.netMid - a.netMid)[0]; return best ? `Best now ${best.netMid >= 0 ? "" : "−"}${gbp(Math.abs(best.netMid))} (+${best.months} mo)` : ""; }],
+        ["holdMinScore", "Stockpiling score of at least", "Demand, versatility and price swings", "", "/100", 1, (r) => (r.stockpile ? `${r.product.name}: ${r.stockpile.score}/100` : "")],
+      ]],
+      ["Holding off", "Suggest waiting only when both hold.", [
+        ["waitTriggerPct", "Prices forecast to fall by at least", "Over the next 3 months", "", "%", 0.1, (r) => (r.forecast && Number.isFinite(r.forecast.in3) ? `Forecast now ${pct(r.forecast.in3)}` : "")],
+        ["waitCoverBufferMonths", "Stock covers the lead time plus", "Safety margin on top of the supplier's lead time", "", "months", 0.25, (r) => (r.product.coverMonths !== null ? `Cover now ${r.product.coverMonths.toFixed(1)} months` : "")],
+      ]],
+      ["Warnings", "When a supplier or the market gets flagged.", [
+        ["staleQuoteDays", "Quote older than", "Ask for a fresh price", "", "days", 1, null],
+        ["onTimeWarnPct", "Supplier on time less than", "From their delivery record", "", "%", 1, null],
+        ["quotaWarnProbPct", "Chance the quota runs out above", "Before your load arrives", "", "%", 1, null],
+        ["importSurgePct", "UK imports above normal by", "Latest month vs 12-month average", "", "%", 1, (r) => (r.competition && r.competition.vsAvgPct !== null ? `Latest ${pct(r.competition.vsAvgPct)}` : "")],
+      ]],
+    ],
+    costs: [
+      ["Money and holding", "Goes into every supplier's landed cost.", [
+        ["costOfCapitalPct", "Cost of capital", "Values payment terms, MOQ overbuy, safety stock and buying ahead", "", "% a year", 0.25, null],
+        ["forecastStoragePerTMonth", "Storage", "Holding extra stock", "£", "/t a month", 0.5, null],
+        ["deliveryPerT", "Delivery to you", "Suppliers who charge delivery on top", "£", "/t", 1, null],
+        ["stockOutPerDayPct", "Cost of running out", "Each day a load lands after you run out, % of its value", "", "% a day", 0.05, null],
+      ]],
+      ["Quota-miss weighting", "Share of the extra duty, if the quota runs out first, each approach counts.", [
+        ["quotaWeightCautiousPct", "Cautious", "", "", "%", 5, null],
+        ["quotaWeightBalancedPct", "Balanced", "", "", "%", 5, null],
+        ["quotaWeightBoldPct", "Price first", "", "", "%", 5, null],
+      ]],
+      ["UK CBAM", "Placeholders until HMRC publishes the steel rate and default values.", [
+        ["cbamRatePerT", "Carbon price", "Close to the UK ETS allowance price", "£", "/t CO₂e", 1, null],
+        ["cbamEafTPerT", "Electric-arc steel", "Emissions when the mill gives no verified figure", "", "t CO₂e/t", 0.05, null],
+        ["cbamBofTPerT", "Blast-furnace steel", "Emissions when the mill gives no verified figure", "", "t CO₂e/t", 0.05, null],
+        ["cbamUnknownTPerT", "Route not known", "Assumes the higher figure", "", "t CO₂e/t", 0.05, null],
+        ["forecastCbamPassThroughPct", "Passed into UK prices", "Share of importers' CBAM cost the forecast adds to the UK market", "", "%", 5, null],
+      ]],
+    ],
+  };
+  const ALL_ROWS = [...ASM.thresholds, ...ASM.costs].flatMap((g) => g[2]);
+  const SUMMARY = ["buyAheadTriggerPct", "holdMinScore", "waitTriggerPct", "costOfCapitalPct", "forecastStoragePerTMonth", "cbamRatePerT"];
+  const num = (v, step) => (Number.isFinite(v) ? (step < 1 ? String(Math.round(v * 100) / 100) : Math.round(v).toLocaleString("en-GB")) : "—");
+  const show = (row, v) => { const [, , , pre, suf, step] = row; return `${pre}${num(v, step)}${suf && !suf.startsWith("/") && !suf.startsWith("%") ? " " : ""}${suf}`; };
+  const readOpen = () => { try { return localStorage.getItem("agx-asm-open") === "1"; } catch { return false; } };
+  const writeOpen = (v) => { try { localStorage.setItem("agx-asm-open", v ? "1" : "0"); } catch { /* blocked */ } };
+
+  function buildAssumptions() {
+    const box = $("asm");
+    const open = readOpen();
+    const toggle = el("button", { type: "button", class: "btn btn-sm asm-toggle", id: "asm-toggle", "aria-expanded": String(open), "aria-controls": "asm-body" },
+      el("span", { text: open ? "Hide" : "Review and edit" }), el("span", { class: "asm-chev", "aria-hidden": "true" }));
+    toggle.addEventListener("click", () => { const now = toggle.getAttribute("aria-expanded") !== "true"; toggle.setAttribute("aria-expanded", String(now)); toggle.firstChild.textContent = now ? "Hide" : "Review and edit"; $("asm-body").hidden = !now; $("asm-summary").hidden = now; writeOpen(now); });
+    const group = ([title, sub, rows]) => el("fieldset", { class: "asm-group" }, el("legend", { text: title }), sub ? el("p", { class: "asm-sub", text: sub }) : null, ...rows.map(rowEl));
+    box.replaceChildren(
+      el("header", { class: "asm-head" },
+        el("div", { class: "asm-title" },
+          el("h2", { id: "asm-title", text: "Assumptions and thresholds" }),
+          el("p", { text: "Every number this plan is calculated on. Change a value to see its effect on this plan, then save it as the default for every plan." })),
+        el("div", { class: "asm-actions" },
+          el("span", { class: "asm-state", id: "asm-state", "aria-live": "polite" }),
+          el("button", { type: "button", class: "btn btn-sm", id: "asm-reset", text: "Reset all", onclick: () => { overrides = {}; syncInputs(true); run(); } }),
+          me.canEdit ? el("button", { type: "button", class: "btn btn-sm btn-primary", id: "asm-save", text: "Save as defaults", onclick: saveDefaults }) : null,
+          toggle)),
+      el("div", { class: "asm-summary", id: "asm-summary", hidden: open ? "" : null }),
+      el("div", { class: "asm-body", id: "asm-body", hidden: open ? null : "" },
+        el("div", { class: "asm-cols" },
+          el("section", { class: "asm-col", "aria-labelledby": "asm-th" }, el("h3", { id: "asm-th", text: "Decision thresholds" }), el("p", { class: "asm-col-sub", text: "When the plan says buy ahead, hold off, or flags a risk." }), ...ASM.thresholds.map(group)),
+          el("section", { class: "asm-col", "aria-labelledby": "asm-co" }, el("h3", { id: "asm-co", text: "Cost assumptions" }), el("p", { class: "asm-col-sub", text: "What goes into each supplier's landed cost and the forecast." }), ...ASM.costs.map(group))),
+        el("section", { class: "asm-fixed", "aria-labelledby": "asm-fx" }, el("h3", { id: "asm-fx", text: "Fixed in the model" }), el("p", { class: "asm-col-sub", text: "Set by regulation or the model's design, so not editable here." }), el("dl", { id: "asm-fixed" }))));
+    if (!open) $("asm-body").hidden = true;
+    box.hidden = false;
+    asmBuilt = true;
+  }
+
+  function rowEl(row) {
+    const [key, label, help, pre, suf, step] = row;
+    const id = `asm-${key}`;
+    const input = el("input", { id, type: "number", step: String(step), inputmode: "decimal", "aria-describedby": `${id}-help ${id}-meta`, "data-key": key });
+    input.addEventListener("input", () => onEdit(row, input));
+    input.addEventListener("blur", () => { if (input.closest(".asm-row").classList.contains("is-error")) syncInputs(true); });
+    return el("div", { class: "asm-row", "data-row": key },
+      el("div", { class: "asm-text" }, el("label", { for: id, text: label }), help ? el("span", { class: "asm-help", id: `${id}-help`, text: help }) : null),
+      el("div", { class: "asm-field" }, pre ? el("span", { class: "asm-pre", text: pre }) : null, input, suf ? el("span", { class: "asm-suf", text: suf }) : null),
+      el("div", { class: "asm-meta", id: `${id}-meta` }));
+  }
+
+  function onEdit(row, input) {
+    const [key] = row;
+    const a = plan.assumptions;
+    const [min, max] = a.limits[key] || [0, Infinity];
+    const v = input.value === "" ? NaN : Number(input.value);
+    const wrap = input.closest(".asm-row");
+    if (!Number.isFinite(v) || v < min || v > max) {
+      wrap.classList.add("is-error");
+      wrap.querySelector(".asm-meta").replaceChildren(el("span", { class: "asm-err", text: `Use ${num(min, row[5])}–${num(max, row[5])}` }));
+      return;
+    }
+    wrap.classList.remove("is-error");
+    if (v === a.defaults[key]) delete overrides[key]; else overrides[key] = v;
+    markRow(row);
+    schedule();
+  }
+
+  function markRow(row) {
+    const [key, , , , , , ctx] = row;
+    const a = plan.assumptions;
+    const wrap = $("asm").querySelector(`[data-row="${key}"]`);
+    if (!wrap || wrap.classList.contains("is-error")) return;
+    const changed = key in overrides && overrides[key] !== a.defaults[key];
+    wrap.classList.toggle("is-changed", changed);
+    const meta = wrap.querySelector(".asm-meta");
+    const context = ctx ? ctx(plan) : "";
+    meta.replaceChildren(...[
+      changed ? el("span", { class: "asm-default" }, `Default ${show(row, a.defaults[key])}`, el("button", { type: "button", class: "asm-undo", "aria-label": `Reset ${row[1]} to ${show(row, a.defaults[key])}`, title: "Reset to default", text: "Reset",
+        onclick: () => { delete overrides[key]; syncInputs(true); run(); } })) : null,
+      context ? el("span", { class: "asm-ctx", text: context }) : null].filter(Boolean));
+  }
+
+  function syncInputs(force = false) {
+    const a = plan.assumptions;
+    for (const row of ALL_ROWS) {
+      const input = $(`asm-${row[0]}`);
+      if (!input) continue;
+      if (force || document.activeElement !== input) {
+        input.value = row[0] in overrides ? overrides[row[0]] : a.values[row[0]];
+        input.closest(".asm-row").classList.remove("is-error");
+      }
+      markRow(row);
+    }
+  }
+
+  function renderAssumptions(r) {
+    if (!r.assumptions) return;
+    if (!asmBuilt) buildAssumptions();
+    const a = r.assumptions;
+    // drop what-ifs the server refused or that now match the saved default
+    for (const k of Object.keys(overrides)) if (a.errors[k] || overrides[k] === a.defaults[k]) delete overrides[k];
+    syncInputs();
+    const n = Object.keys(overrides).length;
+    $("asm").classList.toggle("has-changes", n > 0);
+    $("asm-state").replaceChildren(n ? el("span", { class: "asm-badge" }, `${n} changed for this plan`) : el("span", { class: "muted", text: a.savedAt ? `Saved defaults · updated ${fmt.date(a.savedAt.slice(0, 10))}` : "Using the standard defaults" }));
+    $("asm-reset").hidden = !n;
+    if ($("asm-save")) $("asm-save").hidden = !n;
+    $("asm-summary").replaceChildren(...SUMMARY.map((k) => { const row = ALL_ROWS.find((x) => x[0] === k); const v = k in overrides ? overrides[k] : a.values[k];
+      return el("span", { class: `asm-chip${k in overrides ? " is-changed" : ""}` }, el("span", { text: { buyAheadTriggerPct: "Buy ahead at", holdMinScore: "Hold score", waitTriggerPct: "Hold off at", costOfCapitalPct: "Capital", forecastStoragePerTMonth: "Storage", cbamRatePerT: "CBAM" }[k] }), el("b", { text: `${k === "buyAheadTriggerPct" ? "+" : k === "waitTriggerPct" ? "−" : ""}${show(row, v)}` })); }),
+      ...(n > SUMMARY.filter((k) => k in overrides).length ? [el("span", { class: "asm-chip is-changed" }, el("b", { text: `+${n - SUMMARY.filter((k) => k in overrides).length} more changed` }))] : []));
+    $("asm-fixed").replaceChildren(...a.fixed.map((f) => el("div", { class: "asm-fx" }, el("dt", { text: f.label }), el("dd", {}, el("b", { text: f.value }), el("span", { text: f.note })))));
+  }
+
+  async function saveDefaults(e) {
+    const btn = e.currentTarget;
+    const body = { ...overrides };
+    if (!Object.keys(body).length) return;
+    btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      await api("/api/settings", { method: "PUT", body });
+      overrides = {};
+      toast("Saved. Every plan now uses these values.");
+      await run();
+    } catch (error) {
+      toast(error.data && error.data.errors ? Object.values(error.data.errors).join(" ") : error.message, true);
+    } finally { btn.disabled = false; btn.textContent = "Save as defaults"; }
   }
 
   // ---------------------------------------------------------------- render
@@ -86,14 +283,14 @@
       el("div", { class: "ph-actions" },
         me.canEdit ? el("button", { class: "btn btn-primary", type: "button", text: pick.id === b.id ? `Save order with ${b.name}` : `Save order with ${pick.name}`, onclick: (e) => save(e.currentTarget, pick, tonnes) }) : null,
         el("a", { class: "btn", href: `suppliers.html?supplier=${pick.id}`, text: "Full cost breakdown" }),
-        me.canEdit && (pick.quoteScope !== "product" || pick.quoteAgeDays > 30) ? el("a", { class: "btn", href: `suppliers.html?rfq=${r.product.id}`, text: "Request fresh quotes" }) : null,
+        me.canEdit && (pick.quoteScope !== "product" || pick.quoteAgeDays > r.assumptions.values.staleQuoteDays) ? el("a", { class: "btn", href: `suppliers.html?rfq=${r.product.id}`, text: "Request fresh quotes" }) : null,
         me.canEdit ? el("button", { class: "link-btn", type: "button", text: "+ Log market intel", onclick: () => window.openMarketIntel({ scope: "product", targetId: r.product.id }) }) : null));
   }
 
   async function save(btn, opt, tonnes) {
     btn.disabled = true; btn.textContent = "Saving…";
     try {
-      const res = await api("/api/orders/plan/save", { method: "POST", body: { productId: plan.product.id, supplierId: opt.id, tonnage: tonnes, cbam: plan.inputs.cbam, timing: plan.recommendation.timing.action, reasons: plan.recommendation.reasons } });
+      const res = await api("/api/orders/plan/save", { method: "POST", body: { productId: plan.product.id, supplierId: opt.id, tonnage: tonnes, cbam: plan.inputs.cbam, assume: overrides, timing: plan.recommendation.timing.action, reasons: plan.recommendation.reasons } });
       toast("Order saved as a draft. Submit it for approval from the order page.");
       location.href = `order.html?id=${res.id}`;
     } catch (error) { toast(error.message, true); btn.disabled = false; btn.textContent = "Save order"; }
@@ -174,7 +371,7 @@
     const tags = (o) => [o.id === rec.best.id ? ["Best overall", "is-go"] : null, rec.alternatives.cheapest && o.id === rec.alternatives.cheapest.id && o.id !== rec.best.id ? ["Cheapest", "is-maybe"] : null,
       rec.alternatives.safest && o.id === rec.alternatives.safest.id && o.id !== rec.best.id ? ["Lowest risk", ""] : null, rec.alternatives.fastest && o.id === rec.alternatives.fastest.id && o.id !== rec.best.id ? ["Fastest", ""] : null].filter(Boolean);
     return el("section", { class: "card mk-card plan-options" },
-      el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }), el("p", { class: "small muted", style: "margin:2px 0 0", text: `Priced for ${r.inputs.tonnage} t with each supplier's lead time. "Risk-adjusted" adds ${r.inputs.appetite === "bold" ? "none" : r.inputs.appetite === "cautious" ? "60%" : "25%"} of the quota-miss cost and a penalty for arriving after you run out. Pick one to save it instead.` }))),
+      el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }), el("p", { class: "small muted", style: "margin:2px 0 0", text: `Priced for ${r.inputs.tonnage} t with each supplier's lead time. "Risk-adjusted" adds ${weightOf(r.inputs.appetite) ? `${weightOf(r.inputs.appetite)}%` : "none"} of the quota-miss cost and a penalty for arriving after you run out. Pick one to save it instead.` }))),
       el("div", { class: "table-scroll" }, el("table", { class: "quota-table plan-table" },
         el("thead", {}, el("tr", {}, el("th", {}), el("th", { text: "Supplier" }), el("th", { class: "num", text: "Landed cost" }), el("th", { class: "num", text: "If quota missed" }), el("th", { class: "num", text: "Risk-adjusted" }), el("th", { text: "Arrives" }), el("th", { text: "Notes" }))),
         el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; render(); } },
@@ -192,10 +389,12 @@
   $("plan-form").addEventListener("change", (e) => { if (e.target.id === "pf-product") { $("pf-tonnes").value = ""; $("pf-needby").value = ""; run({ keepInputs: false }); } else schedule(); });
   $("pf-tonnes").addEventListener("input", schedule);
   $("pf-cbam").addEventListener("click", () => { try { localStorage.setItem("agx-cbam", readCbam() ? "off" : "on"); } catch { /* blocked */ } fillForm(); run(); });
+  $("plan-form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
   window.addEventListener("agx:intel", () => run());
   loadMe().then((m) => { me = m; if (plan) render(); }).catch(() => {});
   api("/api/orders/needs").then((r) => {
     products = r.products;
+    fillProducts();
     fillForm();
     const want = new URLSearchParams(location.search).get("product");
     if (want && products.some((p) => p.id === want)) $("pf-product").value = want;

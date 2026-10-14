@@ -10,7 +10,7 @@ import { createStore } from "./lib/store.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
-import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS } from "./lib/settings.mjs";
+import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
 import * as BM from "./lib/benchmarks.mjs";
@@ -1665,12 +1665,14 @@ async function supplierBreakdown(s, opts = {}) {
   const product = products.find((p) => p.id === opts.productId) || needsOrder || supplied[0];
   if (!product) return { ok: false, error: "Add a product they supply to price it." };
   const metrics = stockMetrics({ ...product, stockAsOf: product.stockAsOf || (product.createdAt || "").slice(0, 10) || undefined });
-  const ratePct = Number.isFinite(Number(opts.ratePct)) ? Number(opts.ratePct) : 8;
+  // Workspace settings, with any what-if values from the order planner on top
+  const ws = { ...(await settingsStore.get()), ...(opts.assume || {}) };
+  const ratePct = opts.ratePct !== undefined && opts.ratePct !== "" && Number.isFinite(Number(opts.ratePct)) ? Number(opts.ratePct) : ws.costOfCapitalPct;
   const leadDays = s.leadTimeMax !== null && s.leadTimeMax !== undefined ? s.leadTimeMax * (s.leadTimeUnit === "days" ? 1 : 7) : s.leadTimeMin !== null && s.leadTimeMin !== undefined ? s.leadTimeMin * (s.leadTimeUnit === "days" ? 1 : 7) : null;
   const today = new Date().toISOString().slice(0, 10);
   const importDate = /^\d{4}-\d{2}-\d{2}$/.test(opts.importDate || "") ? opts.importDate : addDaysIso(today, leadDays ?? 21);
   const tonnage = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : Math.max(metrics.suggestedOrderT || 0, s.moqMinT || 0) || 25;
-  const transportPerT = s.transport === "extra" ? Math.max(Number(opts.transportPerT) || 0, 0) : 0;
+  const transportPerT = s.transport === "extra" ? Math.max(Number(opts.transportPerT ?? ws.deliveryPerT) || 0, 0) : 0;
   // Prefer a quote for this exact product; fall back to their general price.
   const byNewest = (a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || ""));
   const productQuote = [...(s.quotes || [])].filter((q) => q.productId === product.id).sort(byNewest)[0];
@@ -1687,7 +1689,6 @@ async function supplierBreakdown(s, opts = {}) {
   };
   // UK CBAM toggle: when on, price the carbon charge as if it already
   // applies (it starts 1 January 2027), using the mill's emissions.
-  const ws = await settingsStore.get();
   const cbamOn = opts.cbam === true || opts.cbam === "on";
   const route = s.productionRoute || "";
   const emissionsDefault = route === "eaf" ? ws.cbamEafTPerT : route === "bf-bof" ? ws.cbamBofTPerT : ws.cbamUnknownTPerT;
@@ -2351,7 +2352,7 @@ async function handleNewsApi(request, response, url) {
 
 // ------------------------------------------------------------ steel forecast
 async function steelForecast(body = {}) {
-  const ws = await settingsStore.get();
+  const ws = { ...(await settingsStore.get()), ...(body.assume || {}) };
   const cfg = { ...FC.FORECAST_DEFAULTS, cbamPassThroughPct: ws.forecastCbamPassThroughPct, storagePerTMonth: ws.forecastStoragePerTMonth };
   const series = await liveSeries();
   const idx = series.find((x) => x.feedKey === "ons:GHAV");
@@ -2784,6 +2785,27 @@ async function handleArrivalsApi(request, response, url) {
 
 
 // ------------------------------------------------------------ order planner
+// What the planner runs on: your saved defaults, with any what-if changes for
+// this one plan on top. Bad values are reported and the default is kept.
+async function planAssumptions(raw = {}) {
+  const ws = await settingsStore.get();
+  const defaults = Object.fromEntries(PLAN_ASSUMPTION_KEYS.map((k) => [k, ws[k]]));
+  const asked = Object.fromEntries(Object.entries(raw && typeof raw === "object" ? raw : {}).filter(([k]) => PLAN_ASSUMPTION_KEYS.includes(k)));
+  const { settings, errors } = validateSettings(asked, ws);
+  const values = Object.fromEntries(PLAN_ASSUMPTION_KEYS.map((k) => [k, errors[k] ? defaults[k] : settings[k]]));
+  const changed = PLAN_ASSUMPTION_KEYS.filter((k) => values[k] !== defaults[k]);
+  return { values, defaults, changed, errors, limits: ASSUMPTION_LIMITS, savedAt: ws.updatedAt || null,
+    fixed: [
+      { label: "Duty if the quota runs out", value: "50% of customs value", note: "UK steel safeguard rate outside quota (Trade Remedies notice)" },
+      { label: "Chance the quota runs out", value: "Projected from live HMRC usage", note: "Burn rate so far this quarter, to your arrival date" },
+      { label: "Forecast damping", value: `${Math.round(FC.FORECAST_DEFAULTS.damping * 100)}% a month`, note: "Each month ahead keeps this share of the previous month's drift" },
+      { label: "Forecast range", value: "80% band", note: "From the index's own month-to-month swings" },
+      { label: "Forecast trend window", value: `${FC.FORECAST_DEFAULTS.trendMonths} months`, note: "ONS steel price index history used for the trend" },
+      { label: "Reliability buffer", value: "Late share × half the lead time", note: "Extra safety stock for suppliers who deliver late" },
+      { label: "Month length", value: "30.4 days", note: "Converts lead times and cover" },
+    ] };
+}
+
 async function orderPlan(body = {}) {
   const product = await productStore.get(body.productId);
   if (!product || product.status === "archived") return { ok: false, error: "Pick a product." };
@@ -2795,9 +2817,11 @@ async function orderPlan(body = {}) {
   const appetite = PLAN.APPETITE[body.appetite] ? body.appetite : "balanced";
   const cbam = body.cbam === true;
   const code8 = String(product.commodityCode).slice(0, 8);
+  const assumptions = await planAssumptions(body.assume);
+  const assume = assumptions.values;
 
   // suppliers, priced for this exact product, tonnage and their own lead time
-  const rows = await compareSuppliers({ productId: product.id, tonnage, arrival: "lead", cbam });
+  const rows = await compareSuppliers({ productId: product.id, tonnage, arrival: "lead", cbam, assume });
   const sups = new Map((await supplierStore.list()).map((x) => [x.id, x]));
   const options = rows.map((r) => {
     const s = sups.get(r.id) || {};
@@ -2808,7 +2832,7 @@ async function orderPlan(body = {}) {
   const priced = options.filter((o) => Number.isFinite(o.effectivePerT)).sort((a, b) => a.effectivePerT - b.effectivePerT);
 
   // forecast for this product, from today's best landed price
-  const fc = await steelForecast({ coreOnly: true }).catch(() => ({ ok: false }));
+  const fc = await steelForecast({ coreOnly: true, assume }).catch(() => ({ ok: false }));
   let forecast = null, aheadOptions = [];
   if (fc.ok) {
     const pctAt = (h) => (fc.fromToday[h - 1] ? ((fc.fromToday[h - 1].mid / fc.indexNow) - 1) * 100 : null);
@@ -2856,22 +2880,23 @@ async function orderPlan(body = {}) {
     .concat((await liveNotes()).filter((n) => n.scope === "supplier" && priced.some((o) => o.id === n.targetId) && NEWS.noteActive(n, needBy) && n.effectUnit !== "none"));
   const productFacts = { id: product.id, name: product.name, category: product.category, commodityCode: product.commodityCode, steelCategory: view.steelCategory, costPerT: product.costPerT, targetBuyPrice: product.targetBuyPrice ?? null,
     monthlyUsageT: product.monthlyUsageT, stockT: m.stockNowT, coverMonths: m.coverMonths, stockOutDate: m.stockOutDate, latestOrderDate: m.latestOrderDate, suggestedOrderT: m.suggestedOrderT, moqT: product.moqT ?? null, status: m.status, reason: m.reason };
-  const rec = PLAN.recommend({ product: productFacts, tonnage, needBy, appetite, options, forecast, aheadOptions, stockpile, quota, market, competition, intel });
-  return { ok: true, today, product: productFacts, inputs: { tonnage, needBy, appetite, cbam }, appetites: PLAN.APPETITE, options: rec.scored || [], unpriced: options.filter((o) => !Number.isFinite(o.effectivePerT)).map((o) => ({ id: o.id, name: o.name, error: o.error })),
+  const rec = PLAN.recommend({ product: productFacts, tonnage, needBy, appetite, options, forecast, aheadOptions, stockpile, quota, market, competition, intel, thresholds: assume });
+  return { ok: true, today, product: productFacts, inputs: { tonnage, needBy, appetite, cbam }, appetites: PLAN.APPETITE, assumptions, options: rec.scored || [], unpriced: options.filter((o) => !Number.isFinite(o.effectivePerT)).map((o) => ({ id: o.id, name: o.name, error: o.error })),
     forecast, aheadOptions, stockpile, market, competition, quota, quotaLines, intel: intel.map((n) => ({ id: n.id, title: n.title, scope: n.scope, targetName: n.targetName || n.targetId, effectUnit: n.effectUnit, effectValue: n.effectValue, effectiveFrom: n.effectiveFrom, by: n.by })), recommendation: rec };
 }
 
 
 // One draft order from a product + supplier, priced through the full cost model.
-async function createPlannedOrder({ productId, supplierId, tonnage, cbam, timing, reasons, note, by = "system", starter = false, role = "chosen" }) {
+async function createPlannedOrder({ productId, supplierId, tonnage, cbam, timing, reasons, note, assume, by = "system", starter = false, role = "chosen" }) {
   const s = await supplierStore.get(supplierId);
   if (!s) return { ok: false, error: "Pick a supplier." };
-  const b = await supplierBreakdown(s, { productId, tonnage: Number(tonnage) || undefined, cbam: cbam === true });
+  const asm = await planAssumptions(assume);
+  const b = await supplierBreakdown(s, { productId, tonnage: Number(tonnage) || undefined, cbam: cbam === true, assume: asm.values });
   if (!b.ok) return { ok: false, error: b.error };
   const inputs = { ...b.scenarioInputs, notes: `${note ? `${note}\n` : ""}From the order planner: ${s.name}, ${b.inputs.tonnage} t, landed £${Math.round(b.effectivePerT)}/t with every cost counted.` };
   const result = await runScenario(inputs, cbam === true ? { cbamStartDate: "0000-01-01" } : { cbamEnabled: false });
   if (!result.ok) return { ok: false, error: Object.values(result.errors || {})[0] || "Could not price this order." };
-  const saved = await store.create({ inputs: result.inputs, result, starter: Boolean(starter), plan: { role: role === "alternative" ? "alternative" : "chosen", supplierId: s.id, productId, effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, timing: timing || null, reasons: Array.isArray(reasons) ? reasons.slice(0, 8).map((x) => String(x).slice(0, 300)) : [] } }, by);
+  const saved = await store.create({ inputs: result.inputs, result, starter: Boolean(starter), plan: { role: role === "alternative" ? "alternative" : "chosen", assumptionsChanged: Object.fromEntries(asm.changed.map((k) => [k, { value: asm.values[k], default: asm.defaults[k] }])), supplierId: s.id, productId, effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, timing: timing || null, reasons: Array.isArray(reasons) ? reasons.slice(0, 8).map((x) => String(x).slice(0, 300)) : [] } }, by);
   return { ok: true, id: saved.id };
 }
 

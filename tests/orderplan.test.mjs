@@ -28,3 +28,15 @@ test("timing: buy ahead when prices rise and the product is safe to hold, wait w
   assert.equal(down.timing.action, "wait");
   assert.equal(recommend({ product, tonnage: 16, options: [] }).ok, false);
 });
+
+test("thresholds you set change the decision", () => {
+  const base = { product, tonnage: 16, needBy: "2026-12-14", appetite: "balanced", options: opts, forecast: { in3: 3 }, aheadOptions: [{ months: 2, netMid: 400, netLow: 50 }], stockpile: { level: "good", score: 72 } };
+  assert.equal(recommend(base).timing.action, "buy-ahead");
+  assert.equal(recommend({ ...base, thresholds: { buyAheadTriggerPct: 4 } }).timing.action, "order-now"); // +3% isn't enough
+  assert.equal(recommend({ ...base, thresholds: { buyAheadMinSaving: 500 } }).timing.action, "order-now"); // £400 saving too small
+  assert.equal(recommend({ ...base, thresholds: { holdMinScore: 80 } }).timing.action, "order-now"); // not safe enough to hold
+  // weighting the quota-miss cost at 0% makes the cheaper import win under "balanced"
+  assert.equal(scoreOptions(opts, { needBy: "2026-12-14", appetite: "balanced", thresholds: { quotaWeightBalancedPct: 0 } })[0].id, "a");
+  assert.ok(!scoreOptions(opts, { needBy: "2026-12-14", thresholds: { onTimeWarnPct: 85 } }).find((o) => o.id === "a").warnings.some((w) => /on time/.test(w)));
+  assert.ok(scoreOptions(opts, { needBy: "2026-12-14", thresholds: { onTimeWarnPct: 92 } }).find((o) => o.id === "a").warnings.some((w) => /on time/.test(w)));
+});

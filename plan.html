@@ -38,13 +38,35 @@
           </div>
         </div>
 
-        <form class="plan-bar card" id="plan-form" novalidate>
-          <label class="pf pf-product"><span>Product</span><select name="productId" id="pf-product"></select></label>
-          <label class="pf"><span>How much</span><span class="pf-in"><input name="tonnage" id="pf-tonnes" type="number" min="0.1" step="0.1" inputmode="decimal"><b>t</b></span><small id="pf-tonnes-hint"></small></label>
-          <label class="pf"><span>Need it by</span><input name="needBy" id="pf-needby" type="date"><small id="pf-needby-hint"></small></label>
-          <fieldset class="pf pf-appetite"><legend>Approach</legend><div class="seg" id="pf-appetite" role="radiogroup"></div></fieldset>
-          <div class="pf pf-cbam"><span>&nbsp;</span><button type="button" class="cbam-pill" id="pf-cbam" role="switch" aria-checked="false"><span class="cbam-track" aria-hidden="true"><span class="cbam-thumb"></span></span>UK CBAM</button></div>
+        <form class="plan-bar card" id="plan-form" novalidate aria-label="Order details">
+          <div class="pf pf-product">
+            <label class="pf-label" for="pf-product">Product</label>
+            <div class="pf-control pf-select"><select name="productId" id="pf-product"></select></div>
+            <p class="pf-hint" id="pf-product-hint"></p>
+          </div>
+          <div class="pf">
+            <label class="pf-label" for="pf-tonnes">Quantity</label>
+            <div class="pf-control pf-unit"><input name="tonnage" id="pf-tonnes" type="number" min="0.1" step="0.1" inputmode="decimal" aria-describedby="pf-tonnes-hint"><span aria-hidden="true">tonnes</span></div>
+            <p class="pf-hint" id="pf-tonnes-hint"></p>
+          </div>
+          <div class="pf">
+            <label class="pf-label" for="pf-needby">Needed by</label>
+            <div class="pf-control"><input name="needBy" id="pf-needby" type="date" aria-describedby="pf-needby-hint"></div>
+            <p class="pf-hint" id="pf-needby-hint"></p>
+          </div>
+          <div class="pf pf-appetite">
+            <span class="pf-label" id="pf-appetite-label">Approach</span>
+            <div class="seg pf-seg" id="pf-appetite" role="radiogroup" aria-labelledby="pf-appetite-label"></div>
+            <p class="pf-hint" id="pf-appetite-hint"></p>
+          </div>
+          <div class="pf pf-cbam">
+            <span class="pf-label" id="pf-cbam-label">UK CBAM</span>
+            <button type="button" class="pf-control pf-switch" id="pf-cbam" role="switch" aria-checked="false" aria-labelledby="pf-cbam-label" aria-describedby="pf-cbam-hint"><span class="cbam-track" aria-hidden="true"><span class="cbam-thumb"></span></span><span class="pf-switch-text">Off</span></button>
+            <p class="pf-hint" id="pf-cbam-hint"></p>
+          </div>
         </form>
+
+        <section class="card asm" id="asm" hidden aria-labelledby="asm-title"></section>
 
         <div id="plan"><div class="pulse-empty"><span class="spinner sm" aria-hidden="true"></span><span>Loading…</span></div></div>
       </main>
