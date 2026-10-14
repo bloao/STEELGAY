@@ -20,6 +20,20 @@
 
   let suppliers = [];
   let costs = {}; // supplier id → full cost model totals (expected / if missed)
+  // UK CBAM toggle (remembered per browser)
+  let cbamOn = false;
+  try { cbamOn = localStorage.getItem("agx-cbam") === "on"; } catch { /* storage blocked */ }
+  function setCbam(on) {
+    cbamOn = Boolean(on);
+    try { localStorage.setItem("agx-cbam", cbamOn ? "on" : "off"); } catch { /* storage blocked */ }
+    const t = document.getElementById("cbam-toggle");
+    if (t) t.checked = cbamOn;
+    document.body.classList.toggle("cbam-on", cbamOn);
+    costs = {};
+    renderTable();
+    loadCosts();
+    if (mode === "detail" && detailId) { const s = suppliers.find((x) => x.id === detailId); if (s && tab === "breakdown") loadBreakdown(s, { ...bd.opts }); if (s) renderBody(s); }
+  }
   let listOrder = []; // ids in the order the table shows them (for prev / next)
   let choices = null;
   let products = [];
@@ -121,7 +135,7 @@
           if (!c) return el("td", { class: "num" }, el("strong", { class: c === null ? "" : "is-pending", text: c === null ? "—" : "…" }), el("div", { class: "row-sub" }, sub));
           return el("td", { class: "num", title: `Every cost counted for ${c.tonnage} t of ${c.productName}${c.missing && c.missing.length ? ` · not yet costed: ${c.missing.join(", ").toLowerCase()}` : ""}` },
             el("strong", { class: c.effectivePerT === best ? "best" : "", text: perT(c.effectivePerT) }),
-            el("div", { class: "row-sub" }, c.probability > 0.005 ? `${Math.round(c.probability * 100)}% quota risk priced in` : c.missPerT > 0.5 ? "quota lasts to arrival" : sub || "all costs in"));
+            el("div", { class: "row-sub" }, c.cbamPerT > 0.005 ? el("span", { class: "cbam-tag", text: `incl. ${perT(c.cbamPerT)} CBAM` }) : c.probability > 0.005 ? `${Math.round(c.probability * 100)}% quota risk priced in` : c.missPerT > 0.5 ? "quota lasts to arrival" : sub || "all costs in"));
         })(),
         (() => {
           const c = costs[s.id];
@@ -305,6 +319,11 @@
           fieldWrap("onTimePct", "On-time delivery", preset("onTimePct", [50, 60, 70, 75, 80, 85, 90, 95, 100], v.onTimePct, "%")),
           fieldWrap("paymentDays", "Payment terms", preset("paymentDays", [0, 7, 14, 30, 45, 60, 90, 120], v.paymentDays, "days")),
           fieldWrap("paymentNote", "Payment note", text("paymentNote", v.paymentNote, { maxlength: "120", placeholder: "e.g. may move to 30 days" })))),
+      section("Carbon (UK CBAM)",
+        el("div", { class: "grid-2" },
+          fieldWrap("productionRoute", "How the mill makes steel", select("productionRoute", { eaf: "Electric arc furnace (scrap)", "bf-bof": "Blast furnace (iron ore)" }, v.productionRoute, { empty: "Not known" })),
+          fieldWrap("emissionsPerT", "Verified emissions", text("emissionsPerT", v.emissionsPerT, { type: "number", min: "0", max: "5", step: "0.01", placeholder: "t CO₂e per tonne" }), { hint: "From the mill's verified report. Leave blank to use the default for the route." }),
+          fieldWrap("carbonPricePaidPerT", "Carbon price already paid", text("carbonPricePaidPerT", v.carbonPricePaidPerT, { type: "number", min: "0", max: "500", step: "0.01", placeholder: "£ per t CO₂e" }), { hint: "e.g. EU ETS cost passed through. Only counts with a CarbonVP1 report from the mill." }))),
       section("Notes",
         el("div", { class: "grid-2" },
           fieldWrap("dutyCosts", "Duty costs", select("dutyCosts", ["Not applicable", "Up to 50%", "50%", "Included in price"], v.dutyCosts, { empty: "Not set" })),
@@ -314,7 +333,7 @@
     form.onsubmit = (e) => {
       e.preventDefault();
       const body = {};
-      for (const k of ["name", "origin", "type", "standing", "website", "priceCovers", "deliveryTerms", "transport", "ddp", "currency", "moqMinT", "moqMaxT", "leadTimeMin", "leadTimeMax", "leadTimeUnit", "onTimePct", "paymentDays", "paymentNote", "dutyCosts", "otherDuty", "dutyRiskNote", "notes"]) body[k] = field(k).value;
+      for (const k of ["name", "origin", "type", "standing", "website", "priceCovers", "deliveryTerms", "transport", "ddp", "currency", "moqMinT", "moqMaxT", "leadTimeMin", "leadTimeMax", "leadTimeUnit", "onTimePct", "paymentDays", "paymentNote", "dutyCosts", "otherDuty", "dutyRiskNote", "productionRoute", "emissionsPerT", "carbonPricePaidPerT", "notes"]) body[k] = field(k).value;
       if (body.moqMaxT === "") body.moqMaxT = body.moqMinT;
       if (body.leadTimeMax === "") body.leadTimeMax = body.leadTimeMin;
       body.supplies = checked("supplies");
@@ -651,6 +670,8 @@
         ["Duty costs", s.dutyCosts || null],
         ["Other duty", s.otherDuty || null],
         ["Currency", s.currency],
+        ["Steel made by", isImport(s) ? ({ eaf: "Electric arc", "bf-bof": "Blast furnace" }[s.productionRoute] || null) : null],
+        ["Verified emissions", isImport(s) && s.emissionsPerT !== null && s.emissionsPerT !== undefined ? `${s.emissionsPerT} t CO₂e/t` : null],
       ]),
         gaps.length && me.canEdit ? el("div", { class: "gaps" }, el("span", { text: `Missing: ${gaps.join(", ")}.` }), el("button", { class: "link-btn", type: "button", text: gaps.includes("a contact") && gaps.length === 1 ? "Add contact" : "Complete profile", onclick: () => (gaps.length === 1 && gaps[0] === "a contact" ? openContactForm(s) : openSupplierForm(s)) })) : null),
       sec(`Your products they supply${supplied.length ? ` · ${supplied.length}` : ""}`,
@@ -788,7 +809,7 @@
     return `${v < 0 ? "−" : "+"}${a > 0 && a < 1 ? `${SYM[cur] || "£"}${a.toFixed(2)}` : money(a, cur)}`;
   };
 
-  const fmtEq = (x, unit) => (unit === "£/t" ? `£${x.toFixed(2)}` : unit === "t" ? `${(Math.round(x * 100) / 100).toLocaleString("en-GB")} t` : unit === "months" ? `${x.toFixed(2)} mo` : unit === "£" ? `£${Math.round(x).toLocaleString("en-GB")}` : String(Math.round(x * 100) / 100));
+  const fmtEq = (x, unit) => (unit === "£/t" ? `£${x.toFixed(2)}` : unit === "t" ? `${(Math.round(x * 100) / 100).toLocaleString("en-GB")} t` : unit === "months" ? `${x.toFixed(2)} mo` : unit === "£" ? `£${Math.round(x).toLocaleString("en-GB")}` : unit === "£/tCO2" ? `£${x.toFixed(2)}/t CO₂e` : String(Math.round(x * 100) / 100));
   const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // Count a number up from zero (skipped when the user prefers less motion).
   function countUp(node, to, format, ms = 700, delay = 0) {
@@ -809,7 +830,7 @@
     bd.opts = { ...opts };
     bd.loading = true;
     bd.error = null;
-    const body = { ...opts, ratePct: opts.ratePct ?? settings.costOfCapitalPct ?? 8 };
+    const body = { ...opts, ratePct: opts.ratePct ?? settings.costOfCapitalPct ?? 8, cbam: cbamOn };
     try {
       const [data, cmp] = await Promise.all([
         api(`/api/suppliers/${s.id}/breakdown`, { method: "POST", body }),
@@ -880,6 +901,18 @@
     const moqAdj = d.adjustments.find((a) => a.key === "moq");
     add("Minimum order", s.moqNote || moq(s), moqAdj ? "watch" : "good", moqAdj ? `${moqAdj.label} — costs ${money(moqAdj.perTonne, cur)}/t to carry.` : `${d.inputs.tonnage} t meets their minimum.`);
     // 8 Reliability
+    // UK CBAM (from 1 January 2027)
+    if (d.cbam && isImport(s)) {
+      const ci = d.cbam;
+      const est = Math.max(ci.rate - ci.relief, 0) * ci.emissions;
+      const cbamLine = e.lines.find((l) => l.key === "cbam");
+      const toggle = { label: ci.on ? "Turn off" : "Include it", fn: () => setCbam(!ci.on) };
+      if (!e.buyerImports) add("UK CBAM", "Supplier pays", "good", "They're importer of record, so they pay the carbon charge from January 2027. Expect it to show up in their prices.");
+      else if (!ci.on) add("UK CBAM", `≈ ${money(est, cur)}/t from Jan 2027`, "watch", `Not in the cost yet. At ${ci.emissions} t CO₂e/t × £${ci.rate} it would add about ${money(est * d.inputs.tonnage, cur)} to this order.`, toggle);
+      else if (ci.emissionsSource !== "verified") add("UK CBAM", `${money((cbamLine && cbamLine.perTonne) || est, cur)}/t included`, "watch",
+        `Based on ${ci.route ? `the ${ci.route === "eaf" ? "electric-arc" : "blast-furnace"} default` : "the higher default, as the mill's route isn't set"} (${ci.emissions} t CO₂e/t). Ask the mill for verified emissions, which could bring it down.`, edit ? { label: "Add emissions", fn: () => openSupplierForm(s) } : null);
+      else add("UK CBAM", `${money((cbamLine && cbamLine.perTonne) || est, cur)}/t included`, "good", `Uses the mill's verified ${ci.emissions} t CO₂e/t.`);
+    }
     if (s.onTimePct !== null) add("Reliability", `${s.onTimePct}% on time`, s.onTimePct >= 90 ? "good" : s.onTimePct >= 75 ? "watch" : "risk",
       `${100 - s.onTimePct}% of loads late — hold extra safety stock${d.adjustments.find((a) => a.key === "reliability") ? ` (≈ ${money(d.adjustments.find((a) => a.key === "reliability").perTonne, cur)}/t)` : ""}.`);
     else add("Reliability", "Not recorded", "muted", "Add their on-time % from your delivery records.", edit);
@@ -935,6 +968,8 @@
     const sentence = el("div", { class: "bd2-sentence" },
       el("span", { text: "Buying" }), tonSel, el("span", { text: "of" }), productSel, el("span", { text: "arriving" }), dateIn,
       el("span", { class: "bd2-sentence-soft", text: "· cost of capital" }), rateSel,
+      el("button", { type: "button", class: `cbam-pill${cbamOn ? " is-on" : ""}`, role: "switch", "aria-checked": String(cbamOn), title: "Include the UK carbon border charge (starts 1 January 2027)", onclick: () => setCbam(!cbamOn) },
+        el("span", { class: "cbam-track", "aria-hidden": "true" }, el("span", { class: "cbam-thumb" })), "UK CBAM"),
       s.transport === "extra" ? el("span", { class: "bd2-sentence-soft", text: "· haulage" }) : null,
       s.transport === "extra" ? (() => { const i = pill(el("input", { type: "number", min: "0", step: "1", value: String(d.inputs.transportPerT || ""), placeholder: "£0" }), "Haulage £ per tonne"); i.style.width = "72px"; i.addEventListener("change", () => refresh({ transportPerT: Number(i.value) || 0 })); return i; })() : null,
       bd.loading ? el("span", { class: "spinner sm", "aria-label": "Updating" }) : null);
@@ -976,7 +1011,7 @@
 
     // ---- 3. the full cost model — every variable, each with its equation
     const KIND = { quote: "Quote", supplier: "Supplier", product: "Product", you: "Your choice", live: "Live data", fixed: "Fixed", calc: "Earlier step" };
-    const STATUS = { included: ["Included", "st-in"], "in-price": ["In their price", "st-price"], supplier: ["Supplier pays", "st-sup"], "n/a": ["Not applicable", "st-na"], missing: ["Needs input", "st-miss"], scenario: ["If missed", "st-scen"], memo: ["For reference", "st-memo"] };
+    const STATUS = { included: ["Included", "st-in"], "in-price": ["In their price", "st-price"], supplier: ["Supplier pays", "st-sup"], "n/a": ["Not applicable", "st-na"], missing: ["Needs input", "st-miss"], scenario: ["If missed", "st-scen"], memo: ["For reference", "st-memo"], off: ["Switched off", "st-na"] };
     const renderEq = (eq, n, total) => {
       let i = 0;
       const tok = (p) => {
@@ -1207,7 +1242,9 @@
   // Price every supplier through the full cost model (expected value of the
   // quota duty, terms, MOQ, reliability…) so the list ranks on real cost.
   async function loadCosts() {
-    const r = await api("/api/suppliers/compare", { method: "POST", body: { arrival: "lead" } }).catch(() => null);
+    const asked = cbamOn;
+    const r = await api("/api/suppliers/compare", { method: "POST", body: { arrival: "lead", cbam: cbamOn } }).catch(() => null);
+    if (asked !== cbamOn) return; // toggled again meanwhile
     const next = {};
     for (const s of suppliers) next[s.id] = null;
     for (const row of (r && r.rows) || []) if (Number.isFinite(row.effectivePerT)) next[row.id] = row;
@@ -1217,6 +1254,11 @@
   }
 
   // ---------------------------------------------------------------- events
+  {
+    const t = document.getElementById("cbam-toggle");
+    if (t) { t.checked = cbamOn; t.addEventListener("change", () => setCbam(t.checked)); }
+    document.body.classList.toggle("cbam-on", cbamOn);
+  }
   form.addEventListener("input", () => {
     dirty = true;
     const cancel = $("drawer-foot").querySelector("[data-cancel]");

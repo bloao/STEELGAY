@@ -840,7 +840,7 @@ async function getFx(currency) {
 
 // Gather live market data, run the engine, and return result + snapshot of
 // every external value used, so a saved scenario can always be explained.
-async function runScenario(rawInputs) {
+async function runScenario(rawInputs, engineSettings = {}) {
   const { inputs, errors, valid } = validateInputs(rawInputs);
   if (!valid) return { ok: false, errors, inputs };
 
@@ -879,7 +879,7 @@ async function runScenario(rawInputs) {
     return { ok: false, errors: { _: `Live quota data unavailable (${market.quotaError}). Try again shortly.` }, inputs };
   }
 
-  const result = calculate(inputs, market, { asOf: new Date().toISOString().slice(0, 10) });
+  const result = calculate(inputs, market, { asOf: new Date().toISOString().slice(0, 10), settings: engineSettings });
   if (result.ok) {
     result.sources = sources;
     result.dutyMeasures = market.dutyMeasures.map(({ measureTypeId, measureType, label, ratePercent, perTonneGbp, orderNumber, geography }) =>
@@ -1549,7 +1549,7 @@ const SUPPLIER_LABELS = {
   priceCovers: "Price covers", deliveryTerms: "Delivery terms", onTimePct: "On-time %", moqMinT: "MOQ min (t)", moqMaxT: "MOQ max (t)",
   moqNote: "MOQ note", ddp: "DDP available", paymentDays: "Payment terms (days)", paymentNote: "Payment note", currency: "Currency",
   leadTimeMin: "Lead time min", leadTimeMax: "Lead time max", leadTimeUnit: "Lead time unit", transport: "Transport",
-  dutyCosts: "Duty costs", otherDuty: "Other duty", dutyRiskNote: "Duty risk note", website: "Website", notes: "Notes",
+  dutyCosts: "Duty costs", otherDuty: "Other duty", dutyRiskNote: "Duty risk note", productionRoute: "Production route", emissionsPerT: "Verified emissions (t CO₂e/t)", carbonPricePaidPerT: "Carbon price paid abroad", website: "Website", notes: "Notes",
 };
 
 // Bring suppliers seeded before the latest supplier sheet up to date
@@ -1617,7 +1617,20 @@ async function supplierBreakdown(s, opts = {}) {
     quoteValidUntil: latest.validUntil || "",
     notes: `From the supplier cost breakdown (${latest.channel === "list" ? "supplier list price" : `quote of ${latest.date}`}).`,
   };
-  const engine = await runScenario(scenarioInputs);
+  // UK CBAM toggle: when on, price the carbon charge as if it already
+  // applies (it starts 1 January 2027), using the mill's emissions.
+  const ws = await settingsStore.get();
+  const cbamOn = opts.cbam === true || opts.cbam === "on";
+  const route = s.productionRoute || "";
+  const emissionsDefault = route === "eaf" ? ws.cbamEafTPerT : route === "bf-bof" ? ws.cbamBofTPerT : ws.cbamUnknownTPerT;
+  const cbamInfo = {
+    on: cbamOn, rate: ws.cbamRatePerT, route,
+    emissions: Number.isFinite(s.emissionsPerT) ? s.emissionsPerT : emissionsDefault,
+    emissionsSource: Number.isFinite(s.emissionsPerT) ? "verified" : route ? "route" : "unknown",
+    relief: Number.isFinite(s.carbonPricePaidPerT) ? s.carbonPricePaidPerT : 0,
+  };
+  if (cbamOn) Object.assign(scenarioInputs, { emissionsPerT: cbamInfo.emissions, ukCarbonPrice: cbamInfo.rate, overseasCarbonPrice: cbamInfo.relief });
+  const engine = await runScenario(scenarioInputs, cbamOn ? { cbamStartDate: "0000-01-01" } : { cbamEnabled: false });
   if (!engine.ok) return { ok: false, error: Object.values(engine.errors || {})[0] || "Could not price this order.", errors: engine.errors };
 
   const pricePerT = engine.lines.find((l) => l.key === "price").perTonne;
@@ -1676,10 +1689,11 @@ async function supplierBreakdown(s, opts = {}) {
   const quotaApplies = engine.buyerImports && engine.quota;
   const worstPerT = quotaApplies ? round2(engine.totals.expectedPerT - (quotaLine.perTonne || 0) + engine.customsValuePerT * 0.5) : engine.totals.expectedPerT;
   const adj = adjustments.reduce((t, a) => t + a.perTonne, 0);
-  const model = buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV });
+  const model = buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV, cbamInfo });
   return {
     ok: true,
     model,
+    cbam: cbamInfo,
     supplier: { id: s.id, name: s.name, origin: s.origin },
     product: { id: product.id, name: product.name, commodityCode: product.commodityCode, monthlyUsageT: usage, suggestedOrderT: metrics.suggestedOrderT },
     inputs: { tonnage, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel },
@@ -1696,7 +1710,7 @@ const round2 = (v) => (v === null || v === undefined || !Number.isFinite(v) ? v 
 // Every cost variable for an order, always listed — even when it's zero, in
 // the supplier's price, carried by the supplier or not applicable — each with
 // its equation and the data points behind it.
-function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV }) {
+function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pricePerT, ratePct, product, usage, moqMin, v, op, priceV, cbamInfo = { on: false } }) {
   const L = (k) => engine.lines.find((l) => l.key === k) || { perTonne: 0, status: "n/a", source: "" };
   const cv = engine.customsValuePerT;
   const cur = latest.currency || "GBP";
@@ -1745,8 +1759,26 @@ function buildCostModel({ s, engine, adjustments, tonnage, latest, quoteSrc, pri
   }
   {
     const c = L("cbam");
-    add("Duty & tax", "cbam", "UK CBAM (carbon)", c.perTonne || 0, c.perTonne ? "included" : c.status === "missing" ? "missing" : buyerImports ? "n/a" : notImporting.status,
-      eqs({ parts: [v("CBAM", c.source || "Not applicable", c.perTonne ? "live" : "fixed", "UK CBAM rules")], result: res("CBAM", c.perTonne || 0) }), c.source);
+    const ci = cbamInfo;
+    const routeName = { eaf: "electric-arc", "bf-bof": "blast furnace" }[ci.route];
+    const emV = v("Embodied emissions", `${ci.emissions} t CO₂e/t`, ci.emissionsSource === "verified" ? "supplier" : "you",
+      ci.emissionsSource === "verified" ? "Mill's verified figure (supplier profile)" : ci.emissionsSource === "route" ? `Settings · ${routeName} default` : "Settings · route unknown, higher figure", ci.emissions);
+    const rateV = v("UK CBAM rate", `£${ci.rate}/t CO₂e`, "you", "Settings · estimate until HMRC publishes", ci.rate);
+    const reliefV = v("Carbon price paid abroad", `£${ci.relief}/t CO₂e`, ci.relief ? "supplier" : "fixed", ci.relief ? "Supplier profile (needs CarbonVP1 evidence)" : "None claimed", ci.relief);
+    if (!ci.on) {
+      add("Duty & tax", "cbam", "UK CBAM (carbon)", 0, "off", eqs({ parts: [v("UK CBAM", "Switched off", "you", "Turn on the CBAM toggle to include it")], result: res("CBAM", 0) }),
+        "UK CBAM starts on 1 January 2027 for imported iron and steel. Turn the toggle on to see what it adds.");
+    } else if (!buyerImports) {
+      add("Duty & tax", "cbam", "UK CBAM (carbon)", 0, notImporting.status, eqs({ parts: notImporting.eq, result: res("CBAM", 0) }), "The importer of record pays UK CBAM. Here that's the supplier, so expect it in their price from 2027.");
+    } else if (!c.perTonne) {
+      add("Duty & tax", "cbam", "UK CBAM (carbon)", 0, "n/a", eqs({ parts: [v("UK CBAM", c.source || "Not applicable", "fixed", "Finance Act 2026, Schedule 16")], result: res("CBAM", 0) }), c.source);
+    } else {
+      add("Duty & tax", "cbam", "UK CBAM (carbon)", c.perTonne, "included",
+        eqs({ parts: [rateV, op("−"), reliefV], result: res("Net carbon price", Math.max(ci.rate - ci.relief, 0), "£/tCO2") },
+          { parts: [emV, op("×"), v("Net carbon price", `£${round2(Math.max(ci.rate - ci.relief, 0))}/t CO₂e`, "calc", "Step 1", Math.max(ci.rate - ci.relief, 0))], result: res("CBAM per tonne", c.perTonne) },
+          { parts: [v("CBAM per tonne", gbpTxt(c.perTonne), "calc", "Step 2"), op("×"), v("Your order", `${tonnage} t`, "you", "Your choice")], result: res("CBAM on this order", c.perTonne * tonnage, "£") }),
+        "Paid by you as importer to HMRC, with returns from 2028 for 2027 imports. The rate and default emission values are estimates until HMRC publishes them; update them in Settings.");
+    }
   }
   {
     const vat = engine.totals.vatPerT || 0;
@@ -1833,7 +1865,7 @@ async function handleSupplierApi(request, response, url) {
     const rows = await Promise.all(pool.map(async (x) => {
       const b = await supplierBreakdown(x, { ...body, importDate: body.arrival === "fixed" ? body.importDate : undefined }).catch((e) => ({ ok: false, error: e.message }));
       return b.ok ? { id: x.id, name: x.name, origin: x.origin, quotedPerT: b.engine.lines.find((l) => l.key === "price").perTonne, expectedPerT: b.engine.totals.expectedPerT,
-        effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, missPerT: b.model ? b.model.totals.missPerT : round2(b.worstPerT - b.bestPerT), missing: b.model ? b.model.totals.missing : [], tonnage: b.inputs.tonnage, productName: b.product.name, probability: b.engine.quota ? b.engine.quota.probability : null, importDate: b.inputs.importDate, adjustments: b.adjustments }
+        effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, missPerT: b.model ? b.model.totals.missPerT : round2(b.worstPerT - b.bestPerT), cbamPerT: round2((b.engine.lines.find((l) => l.key === "cbam") || {}).perTonne || 0), cbam: b.cbam, missing: b.model ? b.model.totals.missing : [], tonnage: b.inputs.tonnage, productName: b.product.name, probability: b.engine.quota ? b.engine.quota.probability : null, importDate: b.inputs.importDate, adjustments: b.adjustments }
         : { id: x.id, name: x.name, origin: x.origin, error: b.error };
     }));
     return sendJson(response, 200, { rows: rows.sort((a, b) => (a.effectivePerT ?? 1e9) - (b.effectivePerT ?? 1e9)) });

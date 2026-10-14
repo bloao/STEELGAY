@@ -1252,3 +1252,21 @@ button.bd2-rank-name { font-size: 14px; }
   .ref-pick { width: 100%; flex-direction: column; align-items: stretch; gap: 4px; }
   .ref-pick .pill-select { max-width: 100%; width: 100%; }
 }
+
+/* ---- UK CBAM toggle ---- */
+.cbam-switch { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px 0 10px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); cursor: pointer; user-select: none; font-size: 13.5px; font-weight: 600; color: var(--ink); transition: border-color 0.15s, background 0.15s; }
+.cbam-switch:hover { border-color: var(--accent); }
+.cbam-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.cbam-switch:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cbam-text small { display: block; font-size: 10.5px; font-weight: 500; color: var(--muted); line-height: 1; margin-top: 1px; }
+.cbam-track { position: relative; flex: 0 0 auto; width: 32px; height: 18px; border-radius: 999px; background: var(--line-strong); transition: background 0.2s; }
+.cbam-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.cbam-switch:has(input:checked) { border-color: #6250d6; background: rgba(98, 80, 214, 0.06); }
+.cbam-switch:has(input:checked) .cbam-track, .cbam-pill.is-on .cbam-track { background: #6250d6; }
+.cbam-switch:has(input:checked) .cbam-thumb, .cbam-pill.is-on .cbam-thumb { transform: translateX(14px); }
+.cbam-pill { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px 0 8px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.cbam-pill:hover { border-color: #6250d6; }
+.cbam-pill.is-on { border-color: #6250d6; background: rgba(98, 80, 214, 0.06); color: #4d3dba; }
+.cbam-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cbam-tag { color: #4d3dba; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .cbam-thumb, .cbam-track { transition: none; } }
