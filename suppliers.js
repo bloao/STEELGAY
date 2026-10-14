@@ -693,7 +693,7 @@
           ? el("div", { class: "contact-mini" }, avatar(m.primaryContact.name),
               el("div", { class: "contact-mini-text" }, el("strong", { text: m.primaryContact.name }), el("span", { text: m.primaryContact.role || m.primaryContact.email || m.primaryContact.phone || "" })),
               contactActions(m.primaryContact, { compact: true }))
-          : el("div", { class: "empty-mini" }, el("span", { text: "No contact yet — quote requests need an email." }), me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Add contact", onclick: () => openContactForm(s) }) : null)),
+          : el("div", { class: "empty-mini" }, el("span", { text: "No contact" }), me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Add contact", onclick: () => openContactForm(s) }) : null)),
       sec("Supplies", null, (s.supplies || []).length ? el("div", { class: "tag-row" }, ...s.supplies.map((g) => el("span", { class: "tag tag-plain", text: g }))) : el("p", { class: "muted small", text: "Not set" })),
       sec("Prices benchmarked against", null,
         (s.pricingSources || []).length

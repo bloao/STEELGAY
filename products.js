@@ -269,7 +269,7 @@
         ["Projected stock-out", m.stockOutDate ? fmt.date(m.stockOutDate) : null],
       ])),
       el("section", { class: "detail-section" }, el("h3", { text: "Buying rules" }), kv([
-        ["Lead time", p.leadTimeWeeks ? `${p.leadTimeWeeks} weeks` : null, p.leadTimeWeeks ? null : "Add one to get an order-by date"],
+        ["Lead time", p.leadTimeWeeks ? `${p.leadTimeWeeks} weeks` : null, null],
         ["Safety stock", p.safetyStockT ? t(p.safetyStockT) : null],
         ["Minimum order (MOQ)", p.moqT ? t(p.moqT) : null],
         ["Cover after delivery", `${p.targetCoverMonths || 3} months`],
@@ -282,7 +282,7 @@
         ["Stock value", fmt.money(m.stockValue)],
         ["Target buy price", p.targetBuyPrice ? `${fmt.money(p.targetBuyPrice, true)}/t` : null],
         ["Best saved quote", best ? el("a", { href: `order.html?id=${best.id}`, text: fmt.perT(best.expectedPerT) }) : null,
-          best ? `${best.supplier || best.title} · ${best.expectedPerT > (p.targetBuyPrice || p.costPerT) ? "above" : "below"} ${p.targetBuyPrice ? "target" : "cost"}` : "No saved quotes for this code"],
+          best ? `${best.supplier || best.title} · ${best.expectedPerT > (p.targetBuyPrice || p.costPerT) ? "above" : "below"} ${p.targetBuyPrice ? "target" : "cost"}` : null],
       ])),
       p.notes ? el("section", { class: "detail-section span-all" }, el("h3", { text: "Notes" }), el("p", { style: "margin:0;white-space:pre-wrap", text: p.notes })) : null);
   }
