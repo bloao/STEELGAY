@@ -2795,6 +2795,7 @@ async function planAssumptions(raw = {}) {
   const values = Object.fromEntries(PLAN_ASSUMPTION_KEYS.map((k) => [k, errors[k] ? defaults[k] : settings[k]]));
   const changed = PLAN_ASSUMPTION_KEYS.filter((k) => values[k] !== defaults[k]);
   return { values, defaults, changed, errors, limits: ASSUMPTION_LIMITS, savedAt: ws.updatedAt || null,
+    approaches: ws.approaches, approachLabels: PLAN.APPROACHES,
     cbam: { status: UK_CBAM.status, rows: [
       { label: "Carbon price", value: `£${UK_CBAM.cbamRatePerT}/t CO₂` },
       { label: "Electric-arc steel", value: `${UK_CBAM.cbamEafTPerT} t CO₂/t` },
@@ -2822,11 +2823,12 @@ async function orderPlan(body = {}) {
   const tonnage = Number(body.tonnage) > 0 ? Math.round(Number(body.tonnage) * 10) / 10 : (m.suggestedOrderT || product.moqT || product.monthlyUsageT || 25);
   const today = new Date().toISOString().slice(0, 10);
   const needBy = /^\d{4}-\d{2}-\d{2}$/.test(body.needBy || "") ? body.needBy : (m.stockOutDate && m.stockOutDate > today ? m.stockOutDate : addDaysIso(today, 30));
-  const appetite = PLAN.APPETITE[body.appetite] ? body.appetite : "balanced";
+  const appetite = PLAN.approachOf(body.appetite);
   const cbam = body.cbam === true;
   const code8 = String(product.commodityCode).slice(0, 8);
   const assumptions = await planAssumptions(body.assume);
   const assume = assumptions.values;
+  const profile = PLAN.thresholdsFor(appetite, { ...assume, approaches: assumptions.approaches });
 
   // suppliers, priced for this exact product, tonnage and their own lead time
   const rows = await compareSuppliers({ productId: product.id, tonnage, arrival: "lead", cbam, assume });
@@ -2847,7 +2849,7 @@ async function orderPlan(body = {}) {
     const priceNow = priced[0] ? priced[0].effectivePerT : product.costPerT;
     forecast = { in1: pctAt(1), in3: pctAt(3), in6: pctAt(6), priceNow, in3Price: fc.fromToday[2] ? priceNow * fc.fromToday[2].mid / fc.indexNow : null,
       band3: fc.fromToday[2] ? [priceNow * fc.fromToday[2].low / fc.indexNow, priceNow * fc.fromToday[2].high / fc.indexNow] : null, drivers: fc.drivers.map((d) => ({ label: d.label, pct: d.pct, kind: d.kind })) };
-    aheadOptions = [1, 2, 3].map((n) => { const b = FC.buyAhead({ priceNow, indexNow: fc.indexNow, path: fc.fromToday, monthlyUsageT: product.monthlyUsageT, months: n, costOfCapitalPct: fc.costOfCapitalPct, storagePerTMonth: fc.settings.storagePerTMonth }); return b ? { months: n, netMid: b.netMid, netLow: b.netLow, netHigh: b.netHigh, signal: b.signal, tonnes: b.tonnes } : null; }).filter(Boolean);
+    aheadOptions = [1, 2, 3].map((n) => { const b = FC.buyAhead({ priceNow, indexNow: fc.indexNow, path: fc.fromToday, monthlyUsageT: product.monthlyUsageT, months: n, costOfCapitalPct: Math.max(fc.costOfCapitalPct, profile.cashRatePct), storagePerTMonth: fc.settings.storagePerTMonth }); return b ? { months: n, netMid: b.netMid, netLow: b.netLow, netHigh: b.netHigh, signal: b.signal, tonnes: b.tonnes } : null; }).filter(Boolean);
   }
 
   // how safe it is to hold
@@ -2888,7 +2890,7 @@ async function orderPlan(body = {}) {
     .concat((await liveNotes()).filter((n) => n.scope === "supplier" && priced.some((o) => o.id === n.targetId) && NEWS.noteActive(n, needBy) && n.effectUnit !== "none"));
   const productFacts = { id: product.id, name: product.name, category: product.category, commodityCode: product.commodityCode, steelCategory: view.steelCategory, costPerT: product.costPerT, targetBuyPrice: product.targetBuyPrice ?? null,
     monthlyUsageT: product.monthlyUsageT, stockT: m.stockNowT, coverMonths: m.coverMonths, stockOutDate: m.stockOutDate, latestOrderDate: m.latestOrderDate, suggestedOrderT: m.suggestedOrderT, moqT: product.moqT ?? null, status: m.status, reason: m.reason };
-  const rec = PLAN.recommend({ product: productFacts, tonnage, needBy, appetite, options, forecast, aheadOptions, stockpile, quota, market, competition, intel, thresholds: assume });
+  const rec = PLAN.recommend({ product: productFacts, tonnage, needBy, appetite, options, forecast, aheadOptions, stockpile, quota, market, competition, intel, thresholds: { ...assume, approaches: assumptions.approaches } });
   return { ok: true, today, product: productFacts, inputs: { tonnage, needBy, appetite, cbam }, appetites: PLAN.APPETITE, assumptions, options: rec.scored || [], unpriced: options.filter((o) => !Number.isFinite(o.effectivePerT)).map((o) => ({ id: o.id, name: o.name, error: o.error })),
     forecast, aheadOptions, stockpile, market, competition, quota, quotaLines, intel: intel.map((n) => ({ id: n.id, title: n.title, scope: n.scope, targetName: n.targetName || n.targetId, effectUnit: n.effectUnit, effectValue: n.effectValue, effectiveFrom: n.effectiveFrom, by: n.by })), recommendation: rec };
 }
@@ -2967,7 +2969,7 @@ async function handleOrdersApi(request, response, url) {
   }
   if (url.pathname === "/api/orders/assumptions" && request.method === "GET") {
     const a = await planAssumptions({});
-    return sendJson(response, 200, { ...a, standard: Object.fromEntries(PLAN_ASSUMPTION_KEYS.map((k) => [k, SETTINGS_DEFAULTS[k]])), updatedBy: (await settingsStore.get()).updatedBy || null, canEdit: can(user, "edit") });
+    return sendJson(response, 200, { ...a, standard: Object.fromEntries(PLAN_ASSUMPTION_KEYS.map((k) => [k, SETTINGS_DEFAULTS[k]])), standardApproaches: PLAN.APPROACH_DEFAULTS, updatedBy: (await settingsStore.get()).updatedBy || null, canEdit: can(user, "edit") });
   }
   if (url.pathname === "/api/orders/starter" && request.method === "POST") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");

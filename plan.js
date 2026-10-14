@@ -21,8 +21,9 @@
   // ---------------------------------------------------------------- form
   const NEEDS = ["critical", "reorder", "low"];
   const STATUS = { critical: ["Order now", "is-risk"], reorder: ["Order now", "is-risk"], low: ["Order soon", "is-maybe"], ok: ["Stock OK", "is-go"], "no-usage": ["No usage set", ""] };
-  const APPROACHES = [["cautious", "Cautious", "quotaWeightCautiousPct"], ["balanced", "Balanced", "quotaWeightBalancedPct"], ["bold", "Price first", "quotaWeightBoldPct"]];
-  const weightOf = (k) => { const a = plan && plan.assumptions; const key = (APPROACHES.find((x) => x[0] === k) || APPROACHES[1])[2]; return a ? a.values[key] : { cautious: 60, balanced: 25, bold: 0 }[k]; };
+  const APPROACHES = [["cashflow", "Cash flow"], ["speed", "Speed"], ["balanced", "Balanced"]];
+  const profileOf = (k) => (plan && plan.assumptions && plan.assumptions.approaches ? plan.assumptions.approaches[k] : null);
+  const weightOf = (k) => { const p = profileOf(k); return p ? p.quotaWeightPct : 25; };
 
   function fillProducts() {
     const keep = $("pf-product").value;
@@ -92,8 +93,13 @@
     const box = $("asm-strip");
     box.replaceChildren(
       el("span", { class: "asm-strip-label", text: "Assumptions" }),
-      el("span", { text: `Buy ahead at +${v.buyAheadTriggerPct}%` }),
-      el("span", { text: `Hold off at −${v.waitTriggerPct}%` }),
+      el("span", { class: "asm-strip-ap", text: (APPROACHES.find((x) => x[0] === r.inputs.appetite) || APPROACHES[2])[1] }),
+      ...(() => { const p = profileOf(r.inputs.appetite) || {}; return [
+        el("span", { text: `Buy ahead at +${p.buyAheadTriggerPct}%` }),
+        el("span", { text: `Hold off at −${p.waitTriggerPct}%` }),
+        r.inputs.appetite === "cashflow" ? el("span", { text: `Cash ${p.cashRatePct}%/yr` }) : null,
+        r.inputs.appetite === "speed" ? el("span", { text: `Lead ${p.leadDayPct}%/day` }) : null,
+        el("span", { text: `Quota ${p.quotaWeightPct}%` })].filter(Boolean); })(),
       el("span", { text: `Capital ${v.costOfCapitalPct}%` }),
       el("span", { text: `Storage £${v.forecastStoragePerTMonth}/t a month` }),
       el("a", { href: "assumptions.html", class: "asm-strip-edit", text: "Edit" }));
@@ -221,12 +227,13 @@
     return el("section", { class: "card mk-card plan-options" },
       el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }))),
       el("div", { class: "table-scroll" }, el("table", { class: "quota-table plan-table" },
-        el("thead", {}, el("tr", {}, el("th", {}), el("th", { text: "Supplier" }), el("th", { class: "num", text: "Landed cost" }), el("th", { class: "num", text: "If quota missed" }), el("th", { class: "num", text: "Risk-adjusted" }), el("th", { text: "Arrives" }), el("th", { text: "Notes" }))),
+        el("thead", {}, el("tr", {}, el("th", {}), el("th", { text: "Supplier" }), el("th", { class: "num", text: "Landed cost" }), el("th", { class: "num", text: "If quota missed" }), el("th", { class: "num", text: "Terms" }), el("th", { class: "num", text: "Score" }), el("th", { text: "Arrives" }), el("th", { text: "Notes" }))),
         el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; render(); } },
           el("td", {}, el("input", { type: "radio", name: "pick", "aria-label": `Choose ${o.name}`, ...(o.id === chosen ? { checked: "" } : {}), onchange: () => { chosen = o.id; render(); } })),
           el("td", {}, el("strong", { text: o.name }), el("div", { class: "row-sub" }, `${o.origin || ""}${o.covers === "everything" ? " · all-in" : o.covers === "except-duty" ? " · + duty" : ""}`, ...tags(o).map(([l, c]) => el("span", { class: `sig ${c} plan-tag`, text: l })))),
           el("td", { class: "num" }, el("strong", { text: gbpT(o.effectivePerT) }), el("div", { class: "row-sub", text: `quoted ${gbpT(o.quotedPerT)}` })),
           el("td", { class: "num" }, el("span", { class: o.quotaExposure > 1 ? "is-bad" : "muted", text: o.quotaExposure > 1 ? `+${gbpT(o.quotaExposure)}` : "—" })),
+          el("td", { class: "num", text: o.payDays ? `${o.payDays} days` : "On delivery" }),
           el("td", { class: "num" }, el("strong", { text: gbpT(o.score) }), o.latePenalty ? el("div", { class: "row-sub is-bad", text: `incl. ${gbpT(o.latePenalty)} late` }) : null),
           el("td", {}, el("span", { class: o.lateDays ? "is-bad" : "", text: o.arrival ? fmt.date(o.arrival) : "—" }), el("div", { class: "row-sub", text: o.leadDays ? (o.leadDays < 14 ? `${o.leadDays} days lead` : `${Math.round(o.leadDays / 7)} wk lead`) : "" })),
           el("td", {}, o.warnings.length ? el("ul", { class: "plan-warn" }, ...o.warnings.slice(0, 3).map((w) => el("li", { text: w }))) : el("span", { class: "muted small", text: "No concerns" }))))))),
