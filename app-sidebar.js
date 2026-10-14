@@ -28,6 +28,7 @@
       children: [
         { key: "orders", label: "Orders", href: "orders.html" },
         { key: "plan", label: "Plan an order", href: "plan.html" },
+        { key: "assumptions", label: "Assumptions", href: "assumptions.html" },
         { key: "quotas", label: "Live quotas", href: "quotas.html" },
         { key: "arrivals", label: "Arrivals", href: "arrivals.html" },
       ] },

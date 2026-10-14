@@ -90,7 +90,8 @@ http://127.0.0.1:3001
 - `/orders.html` — saved order scenarios, filters, CSV export, pick 2–4 to compare
 - `/order.html` — order editor with live landed-cost build-up and the planner's reasons (`?id=` opens a saved one). `/order-tool.html` stays as the standalone public intake page.
 - First run: the old demo scenarios (HR coil, galvanised sheet…) are archived on startup and replaced with draft orders for the products that need restocking, priced from your own suppliers: the planner's pick ("Recommended") and the runner-up ("Alternative"). `POST /api/orders/starter` does the same on demand.
-- `/plan.html` — plan an order. The "Assumptions and thresholds" panel lists every number the plan runs on (cost of capital, storage, delivery, stock-out cost, quota-miss weighting per approach, UK CBAM placeholders, and the triggers for buying ahead, holding off and warnings). Edits apply to that plan only until you press "Save as defaults", which writes them to Settings.
+- `/plan.html` — plan an order; a one-line strip shows the assumptions in use.
+- `/assumptions.html` — Orders › Assumptions: every number the planner runs on (buy-ahead and hold-off triggers, costs, quota-risk weighting, UK CBAM placeholders, warning levels). Saved to Settings and used by every plan.
 - `/compare.html?ids=a,b` — side-by-side quotes, lowest expected cost highlighted
 
 All maths runs on the server in `lib/calc.mjs` (versioned; tests in `tests/calc.test.mjs`, run `npm test`).

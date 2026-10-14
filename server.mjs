@@ -10,7 +10,7 @@ import { createStore } from "./lib/store.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
-import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS } from "./lib/settings.mjs";
+import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
 import * as BM from "./lib/benchmarks.mjs";
@@ -2956,6 +2956,10 @@ async function handleOrdersApi(request, response, url) {
     const body = await readJsonBody(request);
     const r = await createPlannedOrder({ ...body, by: user.name });
     return r.ok ? sendJson(response, 201, r) : sendJson(response, 422, r);
+  }
+  if (url.pathname === "/api/orders/assumptions" && request.method === "GET") {
+    const a = await planAssumptions({});
+    return sendJson(response, 200, { ...a, standard: Object.fromEntries(PLAN_ASSUMPTION_KEYS.map((k) => [k, SETTINGS_DEFAULTS[k]])), updatedBy: (await settingsStore.get()).updatedBy || null, canEdit: can(user, "edit") });
   }
   if (url.pathname === "/api/orders/starter" && request.method === "POST") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
