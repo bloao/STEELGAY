@@ -23,7 +23,7 @@ import * as COMP from "./lib/competition.mjs";
 import * as ARR from "./lib/arrivals.mjs";
 import * as STOCK from "./lib/stockpile.mjs";
 import * as PLAN from "./lib/orderplan.mjs";
-import { converse, systemPrompt, DEFAULT_MODEL, PROVIDERS, toOpenAI, fromOpenAI, pickModel } from "./lib/assistant.mjs";
+import { converse, systemPrompt, DEFAULT_MODEL, PROVIDERS, toOpenAI, fromOpenAI, pickModel, FREE_LIMITS } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
 
@@ -1415,6 +1415,7 @@ async function assistantConfig() {
   return { provider, label: p ? p.label : null, model, key: provider ? keys[provider] : "", configured, ollama: { ...ollama, model: ollamaModel, hasModel: hasOllamaModel } };
 }
 const modelCache = new Map(); // `${provider}|${key tail}` → model id this key can use
+const providerUsage = new Map(); // provider → latest rate-limit headers (free-tier allowance left)
 async function discoverModel(cfg, base) {
   const ck = `${cfg.provider}|${String(cfg.key).slice(-6)}`;
   if (modelCache.has(ck)) return modelCache.get(ck);
@@ -1438,11 +1439,18 @@ function callOpenAICompatible(cfg) {
       body: JSON.stringify(toOpenAI(body)),
       signal: AbortSignal.timeout(cfg.provider === "ollama" ? 180_000 : 90_000),
     });
+    const h = (n) => response.headers.get(n);
+    if (h("x-ratelimit-limit-requests")) providerUsage.set(cfg.provider, { limitRequests: Number(h("x-ratelimit-limit-requests")), remainingRequests: Number(h("x-ratelimit-remaining-requests")), limitTokens: Number(h("x-ratelimit-limit-tokens")) || null, remainingTokens: Number(h("x-ratelimit-remaining-tokens")) || null, at: new Date().toISOString() });
+    // free-tier minute limit: wait as told (if short) and try once more
+    if (response.status === 429 && !retried) {
+      const wait = Math.ceil(Number(h("retry-after")) || 0);
+      if (wait > 0 && wait <= 20) { await new Promise((r) => setTimeout(r, wait * 1000)); return callOpenAICompatible(cfg)(body, true); }
+    }
     const data = await response.json().catch(() => ({}));
     if (response.status === 404 && !fixedModel && !retried) { modelCache.delete(`${cfg.provider}|${String(cfg.key).slice(-6)}`); return callOpenAICompatible(cfg)(body, true); }
     if (!response.ok) {
       const message = data?.error?.message || (Array.isArray(data) ? data[0]?.error?.message : "") || response.statusText;
-      const hint = response.status === 401 || response.status === 403 ? " — check the API key" : response.status === 404 ? ` — model "${body.model}" not found` : response.status === 429 ? " — free-tier limit reached, try again shortly" : "";
+      const hint = response.status === 401 || response.status === 403 ? " — check the API key" : response.status === 404 ? ` — model "${body.model}" not found` : response.status === 429 ? " — free-tier limit reached; it resets within a minute (or tomorrow for the daily limit)" : response.status === 413 ? " — question too large for the free tier; ask something narrower" : "";
       throw Object.assign(new Error(`${PROVIDERS[cfg.provider].label} ${response.status}: ${message}${hint}`), { statusCode: 502 });
     }
     return fromOpenAI(data);
@@ -1484,7 +1492,7 @@ async function handleAssistantApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   if (url.pathname === "/api/assistant/status" && request.method === "GET") {
     const cfg = await assistantConfig();
-    sendJson(response, 200, { configured: cfg.configured, provider: cfg.provider, label: cfg.label, model: cfg.model, ollama: cfg.ollama, canEdit: can(user, "edit") });
+    sendJson(response, 200, { configured: cfg.configured, provider: cfg.provider, label: cfg.label, model: cfg.model, ollama: cfg.ollama, canEdit: can(user, "edit"), free: ["groq", "gemini", "ollama"].includes(cfg.provider), usage: providerUsage.get(cfg.provider) || null });
     return;
   }
   if (url.pathname !== "/api/assistant" || request.method !== "POST") return sendError(response, 404, "Not found");
@@ -1521,11 +1529,12 @@ async function handleAssistantApi(request, response, url) {
   const result = await converse({
     messages: clean,
     callModel: cfg.provider === "anthropic" ? callAnthropic : callOpenAICompatible(cfg),
+    limits: cfg.provider === "groq" || cfg.provider === "gemini" ? FREE_LIMITS : null,
     data,
     model: cfg.model,
     system: systemPrompt({ today: new Date().toISOString().slice(0, 10), user: user.name }),
   });
-  sendJson(response, 200, { ...result, model: cfg.model, provider: cfg.provider });
+  sendJson(response, 200, { ...result, model: cfg.model, provider: cfg.provider, usageLeft: providerUsage.get(cfg.provider) || null });
 }
 
 // ------------------------------------------------------------ product API

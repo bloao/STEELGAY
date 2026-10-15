@@ -108,6 +108,7 @@
     try {
       const res = await api("/api/assistant", { method: "POST", body: { messages: history.filter((m) => !m.error).map(({ role, content }) => ({ role, content })) } });
       typing.remove();
+      if (res.usageLeft) setLabel(null, res.usageLeft);
       const msg = { role: "assistant", content: res.reply, tools: res.tools };
       history.push(msg);
       persist();
@@ -138,11 +139,19 @@
   $("suggestions").addEventListener("click", (e) => { if (e.target.closest(".chip")) ask(e.target.closest(".chip").textContent); });
   $("clear-btn").addEventListener("click", () => { history = []; persist(); renderAll(); input.focus(); });
 
+  let status = null;
+  function setLabel(s, usage) {
+    status = s || status;
+    if (!status) return;
+    const u = usage || status.usage;
+    $("model-label").textContent = !status.configured ? "Not set up"
+      : `${status.label.replace(/ \(.*\)$/, "")} · ${status.model}${status.free ? " · free" : ""}${u && u.limitRequests ? ` · ${u.remainingRequests.toLocaleString("en-GB")}/${u.limitRequests.toLocaleString("en-GB")} today` : ""}`;
+  }
   async function checkStatus() {
     const s = await api("/api/assistant/status").catch(() => null);
     if (!s) return;
     $("setup-card").hidden = s.configured;
-    $("model-label").textContent = s.configured ? `${s.label} · ${s.model}` : "Not set up";
+    setLabel(s);
     input.disabled = !s.configured;
     $("send-btn").disabled = !s.configured;
     input.placeholder = s.configured ? "Ask about stock, quotes, quotas or what to order" : "Choose a model above to start";
