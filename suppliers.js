@@ -1018,10 +1018,10 @@
       const tok = (p) => {
         const style = `--i:${i++}`;
         if (p.t === "op") return el("span", { class: "eq-op", style, "aria-hidden": "true", text: p.o });
-        return el("div", { class: `eq-v k-${p.kind}`, style },
-          el("span", { class: "eq-l", text: p.label }),
+        // number on top, name underneath; where it comes from is the colour dot (and the tooltip)
+        return el("div", { class: `eq-v k-${p.kind}`, style, title: `${KIND[p.kind] || ""}${p.source && p.source !== KIND[p.kind] ? ` · ${p.source}` : ""}` },
           el("strong", { class: "eq-n", text: p.value }),
-          el("span", { class: "eq-s", title: p.source || "" }, el("span", { class: "eq-k", text: KIND[p.kind] || "" }), p.source && p.source !== KIND[p.kind] ? ` · ${p.source}` : ""));
+          el("span", { class: "eq-l", text: p.label }));
       };
       const r = eq.result;
       const resVal = el("strong", { class: "eq-n", "data-count": String(Math.abs(r.value)), "data-unit": r.unit, text: fmtEq(Math.abs(r.value), r.unit) });
@@ -1030,7 +1030,7 @@
         el("div", { class: "eq-row", role: "math", "aria-label": `${eq.parts.map((p) => (p.t === "op" ? p.o : `${p.label} ${p.value}`)).join(" ")} equals ${r.label} ${fmtEq(Math.abs(r.value), r.unit)}` },
           ...eq.parts.map(tok),
           el("span", { class: "eq-op is-eq", style: `--i:${i++}`, "aria-hidden": "true", text: "=" }),
-          el("div", { class: `eq-r${r.sign < 0 ? " is-saving" : ""}${Math.abs(r.value) < 0.005 ? " is-zero" : ""}`, style: `--i:${i++}` }, el("span", { class: "eq-l", text: r.label }), resVal)));
+          el("div", { class: `eq-r${r.sign < 0 ? " is-saving" : ""}${Math.abs(r.value) < 0.005 ? " is-zero" : ""}`, style: `--i:${i++}` }, resVal, el("span", { class: "eq-l", text: r.label }))));
     };
     const openWork = (btn, work, open) => {
       work.classList.toggle("is-open", open);

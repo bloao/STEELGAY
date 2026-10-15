@@ -98,7 +98,7 @@
       el("div", { class: "pkg-head" },
         el("h3", { text: "One load" }),
         opts.length > 1 ? el("div", { class: "pkg-opts", role: "group", "aria-label": "Supplier" }, ...opts.map((x) => el("button", { type: "button", class: "pkg-opt", "aria-pressed": String(x.supplierId === o.supplierId), onclick: () => { pkgPick = x.supplierId; renderPackage(); } },
-          el("b", { text: x.supplier }), el("span", { text: `£${x.scorePerT}/t · ${t1(x.totalT)}` })))) : null),
+          el("b", { text: x.supplier }), el("span", { text: `£${x.scorePerT}/t · ${t1(x.totalT)}${x.origin && x.origin !== "UK" ? (x.ddp === "yes" ? " · DDP" : x.ddp === "no" ? " · no DDP" : "") : ""}` })))) : null),
       el("div", { class: "pkg-body" },
         el("div", { class: "pkg-figs" },
           fig("Load", t1(o.totalT)),

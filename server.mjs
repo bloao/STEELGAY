@@ -1816,7 +1816,7 @@ async function supplierBreakdown(s, opts = {}) {
   const quoteScope = productQuote ? "product" : latest.productId ? "other-product" : "general";
   const scenarioInputs = {
     title: `${product.name} from ${s.name}`, commodityCode: product.commodityCode, origin: engineOrigin(s.origin), tonnage, importDate,
-    incoterm: engineIncoterm(s), importerOfRecord: m.covers === "everything" ? "supplier" : "us",
+    incoterm: engineIncoterm(s), importerOfRecord: s.ddp === "no" ? "us" : m.covers === "everything" ? "supplier" : "us",
     priceAmount: latest.pricePerT, priceCurrency: latest.currency || "GBP", supplier: s.name, inlandFreightPerT: transportPerT,
     leadTimeWeeks: leadDays ? Math.max(1, Math.round(leadDays / 7)) : null,
     paymentTerms: s.paymentDays !== null && s.paymentDays !== undefined ? `${s.paymentDays} days` : "",
@@ -3018,7 +3018,7 @@ async function orderPlan(body = {}) {
     const s = sups.get(r.id) || {};
     const leadDays = s.leadTimeMax != null ? s.leadTimeMax * (s.leadTimeUnit === "days" ? 1 : 7) : s.leadTimeMin != null ? s.leadTimeMin * (s.leadTimeUnit === "days" ? 1 : 7) : null;
     const latest = [...(s.quotes || [])].sort((a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || "")))[0];
-    return { ...r, arrival: r.importDate || null, leadDays, onTimePct: s.onTimePct ?? null, quoteAgeDays: r.quoteDate ? Math.max(0, Math.round((Date.parse(today) - Date.parse(r.quoteDate)) / 86_400_000)) : null, validUntil: latest ? latest.validUntil || null : null, moqNote: s.moqNote || "", paymentDays: s.paymentDays ?? null };
+    return { ...r, arrival: r.importDate || null, leadDays, onTimePct: s.onTimePct ?? null, quoteAgeDays: r.quoteDate ? Math.max(0, Math.round((Date.parse(today) - Date.parse(r.quoteDate)) / 86_400_000)) : null, validUntil: latest ? latest.validUntil || null : null, moqNote: s.moqNote || "", paymentDays: s.paymentDays ?? null, ddp: s.ddp || (s.origin === "UK" ? "na" : ""), isImport: Boolean(s.origin) && s.origin !== "UK" };
   };
   const options = rows.map(toOption);
   const priced = options.filter((o) => Number.isFinite(o.effectivePerT)).sort((a, b) => a.effectivePerT - b.effectivePerT);
