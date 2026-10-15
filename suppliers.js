@@ -1091,12 +1091,12 @@
     const cards = variableCards(s, d).sort((a, b) => order[a.verdict] - order[b.verdict]);
     const counts = { risk: 0, watch: 0, muted: 0, good: 0 };
     cards.forEach((c) => { counts[c.verdict] += 1; });
-    const checklist = el("ul", { class: "bd2-checks" }, ...cards.map((c) => el("li", { class: `bd2-check is-${c.verdict}` },
+    // one compact tile per factor: dot, name, value; the detail is in the tooltip
+    const checklist = el("ul", { class: "bd2-mini" }, ...cards.map((c) => el("li", { class: `bd2-mini-item is-${c.verdict}`, title: c.note },
       el("span", { class: "bd2-dot", "aria-label": { good: "Good", watch: "Watch", risk: "Risk", muted: "Missing" }[c.verdict] }),
-      el("div", { class: "bd2-check-main" },
-        el("div", { class: "bd2-check-head" }, el("span", { class: "bd2-check-name", text: c.name }), el("strong", { class: "bd2-check-val", text: c.value })),
-        el("p", { text: c.note }),
-        c.fix ? el("button", { class: "link-btn", type: "button", text: c.fix.label, onclick: c.fix.fn }) : null))));
+      el("span", { class: "bd2-mini-name", text: ({ "Price vs your other suppliers": "Vs suppliers", "Against the market": "Vs market", "Quote freshness": "Quote", "Minimum order": "Min order", "Payment terms": "Terms" })[c.name] || c.name }),
+      el("strong", { class: "bd2-mini-val", text: String(c.value).replace(/\s+vs\s+.*$/, "").replace(/ on time$/, "").replace(/^From supplier list$/, "List price").replace(/\s+—\s+.*$/, "").replace(/ load$/, "") }),
+      c.fix && c.verdict !== "good" ? el("button", { class: "bd2-mini-fix", type: "button", title: c.fix.label, "aria-label": c.fix.label, text: "→", onclick: c.fix.fn }) : null)));
 
     // ---- 5. same order, every supplier
     const cmpRows = bd.compare && bd.compare.rows ? bd.compare.rows.filter((r) => !r.error) : [];
