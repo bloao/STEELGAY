@@ -60,14 +60,17 @@
   function icon(name) {
     return '<svg class="sidebar__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + "</svg>";
   }
+  // a section's own page is its heading, so it isn't repeated underneath
+  function subPages(sec) { return (sec.children || []).filter(function (c) { return c.key !== sec.key; }); }
   function sectionLink(sec) {
     var on = inSection(sec);
-    var html = '<li class="sidebar__sec' + (on ? " is-open" : "") + '"><a class="sidebar__link' + (on ? " is-active" : "") + '" href="' + sec.href + '"' +
-      (on && !sec.children ? ' aria-current="page"' : "") + ">" + icon(sec.icon) + "<span>" + sec.label + "</span>" +
+    var self = sec.key === active;
+    var html = '<li class="sidebar__sec' + (on ? " is-open" : "") + '"><a class="sidebar__link' + (on ? " is-active" : "") + (self ? " is-current" : "") + '" href="' + sec.href + '"' +
+      (self ? ' aria-current="page"' : "") + ">" + icon(sec.icon) + "<span>" + sec.label + "</span>" +
       (sec.children ? '<svg class="sidebar__chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>' : "") + "</a>";
     if (sec.children && on) {
       html += '<ul class="sidebar__sub">';
-      sec.children.forEach(function (c) {
+      subPages(sec).forEach(function (c) {
         var here = c.key === active;
         html += '<li><a class="sidebar__sublink' + (here ? " is-active" : "") + '" href="' + c.href + '"' + (here ? ' aria-current="page"' : "") + ">" + c.label + "</a></li>";
       });
@@ -85,9 +88,9 @@
   }
   function launchSection(sec) {
     if (!sec.children) return '<div class="ll-sec">' + launchRow(sec) + "</div>";
-    var here = inSection(sec);
-    return '<div class="ll-sec' + (here ? " is-here" : "") + '"><div class="ll ll-head">' + icon(sec.icon) + "<span>" + sec.label + "</span></div>" +
-      sec.children.map(function (c) { return launchRow(c, true); }).join("") + "</div>";
+    var here = inSection(sec), self = sec.key === active;
+    return '<div class="ll-sec' + (here ? " is-here" : "") + '"><a class="ll ll-head' + (self ? " is-active" : "") + '" href="' + sec.href + '"' + (self ? ' aria-current="page"' : "") + ">" + icon(sec.icon) + "<span>" + sec.label + "</span></a>" +
+      subPages(sec).map(function (c) { return launchRow(c, true); }).join("") + "</div>";
   }
   var launcher = '<button type="button" class="launcher-btn" id="launcher-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="launcher" title="All pages">' +
     icon("grid") + '<span class="launcher-cur">All pages</span></button>' +
@@ -138,6 +141,11 @@
       a.classList.toggle("is-active", isMk === mk);
       if (isMk === mk) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
+    aside.querySelectorAll('.sidebar__link[href="suppliers.html"], .ll-head[href="suppliers.html"]').forEach(function (a) {
+      a.classList.toggle(a.classList.contains("ll") ? "is-active" : "is-current", !mk);
+      if (!mk) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    aside.querySelectorAll('.ll-sub[href="suppliers.html#market"]').forEach(function (a) { a.classList.toggle("is-active", mk); });
   });
   aside.innerHTML = html;
   var lbtn = document.getElementById("launcher-btn"), panel = document.getElementById("launcher");

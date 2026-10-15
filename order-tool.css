@@ -2117,3 +2117,9 @@ a.ll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .qh3.is-dense .qh3-axis span:nth-child(even) { visibility: hidden; }
 }
 .qh3-val { z-index: 1; padding: 0 4px; border-radius: 4px; background: var(--surface); line-height: 1.3; }
+
+/* Section heading is the section's own page: highlight it when you're on it */
+.sidebar__sec.is-open > .sidebar__link.is-current { background: var(--accent-soft); color: var(--accent-ink); }
+.sidebar__sec.is-open > .sidebar__link.is-current .sidebar__icon { color: var(--accent); }
+a.ll-head:hover { background: var(--surface-alt); }
+.ll-head.is-active { background: var(--accent-soft); color: var(--accent-ink); }
