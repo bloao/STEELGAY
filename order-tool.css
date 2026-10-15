@@ -2353,3 +2353,36 @@ a.tr-label:hover { color: var(--accent-ink); text-decoration: underline; }
 .tr-wrap.is-focus .tr-link.is-faint.is-hot { opacity: 0.7; }
 .tr-src.is-open .tr-caret { transform: rotate(45deg); }
 .tr-node.is-seen { animation: none; opacity: 1; transform: none; }
+
+/* ---- What needs ordering → One load (packaged to meet the minimum) ---- */
+.pkg { margin-top: 14px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-alt); display: flex; flex-direction: column; gap: 12px; }
+.pkg-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pkg-head h3 { margin: 0; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; }
+.pkg-head h3::before { content: ""; width: 18px; height: 18px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7l9-4 9 4v10l-9 4-9-4z'/%3E%3Cpath d='M3 7l9 4 9-4M12 11v10'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7l9-4 9 4v10l-9 4-9-4z'/%3E%3Cpath d='M3 7l9 4 9-4M12 11v10'/%3E%3C/svg%3E") center / contain no-repeat; color: var(--accent); }
+.pkg-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.pkg-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font: inherit; cursor: pointer; text-align: left; }
+.pkg-opt b { font-size: 12.5px; } .pkg-opt span { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pkg-opt[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.pkg-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pkg-body { display: flex; flex-direction: column; gap: 12px; }
+.pkg-figs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.pkg-fig { display: flex; flex-direction: column; gap: 2px; }
+.pkg-fig span { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.pkg-fig strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.pkg-bar { position: relative; display: flex; height: 14px; border-radius: 999px; background: var(--neutral-bg); overflow: visible; }
+.pkg-seg { height: 100%; background: var(--c); border-right: 2px solid var(--surface-alt); animation: pkg-grow 0.6s cubic-bezier(.2,.7,.3,1) both; transform-origin: left; }
+.pkg-seg:first-child { border-radius: 999px 0 0 999px; }
+.pkg-seg.is-fwd { background: repeating-linear-gradient(135deg, var(--c) 0 5px, color-mix(in srgb, var(--c) 45%, white) 5px 10px); }
+@keyframes pkg-grow { from { transform: scaleX(0); } to { transform: none; } }
+.pkg-min { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--ink); }
+.pkg-load { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 2px dashed var(--muted); }
+.pkg-items { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.pkg-items li { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; }
+.pkg-items i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.pkg-items i.is-fwd { background: repeating-linear-gradient(135deg, var(--c) 0 2px, color-mix(in srgb, var(--c) 45%, white) 2px 4px); }
+.pkg-items b { font-variant-numeric: tabular-nums; }
+.pkg-items small { font-size: 11.5px; color: var(--muted); }
+.pkg-miss { margin: 0; font-size: 12.5px; color: var(--warn-ink); }
+.pkg-actions { display: flex; justify-content: flex-end; }
+@media (max-width: 700px) { .pkg-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pkg-actions .btn { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .pkg-seg { animation: none; } }

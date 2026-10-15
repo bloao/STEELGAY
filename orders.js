@@ -76,6 +76,57 @@
   }
   loadNeeds();
 
+  // ---- One load: everything that needs ordering packaged to meet the supplier's minimum
+  let pkg = null, pkgPick = null;
+  const t1 = (v) => `${Math.round(v * 10) / 10} t`;
+  const COLORS = ["#2a78d6", "#4f9a8f", "#6250d6", "#c2862a", "#c4553a", "#5b7083"];
+  function renderPackage() {
+    const box = document.getElementById("pkg");
+    if (!pkg || !pkg.options || !pkg.options.length) { box.hidden = true; return; }
+    const opts = pkg.options.slice(0, 4);
+    const o = opts.find((x) => x.supplierId === pkgPick) || opts[0];
+    pkgPick = o.supplierId;
+    const cap = o.moqMaxT ? o.moqMaxT * o.loads : Math.max(o.totalT, o.moqMinT || 0);
+    const scale = Math.max(cap, o.totalT) || 1;
+    const fig = (k, v) => el("div", { class: "pkg-fig" }, el("span", { text: k }), el("strong", { text: v }));
+    const seg = el("div", { class: "pkg-bar", role: "img", "aria-label": `${t1(o.totalT)} on ${o.loads} load${o.loads === 1 ? "" : "s"}${o.moqMinT ? `, minimum ${o.moqMinT} t` : ""}` },
+      ...o.items.map((it, i) => el("span", { class: `pkg-seg${it.role === "bring-forward" ? " is-fwd" : ""}`, style: `width:${(it.tonnes / scale) * 100}%;--c:${COLORS[i % COLORS.length]}`, title: `${it.name} · ${t1(it.tonnes)}` })),
+      o.moqMinT ? el("i", { class: "pkg-min", style: `left:${Math.min(100, ((o.moqMaxT && o.loads > 1 ? (o.loads - 1) * o.moqMaxT + o.moqMinT : o.moqMinT) / scale) * 100)}%`, title: `Minimum ${o.moqMinT} t` }) : null,
+      ...(o.moqMaxT && o.loads > 1 ? Array.from({ length: o.loads - 1 }, (_, i) => el("i", { class: "pkg-load", style: `left:${(((i + 1) * o.moqMaxT) / scale) * 100}%` })) : []));
+    box.hidden = false;
+    box.replaceChildren(
+      el("div", { class: "pkg-head" },
+        el("h3", { text: "One load" }),
+        opts.length > 1 ? el("div", { class: "pkg-opts", role: "group", "aria-label": "Supplier" }, ...opts.map((x) => el("button", { type: "button", class: "pkg-opt", "aria-pressed": String(x.supplierId === o.supplierId), onclick: () => { pkgPick = x.supplierId; renderPackage(); } },
+          el("b", { text: x.supplier }), el("span", { text: `£${x.scorePerT}/t · ${t1(x.totalT)}` })))) : null),
+      el("div", { class: "pkg-body" },
+        el("div", { class: "pkg-figs" },
+          fig("Load", t1(o.totalT)),
+          fig(o.loads > 1 ? "Loads" : "Minimum", o.loads > 1 ? `${o.loads} × ${o.moqMaxT} t` : o.moqMinT ? `${o.moqMinT}${o.moqMaxT && o.moqMaxT !== o.moqMinT ? `–${o.moqMaxT}` : ""} t` : "None"),
+          fig("Extra stock", o.extraT > 0 ? `+${t1(o.extraT)}` : "None"),
+          fig("Order total", fmt.money(o.cost)),
+          fig("Per tonne", `£${o.perT}`)),
+        seg,
+        el("ul", { class: "pkg-items" }, ...o.items.map((it, i) => el("li", { style: `--c:${COLORS[i % COLORS.length]}` },
+          el("i", { class: it.role === "bring-forward" ? "is-fwd" : "" }), el("span", { text: it.name }),
+          el("b", { text: it.role === "bring-forward" ? `+${t1(it.tonnes)}` : it.extraT > 0 ? `${t1(it.needT)} +${t1(it.extraT)}` : t1(it.tonnes) }),
+          it.role === "bring-forward" ? el("small", { text: "brought forward" }) : null))),
+        o.uncovered.length ? el("p", { class: "pkg-miss", text: `Not supplied by ${o.supplier}: ${o.uncovered.join(", ")}` }) : null,
+        el("div", { class: "pkg-actions" },
+          el("button", { type: "button", class: "btn btn-primary", id: "pkg-save", text: `Save ${o.items.length} orders as one load`, onclick: savePackage }))));
+  }
+  async function savePackage() {
+    const o = pkg.options.find((x) => x.supplierId === pkgPick);
+    const btn = document.getElementById("pkg-save");
+    btn.disabled = true;
+    try {
+      const r = await api("/api/orders/package/save", { method: "POST", body: { supplierId: o.supplierId, items: o.items.map((it) => ({ productId: it.productId, tonnes: it.tonnes })) } });
+      toast(`Saved ${r.ids.length} orders: one ${t1(r.packageT)} load from ${o.supplier}.`);
+      load();
+    } catch (error) { toast(error.message, true); btn.disabled = false; }
+  }
+  api("/api/orders/package").then((r) => { pkg = r; renderPackage(); }).catch(() => {});
+
   async function load() {
     try {
       const data = await api("/api/scenarios");

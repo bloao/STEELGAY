@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { extname, join, normalize, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual, randomUUID } from "node:crypto";
 import { calculate, validateInputs, findCategory, originMatches, ENGINE_VERSION, ORIGINS, INCOTERMS, CURRENCIES } from "./lib/calc.mjs";
 import { createStore } from "./lib/store.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
@@ -13,6 +13,7 @@ import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from 
 import { quotaHistory, lineProfile } from "./lib/quota-history.mjs";
 import { createFeedManager } from "./lib/feeds.mjs";
 import { buildSchema } from "./lib/data-schema.mjs";
+import { planPackages } from "./lib/package.mjs";
 import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS, UK_CBAM } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
@@ -1803,8 +1804,10 @@ async function supplierBreakdown(s, opts = {}) {
   // What you need, and what you actually have to buy: never less than the supplier's minimum order
   const needT = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : (metrics.needT || metrics.suggestedOrderT || s.moqMinT || 25);
   const moqMin = s.moqMinT || 0;
-  const tonnage = moqMin && needT < moqMin ? moqMin : needT;
-  const loads = s.moqMaxT > 0 ? Math.ceil(tonnage / s.moqMaxT) : 1;
+  // part of a packaged load that already meets the minimum: buy just this line
+  const packaged = Number(opts.packageT) >= moqMin && Number(opts.packageT) > 0;
+  const tonnage = moqMin && needT < moqMin && !packaged ? moqMin : needT;
+  const loads = s.moqMaxT > 0 ? Math.ceil((packaged ? Number(opts.packageT) : tonnage) / s.moqMaxT) : 1;
   const transportPerT = s.transport === "extra" ? Math.max(Number(opts.transportPerT ?? ws.deliveryPerT) || 0, 0) : 0;
   // Prefer a quote for this exact product; fall back to their general price.
   const byNewest = (a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || ""));
@@ -3093,17 +3096,38 @@ async function orderPlan(body = {}) {
 
 
 // One draft order from a product + supplier, priced through the full cost model.
-async function createPlannedOrder({ productId, supplierId, tonnage, cbam, timing, reasons, note, assume, by = "system", starter = false, role = "chosen" }) {
+async function createPlannedOrder({ productId, supplierId, tonnage, cbam, timing, reasons, note, assume, by = "system", starter = false, role = "chosen", packageT, packageId }) {
   const s = await supplierStore.get(supplierId);
   if (!s) return { ok: false, error: "Pick a supplier." };
   const asm = await planAssumptions(assume);
-  const b = await supplierBreakdown(s, { productId, tonnage: Number(tonnage) || undefined, cbam: cbam === true, assume: asm.values });
+  const b = await supplierBreakdown(s, { productId, tonnage: Number(tonnage) || undefined, cbam: cbam === true, assume: asm.values, packageT });
   if (!b.ok) return { ok: false, error: b.error };
   const inputs = { ...b.scenarioInputs, notes: `${note ? `${note}\n` : ""}From the order planner: ${s.name}, ${b.inputs.tonnage} t, landed £${Math.round(b.effectivePerT)}/t with every cost counted.` };
   const result = await runScenario(inputs, cbam === true ? { cbamStartDate: "0000-01-01" } : { cbamEnabled: false });
   if (!result.ok) return { ok: false, error: Object.values(result.errors || {})[0] || "Could not price this order." };
-  const saved = await store.create({ inputs: result.inputs, result, starter: Boolean(starter), plan: { role: role === "alternative" ? "alternative" : "chosen", assumptionsChanged: Object.fromEntries(asm.changed.map((k) => [k, { value: asm.values[k], default: asm.defaults[k] }])), supplierId: s.id, productId, effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, timing: timing || null, reasons: Array.isArray(reasons) ? reasons.slice(0, 8).map((x) => String(x).slice(0, 300)) : [] } }, by);
+  const saved = await store.create({ inputs: result.inputs, result, starter: Boolean(starter), plan: { role: role === "alternative" ? "alternative" : "chosen", assumptionsChanged: Object.fromEntries(asm.changed.map((k) => [k, { value: asm.values[k], default: asm.defaults[k] }])), supplierId: s.id, productId, effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, timing: timing || null, packageId: packageId || null, packageT: Number(packageT) || null, reasons: Array.isArray(reasons) ? reasons.slice(0, 8).map((x) => String(x).slice(0, 300)) : [] } }, by);
   return { ok: true, id: saved.id };
+}
+
+// One load per supplier with everything that needs ordering from them, so
+// their minimum order is met by combining products rather than overbuying one.
+async function orderPackage({ cbam = false } = {}) {
+  const products = (await productStore.list()).filter((p) => p.status !== "archived");
+  const views = await Promise.all(products.map(async (p) => ({ p, m: (await productView(p)).metrics })));
+  const row = ({ p, m }) => ({ productId: p.id, name: p.name, category: p.category, needT: m.needT ?? m.suggestedOrderT, usage: p.monthlyUsageT || 0, coverMonths: m.coverMonths, status: m.status });
+  const lines = views.filter((x) => ["critical", "reorder", "low"].includes(x.m.status) && (x.m.needT ?? x.m.suggestedOrderT) > 0).map(row);
+  if (!lines.length) return { ok: true, best: null, options: [], lines: [] };
+  const fillers = views.filter((x) => !lines.some((l) => l.productId === x.p.id) && (x.p.monthlyUsageT || 0) > 0).map(row);
+  const suppliers = (await supplierStore.list()).filter((x) => x.status !== "archived" && x.standing !== "hold");
+  // landed £/t for every product from every supplier, priced as part of a full load
+  const prices = new Map();
+  await Promise.all([...lines, ...fillers].map(async (l) => {
+    const rows = await compareSuppliers({ productId: l.productId, tonnage: Math.max(l.needT || 0, l.usage || 0, 1), packageT: 1000, arrival: "lead", cbam }).catch(() => []);
+    for (const r of rows) if (Number.isFinite(r.effectivePerT)) prices.set(`${r.id}|${l.productId}`, r.effectivePerT);
+  }));
+  const ws = await settingsStore.get();
+  const plan = planPackages({ lines, fillers, suppliers, price: (sid, pid) => prices.get(`${sid}|${pid}`), ratePct: ws.costOfCapitalPct, storagePerTMonth: ws.forecastStoragePerTMonth ?? 2 });
+  return { ok: true, lines, ...plan };
 }
 
 // Draft orders for what needs ordering: the planner's pick and the runner-up
@@ -3156,18 +3180,28 @@ async function handleOrdersApi(request, response, url) {
     const out = await Promise.all(list.map(async (p) => {
       const v = await productView(p);
       const row = { id: p.id, name: p.name, category: p.category, status: v.metrics.status, reason: v.metrics.reason, needT: v.metrics.needT, suggestedOrderT: v.metrics.suggestedOrderT, coverMonths: v.metrics.coverMonths, stockOutDate: v.metrics.stockOutDate, latestOrderDate: v.metrics.latestOrderDate, monthlyUsageT: p.monthlyUsageT, stockT: v.metrics.stockNowT };
-      // what you'd actually buy: the planner's recommendation, which respects the supplier's minimum order
-      if (["critical", "reorder", "low"].includes(row.status)) {
-        try {
-          const plan = await orderPlan({ productId: p.id });
-          const rec = plan.ok && plan.recommendation;
-          if (rec && rec.ok && rec.recTonnes) { row.suggestedOrderT = Math.round(rec.recTonnes * 10) / 10; row.supplier = rec.best.name; row.moqMinT = rec.best.moqMinT || null; }
-        } catch { /* keep the stock-based figure */ }
-      }
       return row;
     }));
     const rank = { critical: 0, reorder: 1, low: 2, ok: 3, "no-usage": 4 };
     return sendJson(response, 200, { products: out.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || (a.coverMonths ?? 99) - (b.coverMonths ?? 99)) });
+  }
+  if (url.pathname === "/api/orders/package" && request.method === "GET") return sendJson(response, 200, await orderPackage({ cbam: url.searchParams.get("cbam") === "on" }));
+  if (url.pathname === "/api/orders/package/save" && request.method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
+    const body = await readJsonBody(request);
+    const items = (Array.isArray(body.items) ? body.items : []).filter((x) => x && x.productId && Number(x.tonnes) > 0).slice(0, 12);
+    if (!body.supplierId || !items.length) return sendJson(response, 422, { ok: false, error: "Nothing to order." });
+    const packageT = Math.round(items.reduce((n, x) => n + Number(x.tonnes), 0) * 10) / 10;
+    const packageId = randomUUID();
+    const ids = [];
+    for (const [i, it] of items.entries()) {
+      // eslint-disable-next-line no-await-in-loop
+      const r = await createPlannedOrder({ productId: it.productId, supplierId: body.supplierId, tonnage: Number(it.tonnes), cbam: body.cbam === true, packageT, packageId,
+        note: `Packaged load ${i + 1} of ${items.length}: ${packageT} t in one order to meet the minimum load.`, by: user.name });
+      if (!r.ok) return sendJson(response, 422, { ...r, saved: ids });
+      ids.push(r.id);
+    }
+    return sendJson(response, 201, { ok: true, ids, packageId, packageT });
   }
   if (url.pathname === "/api/orders/plan/save-split" && request.method === "POST") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
