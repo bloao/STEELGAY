@@ -86,3 +86,19 @@ test("plan_order finds the product by name and summarises the planner", async ()
   assert.equal(r.recommendation.supplier, "Tata Steel UK");
   assert.equal(r.split.splitWins, false);
 });
+
+test("Messages-style turns translate to and from the OpenAI format (Ollama, Groq, Gemini)", async () => {
+  const { toOpenAI, fromOpenAI } = await import("../lib/assistant.mjs");
+  const req = toOpenAI({ model: "m", max_tokens: 100, system: "sys", tools: [{ name: "list_products", description: "d", input_schema: { type: "object", properties: {} } }],
+    messages: [{ role: "user", content: "hi" },
+      { role: "assistant", content: [{ type: "text", text: "checking" }, { type: "tool_use", id: "t1", name: "list_products", input: {} }] },
+      { role: "user", content: [{ type: "tool_result", tool_use_id: "t1", content: "[]" }] }] });
+  assert.deepEqual(req.messages.map((m) => m.role), ["system", "user", "assistant", "tool"]);
+  assert.equal(req.messages[2].tool_calls[0].function.name, "list_products");
+  assert.equal(req.messages[3].tool_call_id, "t1");
+  assert.equal(req.tools[0].function.name, "list_products");
+  const res = fromOpenAI({ choices: [{ message: { content: null, tool_calls: [{ id: "c1", function: { name: "plan_order", arguments: "{\"product\":\"40×10 Flat\"}" } }] } }], usage: { prompt_tokens: 5, completion_tokens: 2 } });
+  assert.equal(res.stop_reason, "tool_use");
+  assert.equal(res.content[0].input.product, "40×10 Flat");
+  assert.equal(fromOpenAI({ choices: [{ message: { content: "Done" } }] }).stop_reason, "end_turn");
+});

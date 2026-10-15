@@ -138,15 +138,34 @@
   $("suggestions").addEventListener("click", (e) => { if (e.target.closest(".chip")) ask(e.target.closest(".chip").textContent); });
   $("clear-btn").addEventListener("click", () => { history = []; persist(); renderAll(); input.focus(); });
 
-  api("/api/assistant/status").then((s) => {
+  async function checkStatus() {
+    const s = await api("/api/assistant/status").catch(() => null);
+    if (!s) return;
     $("setup-card").hidden = s.configured;
-    $("model-label").textContent = s.configured ? `Claude · ${s.model}` : "Not set up";
-    if (!s.configured) {
-      input.disabled = true;
-      $("send-btn").disabled = true;
-      input.placeholder = "Add an Anthropic API key to start";
-      document.querySelectorAll("#suggestions .chip").forEach((c) => { c.disabled = true; });
-    }
-  }).catch(() => {});
+    $("model-label").textContent = s.configured ? `${s.label} · ${s.model}` : "Not set up";
+    input.disabled = !s.configured;
+    $("send-btn").disabled = !s.configured;
+    input.placeholder = s.configured ? "Ask about stock, quotes, quotas or what to order" : "Choose a model above to start";
+    document.querySelectorAll("#suggestions .chip").forEach((c) => { c.disabled = !s.configured; });
+    const o = s.ollama || {};
+    $("ollama-pull").textContent = `ollama pull ${o.model || "qwen2.5:7b"}`;
+    $("ollama-state").textContent = !o.running ? "Not running" : o.hasModel ? "Ready" : `Running · ${o.model} not downloaded`;
+    $("ollama-state").className = `ai-state ${o.running && o.hasModel ? "is-good" : o.running ? "is-warn" : ""}`;
+    document.querySelectorAll(".ai-key input, .ai-key button").forEach((x) => { x.disabled = !s.canEdit; });
+  }
+  $("ollama-check").addEventListener("click", checkStatus);
+  document.querySelectorAll(".ai-key").forEach((f) => f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const provider = f.dataset.provider, key = f.elements.key.value.trim();
+    if (!key) { f.elements.key.focus(); return; }
+    try {
+      await api("/api/settings", { method: "PUT", body: { assistantProvider: provider, [`${provider}ApiKey`]: key } });
+      f.reset();
+      toast("Saved. The assistant is ready.");
+      await checkStatus();
+      input.focus();
+    } catch (error) { toast(error.data && error.data.errors ? Object.values(error.data.errors).join(" ") : error.message, true); }
+  }));
+  checkStatus();
   renderAll();
 })();

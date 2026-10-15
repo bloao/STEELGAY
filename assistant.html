@@ -41,13 +41,33 @@
         </div>
       </div>
 
-      <section class="card" id="setup-card" hidden>
-        <h2>Set up the assistant</h2>
-        <ol class="checks">
-          <li>Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API keys</a> (add billing credit first).</li>
-          <li>Add a line to <code>.env</code> in the project folder: <code>ANTHROPIC_API_KEY=sk-ant-…</code></li>
-          <li>Restart: <code>node --env-file=.env server.mjs</code></li>
-        </ol>
+      <section class="card" id="setup-card" hidden aria-labelledby="setup-title">
+        <h2 id="setup-title">Choose a model</h2>
+        <div class="ai-options">
+          <article class="ai-opt">
+            <div class="ai-opt-head"><strong>Ollama</strong><span class="badge badge-good">Free · on your Mac</span></div>
+            <ol class="ai-steps">
+              <li>Install from <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com</a></li>
+              <li>In Terminal: <code id="ollama-pull">ollama pull qwen2.5:7b</code></li>
+            </ol>
+            <p class="ai-state" id="ollama-state"></p>
+            <button class="btn btn-sm" type="button" id="ollama-check">Check again</button>
+          </article>
+          <article class="ai-opt">
+            <div class="ai-opt-head"><strong>Groq</strong><span class="badge badge-info">Free key</span></div>
+            <ol class="ai-steps"><li>Key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a></li></ol>
+            <form class="ai-key" data-provider="groq"><input name="key" type="password" placeholder="gsk_…" autocomplete="off" aria-label="Groq API key"><button class="btn btn-sm btn-primary" type="submit">Use Groq</button></form>
+          </article>
+          <article class="ai-opt">
+            <div class="ai-opt-head"><strong>Google Gemini</strong><span class="badge badge-info">Free key</span></div>
+            <ol class="ai-steps"><li>Key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a></li></ol>
+            <form class="ai-key" data-provider="gemini"><input name="key" type="password" placeholder="AIza…" autocomplete="off" aria-label="Gemini API key"><button class="btn btn-sm btn-primary" type="submit">Use Gemini</button></form>
+          </article>
+          <article class="ai-opt">
+            <div class="ai-opt-head"><strong>Claude</strong><span class="badge">Paid · best answers</span></div>
+            <ol class="ai-steps"><li><code>ANTHROPIC_API_KEY=…</code> in <code>.env</code></li><li><code>node --env-file=.env server.mjs</code></li></ol>
+          </article>
+        </div>
       </section>
 
       <section class="chat" aria-label="Conversation">

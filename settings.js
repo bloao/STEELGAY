@@ -5,7 +5,7 @@
   const form = $("settings-form");
   const field = (n) => form.elements.namedItem(n);
   const CAT = window.STEEL_CATALOGUE;
-  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "metalsApiKey", "companiesHouseApiKey", "aisstreamApiKey"];
+  const SIMPLE = ["companyName", "defaultCategory", "defaultLeadTimeWeeks", "defaultMoqT", "defaultSafetyStockT", "defaultTargetCoverMonths", "costOfCapitalPct", "metalsApiKey", "companiesHouseApiKey", "aisstreamApiKey", "assistantProvider", "ollamaModel", "groqApiKey", "geminiApiKey"];
 
   let saved = null;
   let groups = [];
@@ -117,7 +117,7 @@
       const node = $("conn-claude");
       node.className = `status-dot ${r.configured ? "" : "is-warn"}`;
       node.textContent = r.configured ? "Connected" : "Not set up";
-      $("conn-claude-model").textContent = r.configured ? `Model ${r.model}` : "Add ANTHROPIC_API_KEY to .env and restart the server";
+      $("conn-claude-model").textContent = r.configured ? `${r.label} · ${r.model}` : "Not set up";
     }).catch(() => { $("conn-claude").className = "status-dot is-bad"; $("conn-claude").textContent = "Unavailable"; });
   }
 

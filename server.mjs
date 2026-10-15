@@ -10,6 +10,7 @@ import { createStore } from "./lib/store.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
+import { quotaHistory } from "./lib/quota-history.mjs";
 import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS, UK_CBAM } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
@@ -21,7 +22,7 @@ import * as COMP from "./lib/competition.mjs";
 import * as ARR from "./lib/arrivals.mjs";
 import * as STOCK from "./lib/stockpile.mjs";
 import * as PLAN from "./lib/orderplan.mjs";
-import { converse, systemPrompt, DEFAULT_MODEL } from "./lib/assistant.mjs";
+import { converse, systemPrompt, DEFAULT_MODEL, PROVIDERS, toOpenAI, fromOpenAI } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
 
@@ -772,6 +773,17 @@ async function loadMeasureQuotas() {
   };
 }
 
+// Past quarters for every line (DBT dataset, from 2021), with an outlook for this quarter.
+async function steelQuotaHistory() {
+  const [dbt, live] = await Promise.all([getSteelQuotaRows(), getMeasureQuotas()]);
+  const asOf = new Date().toISOString().slice(0, 10);
+  const tm = await loadTradeMeasure();
+  const h = quotaHistory(dbt.rows, live.lines, asOf);
+  const names = new Map(tm.categories.map((c) => [c.id, c.name]));
+  return { ok: true, ...h, source: { name: "DBT UK trade quotas dataset", url: dbt.sourceUrl, fetchedAt: dbt.liveFetchedAt }, liveFetchedAt: live.fetchedAt,
+    lines: h.lines.map((l) => ({ ...l, categoryName: names.get(l.categoryId) || `Category ${l.categoryId}` })) };
+}
+
 async function getMeasureQuotas({ force = false } = {}) {
   const now = Date.now();
   if (force && now - measureCache.lastForced < 60_000) force = false; // at most one forced refresh a minute
@@ -1340,6 +1352,52 @@ async function renderPlanPdf(request, response) {
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ASSISTANT_MODEL = process.env.ASSISTANT_MODEL || DEFAULT_MODEL;
+
+// Which model answers: Claude if there's a key, otherwise a free option —
+// Groq or Gemini with a free key (in .env or Settings), or Ollama running on
+// this computer. LLM_PROVIDER or Settings → Assistant can pick one.
+let ollamaCache = { at: 0, value: null };
+async function ollamaStatus(base = process.env.OLLAMA_URL || "http://localhost:11434") {
+  if (Date.now() - ollamaCache.at < 15_000 && ollamaCache.value) return ollamaCache.value;
+  let value = { running: false, models: [] };
+  try {
+    const r = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(1200) });
+    if (r.ok) { const j = await r.json(); value = { running: true, models: (j.models || []).map((m) => m.name) }; }
+  } catch { /* not running */ }
+  ollamaCache = { at: Date.now(), value };
+  return value;
+}
+async function assistantConfig() {
+  const ws = await settingsStore.get();
+  const keys = { anthropic: ANTHROPIC_API_KEY, groq: process.env.GROQ_API_KEY || ws.groqApiKey || "", gemini: process.env.GEMINI_API_KEY || ws.geminiApiKey || "" };
+  const ollama = await ollamaStatus();
+  const ollamaModel = process.env.OLLAMA_MODEL || ws.ollamaModel || PROVIDERS.ollama.model;
+  let provider = process.env.LLM_PROVIDER || ws.assistantProvider || "auto";
+  if (provider === "auto") provider = keys.anthropic ? "anthropic" : keys.groq ? "groq" : keys.gemini ? "gemini" : ollama.running ? "ollama" : null;
+  const p = provider ? PROVIDERS[provider] : null;
+  const model = provider === "anthropic" ? ASSISTANT_MODEL : provider === "ollama" ? ollamaModel : process.env.ASSISTANT_MODEL && process.env.LLM_PROVIDER === provider ? process.env.ASSISTANT_MODEL : p && p.model;
+  const hasOllamaModel = ollama.models.some((m) => m === ollamaModel || m.split(":")[0] === ollamaModel.split(":")[0] && !ollamaModel.includes(":"));
+  const configured = provider === "ollama" ? ollama.running && hasOllamaModel : Boolean(provider && keys[provider]);
+  return { provider, label: p ? p.label : null, model, key: provider ? keys[provider] : "", configured, ollama: { ...ollama, model: ollamaModel, hasModel: hasOllamaModel } };
+}
+function callOpenAICompatible(cfg) {
+  const base = cfg.provider === "ollama" ? `${(process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/$/, "")}/v1` : PROVIDERS[cfg.provider].baseUrl;
+  return async (body) => {
+    const response = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(cfg.key ? { authorization: `Bearer ${cfg.key}` } : {}) },
+      body: JSON.stringify(toOpenAI(body)),
+      signal: AbortSignal.timeout(cfg.provider === "ollama" ? 180_000 : 90_000),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = data?.error?.message || (Array.isArray(data) ? data[0]?.error?.message : "") || response.statusText;
+      const hint = response.status === 401 || response.status === 403 ? " — check the API key" : response.status === 404 ? ` — model "${body.model}" not found` : response.status === 429 ? " — free-tier limit reached, try again shortly" : "";
+      throw Object.assign(new Error(`${PROVIDERS[cfg.provider].label} ${response.status}: ${message}${hint}`), { statusCode: 502 });
+    }
+    return fromOpenAI(data);
+  };
+}
 const assistantRate = new Map(); // user -> recent request timestamps
 
 let fallbackCommodities = null;
@@ -1375,11 +1433,13 @@ async function callAnthropic(body) {
 async function handleAssistantApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   if (url.pathname === "/api/assistant/status" && request.method === "GET") {
-    sendJson(response, 200, { configured: Boolean(ANTHROPIC_API_KEY), model: ASSISTANT_MODEL });
+    const cfg = await assistantConfig();
+    sendJson(response, 200, { configured: cfg.configured, provider: cfg.provider, label: cfg.label, model: cfg.model, ollama: cfg.ollama, canEdit: can(user, "edit") });
     return;
   }
   if (url.pathname !== "/api/assistant" || request.method !== "POST") return sendError(response, 404, "Not found");
-  if (!ANTHROPIC_API_KEY) return sendError(response, 503, "The assistant is not set up yet: add ANTHROPIC_API_KEY to .env and restart the server.");
+  const cfg = await assistantConfig();
+  if (!cfg.configured) return sendError(response, 503, cfg.provider === "ollama" ? `Ollama is running but the model isn't downloaded: run "ollama pull ${cfg.ollama.model}".` : "The assistant is not set up yet: see the setup steps on the Assistant page.");
 
   const now = Date.now();
   const recent = (assistantRate.get(user.name) || []).filter((t) => now - t < 60_000);
@@ -1404,17 +1464,18 @@ async function handleAssistantApi(request, response, url) {
     quotas: () => getMeasureQuotas(),
     price: (inputs) => runScenario(inputs),
     plan: (body) => orderPlan(body),
+    quotaHistory: () => steelQuotaHistory(),
     commodities: commodityList,
     categoryFor: (code) => findCategory(code, tradeMeasure.categories)?.id || null,
   };
   const result = await converse({
     messages: clean,
-    callModel: callAnthropic,
+    callModel: cfg.provider === "anthropic" ? callAnthropic : callOpenAICompatible(cfg),
     data,
-    model: ASSISTANT_MODEL,
+    model: cfg.model,
     system: systemPrompt({ today: new Date().toISOString().slice(0, 10), user: user.name }),
   });
-  sendJson(response, 200, { ...result, model: ASSISTANT_MODEL });
+  sendJson(response, 200, { ...result, model: cfg.model, provider: cfg.provider });
 }
 
 // ------------------------------------------------------------ product API
@@ -2885,6 +2946,11 @@ async function orderPlan(body = {}) {
       quotaLines = q.lines.filter((l) => l.categoryId === view.steelCategory.id).map(({ orderNumber, origin, residual, balanceT, usedShare, runOutDate, risk, endDate, nextStartDate }) => ({ orderNumber, origin, residual, balanceT, usedShare, runOutDate, risk, endDate, nextStartDate }));
       const origins = new Set(priced.map((o) => o.origin));
       quota = quotaLines.find((l) => origins.has("France") || origins.has("Italy") || origins.has("Spain") ? l.origin === "European Union" : false) || quotaLines.find((l) => l.residual) || quotaLines[0] || null;
+      if (quota) {
+        const qh = await steelQuotaHistory().catch(() => null);
+        const hl = qh && qh.lines.find((x) => x.orderNumber === quota.orderNumber);
+        if (hl) quota = { ...quota, history: { quarters: hl.quarters, avgFillPct: hl.avgFillPct, exhaustedCount: hl.exhaustedCount, recentQuarters: hl.recentQuarters, dayFullMedian: hl.dayFullMedian, fullOn: hl.outlook && hl.outlook.fullOn, safeUntil: hl.outlook && hl.outlook.safeUntil, verdict: hl.outlook && hl.outlook.verdict } };
+      }
     } catch { /* quota feed down: carry on without it */ }
   }
 
@@ -3176,6 +3242,11 @@ async function handleScenarioApi(request, response, url) {
   const method = request.method;
   const path = url.pathname;
 
+  if (path === "/api/steel-quotas/history" && method === "GET") {
+    try { sendJson(response, 200, await steelQuotaHistory()); }
+    catch (error) { sendJson(response, 502, { ok: false, error: `Quota history unavailable: ${error.message}` }); }
+    return;
+  }
   if (path === "/api/steel-quotas/live" && method === "GET") {
     const data = await getMeasureQuotas({ force: url.searchParams.get("refresh") === "1" });
     const { rows, ...rest } = data;
@@ -3419,7 +3490,7 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    if (url.pathname.startsWith("/api/scenarios") || ["/api/calculate", "/api/me", "/api/options", "/api/data-status", "/api/sample-data", "/api/health", "/api/steel-quotas/live", "/api/tariff-auth-check"].includes(url.pathname)) {
+    if (url.pathname.startsWith("/api/scenarios") || ["/api/calculate", "/api/me", "/api/options", "/api/data-status", "/api/sample-data", "/api/health", "/api/steel-quotas/live", "/api/steel-quotas/history", "/api/tariff-auth-check"].includes(url.pathname)) {
       await handleScenarioApi(request, response, url);
       return;
     }
@@ -3463,5 +3534,5 @@ server.listen(port, bindHost, () => {
   console.log(`Steel ARB live app running at http://${bindHost}:${port}`);
   console.log(`Home:         http://${bindHost}:${port}/   (assistant; engine v${ENGINE_VERSION}, from ${root})`);
   console.log(`HMRC Trade Tariff access: ${tariffAuthMode === "registered" ? "registered credentials loaded" : "public (no credentials)"}`);
-  console.log(`Assistant: ${ANTHROPIC_API_KEY ? `ready (${ASSISTANT_MODEL})` : "not set up — add ANTHROPIC_API_KEY to .env"}`);
+  assistantConfig().then((c) => console.log(`Assistant: ${c.configured ? `ready (${c.label} · ${c.model})` : c.provider === "ollama" ? `Ollama found — run "ollama pull ${c.ollama.model}"` : "not set up — free options on the Assistant page"}`)).catch(() => {});
 });

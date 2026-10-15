@@ -92,6 +92,8 @@ http://127.0.0.1:3001
 - First run: the old demo scenarios (HR coil, galvanised sheet…) are archived on startup and replaced with draft orders for the products that need restocking, priced from your own suppliers: the planner's pick ("Recommended") and the runner-up ("Alternative"). `POST /api/orders/starter` does the same on demand.
 - `/plan.html` — plan an order; a one-line strip shows the assumptions in use.
 - `/assumptions.html` — Orders › Assumptions: every number the planner runs on (buy-ahead and hold-off triggers, costs, quota-risk weighting, UK CBAM placeholders, warning levels). Saved to Settings and used by every plan.
+- `/quotas.html` → History & outlook: every quarter since 2021 per quota line (DBT dataset; safeguard periods mapped onto today's lines by category and origin), average fill, how often it ran out and on which day, pace in t/day, and when this quarter should fill (blending this quarter's pace with the past) plus the last safe import date.
+- Assistant models: Claude (`ANTHROPIC_API_KEY`), or free for demos: Ollama on your own computer (`ollama pull qwen2.5:7b`, auto-detected), Groq or Google Gemini free keys (paste on the Assistant page or in Settings, or `GROQ_API_KEY` / `GEMINI_API_KEY` in `.env`). `LLM_PROVIDER` forces one.
 - `/compare.html?ids=a,b` — side-by-side quotes, lowest expected cost highlighted
 
 All maths runs on the server in `lib/calc.mjs` (versioned; tests in `tests/calc.test.mjs`, run `npm test`).

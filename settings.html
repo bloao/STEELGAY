@@ -124,7 +124,22 @@
                   <input name="aisstreamApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your aisstream.io API key"><span class="hint">Stored on your server only. Needs Node.js 22 or newer.</span><span class="error"></span>
                 </label>
               </div>
-              <div class="conn"><div><strong>Claude assistant</strong><span class="small" id="conn-claude-model">Answers questions in the Assistant tab</span></div><span class="status-dot is-muted" id="conn-claude">Checking…</span></div>
+              <div class="conn conn-key">
+                <div><strong>Assistant</strong><span class="small" id="conn-claude-model"></span></div>
+                <span class="status-dot is-muted" id="conn-claude">Checking…</span>
+                <label class="field" data-field="assistantProvider">Model
+                  <select name="assistantProvider"><option value="auto">Automatic</option><option value="ollama">Ollama (free, on this computer)</option><option value="groq">Groq (free key)</option><option value="gemini">Google Gemini (free key)</option><option value="anthropic">Claude (key in .env)</option></select><span class="error"></span>
+                </label>
+                <label class="field" data-field="ollamaModel">Ollama model
+                  <input name="ollamaModel" type="text" autocomplete="off" spellcheck="false" placeholder="qwen2.5:7b"><span class="error"></span>
+                </label>
+                <label class="field" data-field="groqApiKey">Groq key
+                  <input name="groqApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_…"><span class="error"></span>
+                </label>
+                <label class="field" data-field="geminiApiKey">Gemini key
+                  <input name="geminiApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…"><span class="error"></span>
+                </label>
+              </div>
             </div>
           </section>
 

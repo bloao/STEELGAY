@@ -255,6 +255,9 @@
       fact(`${q.origin || "Line"} ${q.orderNumber}`, `${Math.round(q.balanceT).toLocaleString("en-GB")} t left`),
       el("span", { class: "sp-bar pc-quota" }, el("span", { style: `width:${Math.round((q.usedShare || 0) * 100)}%` })),
       q.runOutDate ? fact("Runs out about", fmt.date(q.runOutDate), arrival && q.runOutDate < arrival ? "is-bad" : "") : null,
+      q.history && q.history.recentQuarters ? fact("Ran out", `${q.history.exhaustedCount} of last ${q.history.recentQuarters} quarters`, q.history.exhaustedCount ? "is-bad" : "") : null,
+      q.history && q.history.dayFullMedian ? fact("Typically full by", `day ${Math.round(q.history.dayFullMedian)}`) : null,
+      q.history && q.history.safeUntil ? fact("Safe to import until", q.history.safeUntil < r.today ? "Risky now" : fmt.date(q.history.safeUntil), arrival && (q.history.safeUntil < r.today || arrival > q.history.safeUntil) ? "is-bad" : "") : null,
       fact("Next quarter opens", fmt.date(q.nextStartDate)),
       el("a", { class: "pc-link", href: "quotas.html", text: "Live quotas →" }));
   }
