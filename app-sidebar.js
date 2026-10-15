@@ -52,10 +52,14 @@
       ] },
   ];
   var active = aside.getAttribute("data-active");
+  // Settings has its own tabs: general settings and the data schema
+  var SETTINGS = { key: "settings", label: "Settings", href: "settings.html", icon: "settings",
+    children: [{ key: "settings", label: "General", href: "settings.html" }, { key: "data-schema", label: "Data schema", href: "data-schema.html" }] };
   if (active === "suppliers" && location.hash === "#market") active = "market-prices";
   var inSection = function (sec) { return sec.key === active || (sec.children || []).some(function (c) { return c.key === active; }); };
   var current = null;
   SECTIONS.forEach(function (sec) { if (!current && inSection(sec)) current = sec; });
+  if (!current && inSection(SETTINGS)) current = SETTINGS;
 
   function icon(name) {
     return '<svg class="sidebar__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + "</svg>";
@@ -80,7 +84,7 @@
   SECTIONS.forEach(function (sec) { html += sectionLink(sec); });
   html += "</ul></nav>";
   // Settings pinned to the bottom of the menu
-  var setOn = active === "settings";
+  var setOn = inSection(SETTINGS);
   html += '<nav class="sidebar__foot sidebar__foot--settings" aria-label="Workspace"><ul><li class="sidebar__sec"><a class="sidebar__link' + (setOn ? " is-active is-current" : "") + '" href="settings.html"' + (setOn ? ' aria-current="page"' : "") + ">" + icon("settings") + "<span>Settings</span></a></li></ul></nav>";
 
 

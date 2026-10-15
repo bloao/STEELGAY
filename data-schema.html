@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Data schema · Datafab AGX</title>
+    <link rel="stylesheet" href="order-tool.css">
+    <link rel="stylesheet" href="nav.css">
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav__brand" href="/">
+        <img class="site-nav__logo" src="logo.png" alt="Datafab AGX">
+        <span class="site-nav__brand-text">Datafab AGX</span>
+        <span class="site-nav__collab" aria-hidden="true">×</span>
+        <img class="site-nav__partner" src="hall-pickles-logo.png" alt="in partnership with Hall &amp; Pickles" width="148" height="26">
+      </a>
+      <div class="site-nav__links">
+        <a class="site-nav__link" href="the-plan.html">The plan</a>
+        <a class="site-nav__link" href="quota-tracker.html">Live quotas</a>
+        <a class="site-nav__link" href="deployment-ideas.html">Deployment ideas</a>
+        <a class="site-nav__link is-active" href="orders.html" aria-current="page">Orders</a>
+      </div>
+    </nav>
+
+    <div class="app-layout">
+      <aside class="sidebar" data-active="data-schema"></aside>
+      <script src="app-sidebar.js"></script>
+      <main class="page schema-page">
+        <div class="page-head">
+          <div><h1>Data schema</h1></div>
+          <div class="actions">
+            <div class="seg" id="sc-view" role="group" aria-label="View">
+              <button type="button" data-view="source" aria-pressed="true">By source</button>
+              <button type="button" data-view="page" aria-pressed="false">By page</button>
+            </div>
+          </div>
+        </div>
+        <div class="sc-figs" id="sc-figs"></div>
+        <div class="sc-search"><input type="search" id="sc-q" placeholder="Search data points" aria-label="Search data points"></div>
+        <div id="sc-root" aria-live="polite"><p class="muted">Loading…</p></div>
+      </main>
+    </div>
+
+    <script src="order-common.js"></script>
+    <script src="data-schema.js"></script>
+    <script src="nav-menu.js"></script>
+  </body>
+</html>

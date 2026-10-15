@@ -12,6 +12,7 @@ import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./li
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
 import { quotaHistory, lineProfile } from "./lib/quota-history.mjs";
 import { createFeedManager } from "./lib/feeds.mjs";
+import { buildSchema } from "./lib/data-schema.mjs";
 import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS, UK_CBAM } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
@@ -3250,9 +3251,40 @@ async function handleBenchmarkApi(request, response, url) {
 
 // ------------------------------------------------------------ settings API
 
+// Latest real value of each data point, read from what's already loaded
+// (never triggers a fetch), so the schema page shows live examples.
+async function schemaSamples() {
+  const out = {};
+  const safe = async (key, fn) => { try { const v = await fn(); if (v) out[key] = v; } catch { /* no sample */ } };
+  const lastPoint = (series) => { const pts = (series && series.points) || []; return pts.length ? pts[pts.length - 1] : null; };
+  const bms = await benchmarkStore.list().catch(() => []);
+  await safe("hmrc-quotas", () => { const l = measureCache.payload && measureCache.payload.lines.find((x) => x.found); return l && { ...l, unit: "Kilograms → t" }; });
+  await safe("dbt-quotas", () => { const r = caches.quotas.payload && caches.quotas.payload.rows.slice(-1)[0]; return r && { ...r, geographicalAreas: r.geographicalAreas.join(", "), commodityCodes: r.commodityCodes.slice(0, 3).join(", ") + (r.commodityCodes.length > 3 ? " …" : ""), categoryIds: r.categoryIds.join(", ") }; });
+  await safe("ons", () => { const s = bms.find((x) => String(x.feedKey || "").startsWith("ons:")); const p = lastPoint(s); return p && { date: p.date, price: p.price, series: s.feedKey.slice(4) }; });
+  await safe("lme", () => { const s = bms.find((x) => String(x.feedKey || "").startsWith("metals:")); const p = lastPoint(s); return p && { date: p.date, price: p.price, series: s.feedKey.slice(7) }; });
+  await safe("fx", () => { const e = fxCache.get("EUR"), u = fxCache.get("USD"); return (e || u) && { eur: e && e.value.rate, usd: u && u.value.rate, date: (e || u).value.date }; });
+  await safe("news", async () => { const n = (await getNews()).items || []; return n[0]; });
+  await safe("hmrc-trade", async () => {
+    const d = await getCompData();
+    const months = Object.keys(d.trade || {}).sort();
+    const m = months[months.length - 1];
+    const codes = m ? Object.entries(d.trade[m]) : [];
+    const [code, c] = codes[0] || [];
+    const im = Object.values(d.companies || {})[0] || (d.summary || [])[0];
+    const top = c ? (o) => Object.entries(o || {}).sort((a, b) => b[1] - a[1])[0]?.[0] : () => null;
+    return (c || im) && { period: m, code, t: c && c.t, v: c && c.v, origin: c && top(c.o), port: c && top(c.pt), mode: c && top(c.md), name: im && im.name, postcode: im && im.postcode };
+  });
+  await safe("companies-house", async () => { const c = (await competitorStore.list()).find((x) => x.accounts); const a = c && c.accounts; return a && { stock: a.stock?.[0]?.value, turnover: a.turnover?.[0]?.value, cash: a.cash?.[0]?.value, date: (a.stock?.[0] || a.turnover?.[0] || {}).date }; });
+  await safe("ais", () => { const v = Object.values(ais.vessels).find((x) => x.name && Number.isFinite(x.lat)); return v && { ...v, pos: `${v.lat.toFixed(3)}, ${v.lon.toFixed(3)}` }; });
+  await safe("tariff-codes", () => caches.commodities.payload && caches.commodities.payload.commodities[0]);
+  for (const src of FEED_SOURCES) await safe(`prices-${src.toLowerCase()}`, () => { const s = bms.find((x) => x.source === src && (x.points || []).length); const p = lastPoint(s); return p && { date: p.date, price: p.price, series: s.name, currency: s.currency }; }); // eslint-disable-line no-await-in-loop
+  return out;
+}
+
 async function handleSettingsApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
   if (url.pathname === "/api/feeds" && request.method === "GET") return sendJson(response, 200, { feeds: feeds.list(), now: new Date().toISOString() });
+  if (url.pathname === "/api/data-schema" && request.method === "GET") return sendJson(response, 200, { ...buildSchema(feeds.list(), await schemaSamples()), now: new Date().toISOString() });
   const fm = url.pathname.match(/^\/api\/feeds\/([a-z0-9-]+)\/refresh$/);
   if (fm && request.method === "POST") {
     if (!can(user, "edit")) return sendError(response, 403, "Your account cannot refresh data sources.");
@@ -3605,7 +3637,7 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    if (url.pathname === "/api/settings" || url.pathname === "/api/backup" || url.pathname.startsWith("/api/feeds")) {
+    if (url.pathname === "/api/settings" || url.pathname === "/api/backup" || url.pathname === "/api/data-schema" || url.pathname.startsWith("/api/feeds")) {
       await handleSettingsApi(request, response, url);
       return;
     }
