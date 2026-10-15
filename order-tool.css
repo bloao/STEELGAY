@@ -2208,3 +2208,10 @@ a.ll-head:hover { background: var(--surface-alt); }
   .model-pill { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
 }
 .msg-bot .bubble { overflow-x: auto; } .msg-bot .bubble th, .msg-bot .bubble td { white-space: nowrap; }
+
+/* Assistant: slimmer composer; icon matches the menu's Assistant icon */
+.chat-mark { width: 48px; height: 48px; border-radius: 14px; }
+.chat-form { border-radius: 22px; padding: 4px 4px 4px 18px; align-items: center; box-shadow: 0 4px 16px rgba(12, 14, 18, 0.06); }
+.chat-form textarea { font-size: 14.5px; padding: 6px 0; min-height: 32px; line-height: 20px; }
+.send-btn { flex-basis: 32px; width: 32px; height: 32px; border-radius: 50%; }
+.send-btn svg { width: 16px; height: 16px; }

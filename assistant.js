@@ -80,7 +80,7 @@
     copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
     check: '<path d="m5 12 5 5 9-10"/>',
     tool: '<path d="m5 12 5 5 9-10"/>',
-    mark: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>',
+    mark: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/>',
   };
   document.querySelectorAll(".sugg-i").forEach((n) => { n.innerHTML = SVG(ICON[n.dataset.icon]); });
   const avatar = () => { const a = el("span", { class: "msg-av", "aria-hidden": "true" }); a.innerHTML = SVG(ICON.mark, 16); return a; };
