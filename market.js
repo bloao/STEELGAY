@@ -365,7 +365,10 @@
     // direct labels at line ends, nudged apart (only when few series)
     if (labels.length <= 4) {
       labels.sort((a, b) => a.y - b.y);
-      for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 14) labels[i].y = labels[i - 1].y + 14;
+      for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 16) labels[i].y = labels[i - 1].y + 16;
+      const over = labels.length ? labels[labels.length - 1].y - (H - B - 4) : 0;
+      if (over > 0) for (const lb of labels) lb.y -= over;
+      for (let i = labels.length - 2; i >= 0; i--) if (labels[i + 1].y - labels[i].y < 16) labels[i].y = labels[i + 1].y - 16;
       svg += labels.map((lb) => `<text x="${(lb.x + 8).toFixed(1)}" y="${(lb.y + 4).toFixed(1)}" class="mk-label">${lb.text.length > 18 ? `${lb.text.slice(0, 17)}…` : lb.text}</text>`).join("");
     }
     svg += quotes.map((q) => `<rect x="${(X(q.date) - 4).toFixed(1)}" y="${(Y(q.gbp) - 4).toFixed(1)}" width="8" height="8" rx="2" class="mk-quote"/>`).join("");
@@ -393,11 +396,10 @@
         ...quotes.filter((q) => q.date === near).map((q) => ({ c: "var(--ink)", name: q.supplier, v: q.gbp, exact: true, quote: true })),
       ];
       tip.replaceChildren(el("strong", { text: fmt.date(near) }), ...items.map((i) => el("div", { class: "mk-tip-row" }, el("span", { class: `swatch${i.quote ? " is-quote" : ""}`, style: i.quote ? "" : `background:${i.c}` }), el("span", { text: i.name }), el("b", { text: `${perT(i.v)}${i.exact ? "" : "*"}` }))));
-      tip.hidden = false;
-      const px = (xs / W) * r.width;
-      tip.style.left = `${Math.min(Math.max(px + 12, 0), r.width - 220)}px`;
+      window.OrderTool.placeTip(tip, (xs / W) * r.width, r.width);
     };
     svgEl.addEventListener("pointermove", show);
+    svgEl.addEventListener("pointerdown", show);
     svgEl.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
   }
 

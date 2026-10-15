@@ -150,5 +150,16 @@
     try { return await api("/api/me"); } catch { return { name: "unknown", role: "viewer", canEdit: false, canApprove: false }; }
   }
 
-  window.OrderTool = { api, apiBase: API_BASE, fmt, el, statusBadge, quotaBadge, toast, loadDataStatus, loadMe, STATUS, showServerProblem };
+  // Chart hover card: measure it, sit it right of the cursor, flip left when it
+  // would run off the plot, and never let it leave the plot area
+  function placeTip(tip, px, plotWidth) {
+    tip.hidden = false;
+    tip.style.left = "0px";
+    const w = tip.offsetWidth;
+    let left = px + 14;
+    if (left + w > plotWidth) left = px - 14 - w;
+    tip.style.left = `${Math.max(0, Math.min(left, plotWidth - w))}px`;
+  }
+
+  window.OrderTool = { placeTip, api, apiBase: API_BASE, fmt, el, statusBadge, quotaBadge, toast, loadDataStatus, loadMe, STATUS, showServerProblem };
 })();

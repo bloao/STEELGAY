@@ -79,18 +79,19 @@
     $("chart-sub").textContent = "Index, 2015 = 100. The shaded area is where prices should land four times out of five if the next months behave like the last two years.";
     const svgEl = wrap.querySelector("svg"), cross = wrap.querySelector(".mk-cross");
     const pts = [...hist.map((p) => ({ date: p.date, v: p.price, kind: "Actual" })), ...path.map((p) => ({ date: p.date, v: p.mid, low: p.low, high: p.high, kind: "Forecast" }))];
-    svgEl.addEventListener("pointermove", (evt) => {
+    const showTip = (evt) => {
       const r = svgEl.getBoundingClientRect();
       const sx = ((evt.clientX - r.left) / r.width) * W;
       const near = pts.reduce((a, b) => (Math.abs(X(b.date) - sx) < Math.abs(X(a.date) - sx) ? b : a), pts[0]);
       cross.setAttribute("x1", X(near.date)); cross.setAttribute("x2", X(near.date)); cross.setAttribute("visibility", "visible");
       const chg = ((near.v / data.model.indexNow) - 1) * 100;
-      tip.replaceChildren(el("strong", { text: monthYear(near.date) }), el("div", { class: "mk-tip-row" }, el("span", { text: near.kind }), el("b", { text: near.v.toFixed(1) })),
+      tip.replaceChildren(...[el("strong", { text: monthYear(near.date) }), el("div", { class: "mk-tip-row" }, el("span", { text: near.kind }), el("b", { text: near.v.toFixed(1) })),
         near.low ? el("div", { class: "mk-tip-row" }, el("span", { text: "Range" }), el("b", { text: `${near.low.toFixed(1)}–${near.high.toFixed(1)}` })) : null,
-        el("div", { class: "mk-tip-row" }, el("span", { text: "vs today" }), el("b", { text: pct(chg) })));
-      tip.hidden = false;
-      tip.style.left = `${Math.min(Math.max((X(near.date) / W) * r.width + 12, 0), r.width - 200)}px`;
-    });
+        el("div", { class: "mk-tip-row" }, el("span", { text: "vs today" }), el("b", { text: pct(chg) }))].filter(Boolean));
+      window.OrderTool.placeTip(tip, (X(near.date) / W) * r.width, r.width);
+    };
+    svgEl.addEventListener("pointermove", showTip);
+    svgEl.addEventListener("pointerdown", showTip);
     svgEl.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
   }
 

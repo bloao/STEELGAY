@@ -1990,3 +1990,68 @@ button.vdot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
 .qh-since { margin-left: 8px; font-family: var(--font-sans); font-size: 12.5px; font-weight: 500; color: var(--muted); }
 .qh2-bars { justify-content: flex-start; }
 .qh2-col { flex: 0 1 56px; }
+
+/* Quota profile: compact */
+.qp-page .page-head { margin-bottom: 12px; }
+.qp-page h1 { font-size: 26px; }
+.qp-sub { font-size: 12.5px; margin-top: 2px; }
+.qp-hero { padding: 16px 20px 14px; margin-bottom: 12px; }
+.qp-figs { display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: flex-end; }
+.qp-fig { display: flex; flex-direction: column; min-width: 0; }
+.qp-fig span { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.qp-fig strong { font-size: 18px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qp-fig:first-child strong { font-family: var(--font-display); font-size: 26px; }
+.qp-fig strong.is-bad { color: var(--bad-ink); } .qp-fig strong.is-good { color: var(--good); }
+.qp-fig small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qp-hero .qb { padding-top: 20px; margin-top: 4px; }
+.qp-hero .qb-track { height: 10px; }
+.qp-hero .qb-axis { margin-top: 20px; font-size: 11px; }
+.qp-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0; padding: 0; margin-bottom: 10px; }
+.qp-col { padding: 16px 20px; min-width: 0; }
+.qp-side { border-left: 1px solid var(--line); }
+.qp-col h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-family: var(--font-sans); }
+.qp-body .qh2-bars { height: 120px; }
+.qp-body .qh2-key { margin-top: 8px; }
+.qp-side .qp-kv-rows div { padding: 7px 0; font-size: 13px; }
+.qp-exp { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
+.qp-exp dd { font-weight: 500; text-align: right; }
+.qp-exp a.is-bad { color: var(--bad-ink); }
+.qp-details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.qp-details summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent-ink); }
+.qp-details .table-scroll { margin-top: 8px; }
+.qp-details .qp-table td { padding: 7px 8px; font-size: 13px; }
+.qp-src { margin-top: 4px; }
+@media (max-width: 800px) { .qp-body { grid-template-columns: minmax(0, 1fr); } .qp-side { border-left: 0; border-top: 1px solid var(--line); } }
+@media (max-width: 560px) { .qp-figs { gap: 10px 20px; } .qp-fig { flex: 1 1 40%; } .qp-col { padding: 14px 16px; } }
+
+/* Quota bar: ticks on the track, names in a key underneath (no overlapping text) */
+.qb, .qp-hero .qb { padding-top: 6px; }
+.qb-mark { top: -4px; bottom: -4px; }
+.qb-label { display: none; }
+.qb-foot { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.qb-end { flex: 0 0 auto; white-space: nowrap; }
+.qb-key { flex: 1 1 auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; min-width: 0; }
+.qb-key span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--ink); font-weight: 600; }
+.qb-key span::before { content: ""; width: 2px; height: 12px; background: var(--ink); }
+.qb-key .is-full { color: var(--bad-ink); } .qb-key .is-full::before { background: #c2482a; }
+.qb-key .is-typical { color: var(--warn-ink); } .qb-key .is-typical::before { background: none; border-left: 2px dashed var(--warn-line); height: 12px; }
+@media (max-width: 560px) { .qb-foot { flex-wrap: wrap; } .qb-key { order: 3; flex-basis: 100%; justify-content: flex-start; } .qb-end:last-of-type { margin-left: auto; } }
+
+/* Chart hover cards: rows are flex so labels and values never collide,
+   whatever the number of parts; the card sizes to its content */
+.mk-tip { width: auto; min-width: 150px; max-width: min(280px, calc(100% - 8px)); z-index: 5; }
+.mk-tip > strong { display: block; white-space: nowrap; margin-bottom: 2px; color: var(--ink); }
+.mk-tip-row { display: flex; align-items: baseline; gap: 8px; line-height: 1.35; }
+.mk-tip-row > .swatch { flex: 0 0 10px; align-self: center; }
+.mk-tip-row > span:not(.swatch) { flex: 1 1 auto; min-width: 0; overflow: visible; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+.mk-tip-row > b { flex: 0 0 auto; margin-left: auto; padding-left: 6px; white-space: nowrap; text-align: right; }
+
+/* Left menu: sits above page content on desktop; scrolls away on small screens
+   so it never ends up layered over cards */
+.sidebar { z-index: 20; }
+@media (max-width: 900px) { .sidebar { position: static; } }
+@media (max-width: 560px) {
+  .qp-figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px 16px; }
+  .qh2-val { display: block; }
+  .qh2-bars.is-dense .qh2-val { display: none; }
+}
