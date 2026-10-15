@@ -2123,3 +2123,7 @@ a.ll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .sidebar__sec.is-open > .sidebar__link.is-current .sidebar__icon { color: var(--accent); }
 a.ll-head:hover { background: var(--surface-alt); }
 .ll-head.is-active { background: var(--accent-soft); color: var(--accent-ink); }
+
+/* Launcher: the five sections only */
+.launcher.launcher-list { width: 220px; gap: 2px; }
+.launcher.launcher-list .ll { min-height: 40px; }
