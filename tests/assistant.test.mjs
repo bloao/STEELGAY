@@ -102,3 +102,11 @@ test("Messages-style turns translate to and from the OpenAI format (Ollama, Groq
   assert.equal(res.content[0].input.product, "40×10 Flat");
   assert.equal(fromOpenAI({ choices: [{ message: { content: "Done" } }] }).stop_reason, "end_turn");
 });
+
+test("free providers: pick a current chat model from the key's model list", async () => {
+  const { pickModel } = await import("../lib/assistant.mjs");
+  assert.equal(pickModel("groq", ["whisper-large-v3", "openai/gpt-oss-20b", "openai/gpt-oss-120b"]), "openai/gpt-oss-120b");
+  assert.equal(pickModel("groq", ["whisper-large-v3", "some-new-model"]), "some-new-model");
+  assert.equal(pickModel("gemini", ["models/embedding-001", "models/gemini-2.0-flash"]), "gemini-2.0-flash");
+  assert.equal(pickModel("groq", ["whisper-large-v3"]), null);
+});

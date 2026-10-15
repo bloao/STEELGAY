@@ -22,7 +22,7 @@ import * as COMP from "./lib/competition.mjs";
 import * as ARR from "./lib/arrivals.mjs";
 import * as STOCK from "./lib/stockpile.mjs";
 import * as PLAN from "./lib/orderplan.mjs";
-import { converse, systemPrompt, DEFAULT_MODEL, PROVIDERS, toOpenAI, fromOpenAI } from "./lib/assistant.mjs";
+import { converse, systemPrompt, DEFAULT_MODEL, PROVIDERS, toOpenAI, fromOpenAI, pickModel } from "./lib/assistant.mjs";
 import { gzipSync } from "node:zlib";
 import vm from "node:vm";
 
@@ -1375,14 +1375,30 @@ async function assistantConfig() {
   let provider = process.env.LLM_PROVIDER || ws.assistantProvider || "auto";
   if (provider === "auto") provider = keys.anthropic ? "anthropic" : keys.groq ? "groq" : keys.gemini ? "gemini" : ollama.running ? "ollama" : null;
   const p = provider ? PROVIDERS[provider] : null;
-  const model = provider === "anthropic" ? ASSISTANT_MODEL : provider === "ollama" ? ollamaModel : process.env.ASSISTANT_MODEL && process.env.LLM_PROVIDER === provider ? process.env.ASSISTANT_MODEL : p && p.model;
+  const found = provider ? modelCache.get(`${provider}|${String(keys[provider] || "").slice(-6)}`) : null;
+  const model = provider === "anthropic" ? ASSISTANT_MODEL : provider === "ollama" ? ollamaModel : process.env.ASSISTANT_MODEL && process.env.LLM_PROVIDER === provider ? process.env.ASSISTANT_MODEL : found || (p && p.model);
   const hasOllamaModel = ollama.models.some((m) => m === ollamaModel || m.split(":")[0] === ollamaModel.split(":")[0] && !ollamaModel.includes(":"));
   const configured = provider === "ollama" ? ollama.running && hasOllamaModel : Boolean(provider && keys[provider]);
   return { provider, label: p ? p.label : null, model, key: provider ? keys[provider] : "", configured, ollama: { ...ollama, model: ollamaModel, hasModel: hasOllamaModel } };
 }
+const modelCache = new Map(); // `${provider}|${key tail}` → model id this key can use
+async function discoverModel(cfg, base) {
+  const ck = `${cfg.provider}|${String(cfg.key).slice(-6)}`;
+  if (modelCache.has(ck)) return modelCache.get(ck);
+  const r = await fetch(`${base}/models`, { headers: cfg.key ? { authorization: `Bearer ${cfg.key}` } : {}, signal: AbortSignal.timeout(10_000) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(`${PROVIDERS[cfg.provider].label} ${r.status}: ${j?.error?.message || r.statusText}${r.status === 401 || r.status === 403 ? " — check the API key" : ""}`), { statusCode: 502 });
+  const model = pickModel(cfg.provider, (j.data || j.models || []).map((m) => m.id || m.name));
+  if (!model) throw Object.assign(new Error(`${PROVIDERS[cfg.provider].label}: no chat model available to this key`), { statusCode: 502 });
+  modelCache.set(ck, model);
+  return model;
+}
 function callOpenAICompatible(cfg) {
   const base = cfg.provider === "ollama" ? `${(process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/$/, "")}/v1` : PROVIDERS[cfg.provider].baseUrl;
-  return async (body) => {
+  const fixedModel = cfg.provider === "ollama" || (process.env.ASSISTANT_MODEL && process.env.LLM_PROVIDER === cfg.provider);
+  return async (body, retried = false) => {
+    if (!fixedModel) body = { ...body, model: await discoverModel(cfg, base) };
+    cfg.model = body.model;
     const response = await fetch(`${base}/chat/completions`, {
       method: "POST",
       headers: { "content-type": "application/json", ...(cfg.key ? { authorization: `Bearer ${cfg.key}` } : {}) },
@@ -1390,6 +1406,7 @@ function callOpenAICompatible(cfg) {
       signal: AbortSignal.timeout(cfg.provider === "ollama" ? 180_000 : 90_000),
     });
     const data = await response.json().catch(() => ({}));
+    if (response.status === 404 && !fixedModel && !retried) { modelCache.delete(`${cfg.provider}|${String(cfg.key).slice(-6)}`); return callOpenAICompatible(cfg)(body, true); }
     if (!response.ok) {
       const message = data?.error?.message || (Array.isArray(data) ? data[0]?.error?.message : "") || response.statusText;
       const hint = response.status === 401 || response.status === 403 ? " — check the API key" : response.status === 404 ? ` — model "${body.model}" not found` : response.status === 429 ? " — free-tier limit reached, try again shortly" : "";
