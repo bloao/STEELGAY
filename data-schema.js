@@ -67,9 +67,112 @@
         el("div", { class: "sc-chips" }, ...f.fields.map((l) => el("span", { class: "sc-chip is-field", text: l })))))))));
   }
 
+  // ---- Tree: source → data point → calculation / page, left to right -----
+  const open = new Set();
+  const seen = new Set(); // nodes/links already shown, so a toggle only animates what's new
+  let treeInit = false;
+  const NS = "http://www.w3.org/2000/svg";
+
+  function tree() {
+    const sources = data.sources.filter((s) => !q || s.fields.some((x) => match(x, s)));
+    if (!sources.length) return el("p", { class: "muted", text: "No matching data points" });
+    if (!treeInit) { treeInit = true; const first = sources.find((s) => s.status === "live") || sources[0]; open.add(first.key); }
+    const links = []; // [fromId, toId, sourceKey]
+    const usedTargets = new Set();
+    const colSrc = el("div", { class: "tr-col" }, el("h3", { text: "Sources" }));
+    const colFld = el("div", { class: "tr-col" }, el("h3", { text: "Data points" }));
+    const colTgt = el("div", { class: "tr-col" }, el("h3", { text: "Feeds into" }));
+    let delay = 0;
+    const node = (id, cls, kids, extra = {}) => { const old = seen.has(id); seen.add(id); return el("div", { class: `tr-node ${cls}${old ? " is-seen" : ""}`, "data-id": id, style: old ? "" : `--d:${(delay += 14)}ms`, ...extra }, ...kids); };
+    for (const s of sources) {
+      const isOpen = open.has(s.key) || Boolean(q);
+      const fields = s.fields.filter((x) => match(x, s));
+      colSrc.append(node(`s:${s.key}`, `tr-src${isOpen ? " is-open" : ""}`, [dot(s.status), el("span", { class: "tr-label", text: s.name }), el("span", { class: "tr-n", text: String(fields.length) }),
+        el("span", { class: "tr-caret", "aria-hidden": "true" })], { role: "button", tabindex: "0", "aria-expanded": String(isOpen),
+        onclick: () => toggle(s.key), onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(s.key); } } }));
+      if (isOpen) {
+        const grp = el("div", { class: "tr-group" });
+        for (const x of fields) {
+          const fid = `f:${s.key}:${x.key}`;
+          const ex = fmtEx(x.example, x.unit);
+          grp.append(node(fid, `tr-fld${x.derived ? " is-derived" : ""}`, [el("span", { class: "tr-label", text: x.label }), ex ? el("span", { class: "tr-ex", text: ex }) : el("span", { class: "tr-type", text: x.type })], { title: `${x.key} · ${x.type}${x.unit ? ` · ${x.unit}` : ""}` }));
+          links.push([`s:${s.key}`, fid, s.key]);
+          for (const e of x.engines || []) { links.push([fid, `e:${e}`, s.key]); usedTargets.add(`e:${e}`); }
+          for (const pg of x.usedIn) { links.push([fid, `p:${pg}`, s.key]); usedTargets.add(`p:${pg}`); }
+        }
+        colFld.append(grp);
+      } else {
+        for (const pg of s.pages) { links.push([`s:${s.key}`, `p:${pg}`, s.key, true]); usedTargets.add(`p:${pg}`); }
+      }
+    }
+    const engines = Object.entries(data.engines).filter(([k]) => usedTargets.has(`e:${k}`));
+    const pages = Object.values(data.pageInfo).filter((p) => usedTargets.has(`p:${p.key}`));
+    if (engines.length) colTgt.append(el("div", { class: "tr-sub", text: "Calculations" }), ...engines.map(([k, label]) => node(`e:${k}`, "tr-tgt is-engine", [el("span", { class: "tr-label", text: label })])));
+    if (pages.length) colTgt.append(el("div", { class: "tr-sub", text: "Pages" }), ...pages.map((p) => node(`p:${p.key}`, "tr-tgt", [el("a", { class: "tr-label", href: p.href, text: p.label })])));
+    if (!colFld.querySelector(".tr-node")) colFld.append(el("p", { class: "tr-hint", text: "Open a source" }));
+    const svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "tr-links"); svg.setAttribute("aria-hidden", "true");
+    const wrap = el("div", { class: "tr-wrap" }, svg, el("div", { class: "tr-grid" }, colSrc, colFld, colTgt));
+    const box = el("div", { class: "card tr-card" }, wrap);
+    requestAnimationFrame(() => drawLinks(wrap, svg, links));
+    wireHover(wrap);
+    return box;
+  }
+
+  function toggle(key) { if (open.has(key)) open.delete(key); else open.add(key); render(); }
+
+  function drawLinks(wrap, svg, links) {
+    const base = wrap.getBoundingClientRect();
+    svg.setAttribute("width", wrap.scrollWidth); svg.setAttribute("height", wrap.scrollHeight);
+    svg.replaceChildren();
+    const pos = (id) => { const n = wrap.querySelector(`[data-id="${CSS.escape(id)}"]`); if (!n) return null; const r = n.getBoundingClientRect(); return { l: r.left - base.left, r: r.right - base.left, y: r.top - base.top + r.height / 2 }; };
+    links.forEach(([a, b, src, faint], i) => {
+      const A = pos(a), B = pos(b); if (!A || !B) return;
+      const x1 = A.r, x2 = B.l, mx = (x1 + x2) / 2;
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", `M${x1},${A.y} C${mx},${A.y} ${mx},${B.y} ${x2},${B.y}`);
+      p.setAttribute("class", `tr-link${faint ? " is-faint" : ""}${b.startsWith("e:") ? " is-engine" : ""}`);
+      p.dataset.a = a; p.dataset.b = b; p.dataset.src = src;
+      svg.append(p);
+      const lk = `${a}>${b}`;
+      if (seen.has(lk)) return;
+      seen.add(lk);
+      const len = p.getTotalLength();
+      p.style.strokeDasharray = `${len}`; p.style.strokeDashoffset = `${len}`;
+      p.style.transitionDelay = `${Math.min(i * 6, 600)}ms`;
+    });
+    requestAnimationFrame(() => svg.classList.add("is-drawn"));
+  }
+
+  function wireHover(wrap) {
+    const on = (id) => {
+      const paths = [...wrap.querySelectorAll(".tr-link")];
+      let hot;
+      if (id.startsWith("s:")) hot = paths.filter((p) => `s:${p.dataset.src}` === id);
+      else if (id.startsWith("f:")) hot = paths.filter((p) => p.dataset.a === id || p.dataset.b === id);
+      else {
+        const into = paths.filter((p) => p.dataset.b === id);
+        const feeders = new Set(into.map((p) => p.dataset.a));
+        hot = [...into, ...paths.filter((p) => feeders.has(p.dataset.b))];
+      }
+      const ids = new Set([id]);
+      hot.forEach((p) => { ids.add(p.dataset.a); ids.add(p.dataset.b); });
+      wrap.classList.add("is-focus");
+      paths.forEach((p) => p.classList.toggle("is-hot", hot.includes(p)));
+      wrap.querySelectorAll(".tr-node").forEach((n) => n.classList.toggle("is-hot", ids.has(n.dataset.id)));
+    };
+    const off = () => { wrap.classList.remove("is-focus"); wrap.querySelectorAll(".is-hot").forEach((n) => n.classList.remove("is-hot")); };
+    wrap.addEventListener("pointerover", (e) => { const n = e.target.closest(".tr-node"); if (n) on(n.dataset.id); else off(); });
+    wrap.addEventListener("pointerleave", off);
+    wrap.addEventListener("focusin", (e) => { const n = e.target.closest(".tr-node"); if (n) on(n.dataset.id); });
+    wrap.addEventListener("focusout", off);
+  }
+  let resizeT = null;
+  window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (view === "tree") render(); }, 150); });
+
   function render() {
     if (!data) return;
     if (view === "page") { $("sc-root").replaceChildren(byPage()); return; }
+    if (view === "tree") { $("sc-root").replaceChildren(tree()); return; }
     const sources = data.sources.filter((s) => !q || s.fields.some((x) => match(x, s)));
     if (!sources.length) { $("sc-root").replaceChildren(el("p", { class: "muted", text: "No matching data points" })); return; }
     if (!sources.some((s) => s.key === pick)) pick = sources[0].key;
@@ -92,7 +195,7 @@
       data = r;
       const want = new URLSearchParams(location.search).get("source");
       if (want) pick = want;
-      figs(); render();
+      figs(); if (view !== "tree" || !document.querySelector(".tr-wrap")) render();
     } catch (error) { $("sc-root").replaceChildren(el("p", { class: "muted", text: `Couldn't load the schema: ${error.message}` })); }
   }
   load();
