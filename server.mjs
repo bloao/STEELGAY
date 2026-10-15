@@ -1160,10 +1160,10 @@ async function serveStatic(requestUrl, response) {
   try {
     const body = await readFile(filePath);
     const contentType = mimeTypes[extname(filePath)] || "application/octet-stream";
-    // Static assets can be cached briefly by the browser — dev-friendly TTL.
+    // Browsers re-check static files on every load so updates show at once.
     writeBody(response, 200, {
       "content-type": contentType,
-      "cache-control": "public, max-age=60",
+      "cache-control": "no-cache",
     }, body);
   } catch {
     sendError(response, 404, "Not found");

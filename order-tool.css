@@ -2066,3 +2066,17 @@ button.vdot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
 .site-nav__settings:hover { background: var(--surface-alt); color: var(--ink); }
 .site-nav__settings.is-active { background: var(--accent-soft); color: var(--accent-ink); }
 .site-nav__settings:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Launcher: one vertical list — each section, then its pages underneath */
+.launcher.launcher-list { width: 260px; max-width: calc(100vw - 32px); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.ll-sec { display: flex; flex-direction: column; gap: 1px; }
+.ll-sec + .ll-sec { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 3px; }
+.ll { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px; border-radius: 6px; color: var(--ink-soft); text-decoration: none; font-size: 14px; font-weight: 500; }
+.ll .sidebar__icon { width: 18px; height: 18px; color: var(--muted); }
+a.ll:hover { background: var(--surface-alt); color: var(--ink); }
+a.ll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ll-head { color: var(--ink); font-weight: 600; }
+.ll-sub { min-height: 32px; padding-left: 38px; font-size: 13.5px; }
+.ll.is-active { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.ll.is-active .sidebar__icon, .ll-sec.is-here .ll-head .sidebar__icon { color: var(--accent); }
+@media (max-width: 900px) { .launcher.launcher-list { top: 72px; left: 16px; width: min(300px, calc(100vw - 32px)); } }
