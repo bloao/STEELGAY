@@ -71,16 +71,43 @@
     return frag;
   }
 
+  const SVG = (d, w = 18) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICON = {
+    orders: '<path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M8 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="M9 11h6M9 15h6"/>',
+    quotas: '<path d="M4 15a8 8 0 1 1 16 0"/><path d="m12 15 4-5"/><path d="M4 19h16"/>',
+    split: '<path d="M6 3v6a6 6 0 0 0 6 6h0a6 6 0 0 0 6-6V3"/><path d="M12 15v6"/>',
+    price: '<path d="M20 12 12 20l-8-8V4h8z"/><circle cx="8.5" cy="8.5" r="1.5"/>',
+    copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+    check: '<path d="m5 12 5 5 9-10"/>',
+    tool: '<path d="m5 12 5 5 9-10"/>',
+    mark: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>',
+  };
+  document.querySelectorAll(".sugg-i").forEach((n) => { n.innerHTML = SVG(ICON[n.dataset.icon]); });
+  const avatar = () => { const a = el("span", { class: "msg-av", "aria-hidden": "true" }); a.innerHTML = SVG(ICON.mark, 16); return a; };
+
   // ---- rendering ----------------------------------------------------------
+  function copyBtn(text) {
+    const b = el("button", { class: "msg-act", type: "button", title: "Copy", "aria-label": "Copy answer" });
+    b.innerHTML = SVG(ICON.copy, 15);
+    b.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(text); b.innerHTML = SVG(ICON.check, 15); setTimeout(() => { b.innerHTML = SVG(ICON.copy, 15); }, 1500); } catch { toast("Couldn't copy", true); }
+    });
+    return b;
+  }
+
   function addMessage(msg) {
     $("empty").hidden = true;
-    const node = msg.role === "user"
-      ? el("div", { class: "msg msg-user" }, el("div", { class: "bubble", text: msg.content }))
-      : el("div", { class: `msg msg-bot${msg.error ? " msg-error" : ""}` },
-          msg.tools && msg.tools.length
-            ? el("div", { class: "tool-chips" }, ...[...new Set(msg.tools.map((t) => t.label))].map((l) => el("span", { class: "tool-chip", text: l })))
-            : null,
-          el("div", { class: "bubble" }, msg.error ? msg.content : markdown(msg.content)));
+    log.classList.add("has-msgs");
+    let node;
+    if (msg.role === "user") node = el("div", { class: "msg msg-user" }, el("div", { class: "bubble", text: msg.content }));
+    else {
+      const tools = msg.tools && msg.tools.length ? [...new Set(msg.tools.map((t) => t.label))] : [];
+      node = el("div", { class: `msg msg-bot${msg.error ? " msg-error" : ""}` }, avatar(),
+        el("div", { class: "msg-body" },
+          tools.length ? el("div", { class: "tool-chips" }, ...tools.map((l) => el("span", { class: "tool-chip", text: l }))) : null,
+          el("div", { class: "bubble" }, msg.error ? msg.content : markdown(msg.content)),
+          msg.error ? null : el("div", { class: "msg-acts" }, copyBtn(msg.content))));
+    }
     log.append(node);
     node.scrollIntoView({ behavior: "smooth", block: "end" });
     return node;
@@ -89,6 +116,7 @@
   function renderAll() {
     [...log.querySelectorAll(".msg")].forEach((n) => n.remove());
     $("empty").hidden = history.length > 0;
+    log.classList.toggle("has-msgs", history.length > 0);
     history.forEach(addMessage);
   }
 
@@ -102,7 +130,7 @@
     addMessage({ role: "user", content: q });
     input.value = "";
     autosize();
-    const typing = el("div", { class: "msg msg-bot" }, el("div", { class: "bubble" }, el("span", { class: "typing", "aria-label": "Thinking" }, el("span"), el("span"), el("span"))));
+    const typing = el("div", { class: "msg msg-bot" }, avatar(), el("div", { class: "msg-body" }, el("div", { class: "bubble" }, el("span", { class: "typing", "aria-label": "Thinking" }, el("span"), el("span"), el("span")))));
     log.append(typing);
     typing.scrollIntoView({ behavior: "smooth", block: "end" });
     try {
@@ -136,7 +164,7 @@
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(input.value); }
   });
-  $("suggestions").addEventListener("click", (e) => { if (e.target.closest(".chip")) ask(e.target.closest(".chip").textContent); });
+  $("suggestions").addEventListener("click", (e) => { const b = e.target.closest(".sugg"); if (b) ask(b.dataset.q); });
   $("clear-btn").addEventListener("click", () => { history = []; persist(); renderAll(); input.focus(); });
 
   let status = null;
@@ -144,8 +172,12 @@
     status = s || status;
     if (!status) return;
     const u = usage || status.usage;
-    $("model-label").textContent = !status.configured ? "Not set up"
-      : `${status.label.replace(/ \(.*\)$/, "")} · ${status.model}${status.free ? " · free" : ""}${u && u.limitRequests ? ` · ${u.remainingRequests.toLocaleString("en-GB")}/${u.limitRequests.toLocaleString("en-GB")} today` : ""}`;
+    const pill = $("model-label");
+    pill.hidden = false;
+    pill.classList.toggle("is-off", !status.configured);
+    pill.replaceChildren(el("i", { "aria-hidden": "true" }), !status.configured ? "Not set up"
+      : `${status.label.replace(/ \(.*\)$/, "")} · ${String(status.model || "").replace(/^.*\//, "")}`);
+    pill.title = status.configured ? `${status.model}${status.free ? " · free" : ""}${u && u.limitRequests ? ` · ${u.remainingRequests.toLocaleString("en-GB")}/${u.limitRequests.toLocaleString("en-GB")} left today` : ""}` : "";
   }
   async function checkStatus() {
     const s = await api("/api/assistant/status").catch(() => null);
@@ -154,8 +186,8 @@
     setLabel(s);
     input.disabled = !s.configured;
     $("send-btn").disabled = !s.configured;
-    input.placeholder = s.configured ? "Ask about stock, quotes, quotas or what to order" : "Choose a model above to start";
-    document.querySelectorAll("#suggestions .chip").forEach((c) => { c.disabled = !s.configured; });
+    input.placeholder = s.configured ? "Ask anything…" : "Choose a model above to start";
+    document.querySelectorAll("#suggestions .sugg").forEach((c) => { c.disabled = !s.configured; });
     const o = s.ollama || {};
     $("ollama-pull").textContent = `ollama pull ${o.model || "qwen2.5:7b"}`;
     $("ollama-state").textContent = !o.running ? "Not running" : o.hasModel ? "Ready" : `Running · ${o.model} not downloaded`;
