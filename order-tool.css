@@ -2080,3 +2080,40 @@ a.ll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .ll.is-active { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .ll.is-active .sidebar__icon, .ll-sec.is-here .ll-head .sidebar__icon { color: var(--accent); }
 @media (max-width: 900px) { .launcher.launcher-list { top: 72px; left: 16px; width: min(300px, calc(100vw - 32px)); } }
+
+/* Quota profile figures: title + value only, evenly spaced */
+.qp-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px 24px; align-items: end; }
+.qp-fig { gap: 4px; }
+.qp-fig strong, .qp-fig:first-child strong { font-family: var(--font-display); font-size: 24px; line-height: 1.15; }
+@media (max-width: 560px) { .qp-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .qp-fig strong, .qp-fig:first-child strong { font-size: 20px; } }
+
+/* Quota history chart: taller bars, clear values, 85% and 100% guide lines */
+.qp-col > h2 { color: var(--ink); font-size: 15px; letter-spacing: 0; text-transform: none; margin-bottom: 14px; }
+.qh3-plot { position: relative; display: flex; align-items: stretch; gap: 14px; height: 190px; padding: 26px 0 0 44px; border-bottom: 1.5px solid var(--line-strong); }
+.qh3-line { position: absolute; left: 44px; right: 0; border-top: 1px dashed var(--line-strong); pointer-events: none; }
+.qh3-line.is-100 { top: 26px; }
+.qh3-line.is-85 { top: calc(26px + (100% - 26px) * 0.15); border-top-color: var(--warn-line); }
+.qh3-line em { position: absolute; left: -44px; top: -8px; width: 38px; text-align: right; font-style: normal; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.qh3-line.is-85 em { color: var(--warn-ink); }
+.qh3-bar { position: relative; flex: 0 1 64px; min-width: 0; }
+.qh3-bar i { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 6px 6px 0 0; background: var(--accent); }
+.qh3-bar i.is-high { background: var(--warn-line); }
+.qh3-bar i.is-out { background: #c2482a; }
+.qh3-bar i.is-now { background: repeating-linear-gradient(135deg, var(--accent) 0 6px, color-mix(in srgb, var(--accent) 55%, white) 6px 12px); }
+.qh3-bar i.is-now.is-high { background: repeating-linear-gradient(135deg, var(--warn-line) 0 6px, color-mix(in srgb, var(--warn-line) 55%, white) 6px 12px); }
+.qh3-bar i.is-now.is-out { background: repeating-linear-gradient(135deg, #c2482a 0 6px, color-mix(in srgb, #c2482a 55%, white) 6px 12px); }
+.qh3-val { position: absolute; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.qh3-axis { display: flex; gap: 14px; padding: 8px 0 0 44px; }
+.qh3-axis span { flex: 0 1 64px; min-width: 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+.qh3-axis span.is-now { color: var(--accent-ink); }
+.qh2-key .k-now::before { background: repeating-linear-gradient(135deg, var(--accent) 0 2px, color-mix(in srgb, var(--accent) 55%, white) 2px 4px); }
+.qh3.is-dense .qh3-plot, .qh3.is-dense .qh3-axis { gap: 6px; }
+.qh3.is-dense .qh3-val { font-size: 11px; }
+@media (max-width: 560px) {
+  .qh3-plot { height: 160px; gap: 10px; padding-left: 36px; }
+  .qh3-line { left: 36px; } .qh3-line em { left: -36px; width: 30px; }
+  .qh3-axis { gap: 10px; padding-left: 36px; }
+  .qh3.is-dense .qh3-val { display: none; }
+  .qh3.is-dense .qh3-axis span:nth-child(even) { visibility: hidden; }
+}
+.qh3-val { z-index: 1; padding: 0 4px; border-radius: 4px; background: var(--surface); line-height: 1.3; }

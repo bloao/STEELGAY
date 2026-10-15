@@ -33,15 +33,22 @@
         el("span", { class: "qb-end", text: day(addDays(o.quarterStart, o.quarterDays - 1)) })));
   }
 
+  // Fill per quarter since the measure began: bars against 85% and 100% lines
   function historyBars(hist) {
     const hs = hist.slice(-12);
     if (!hs.length) return el("p", { class: "muted", text: "No history yet" });
-    return el("div", { class: "qh2" },
-      el("div", { class: `qh2-bars${hs.length > 6 ? " is-dense" : ""}` }, ...hs.map((h) => el("div", { class: "qh2-col", title: `${qShort(h.startDate)} · ${pct(Math.min(100, h.fillPct))} used${h.exhausted ? ` · ran out day ${h.dayFull || "?"}` : ""}${h.current ? " · so far" : ""}` },
-        el("span", { class: "qh2-val", text: h.exhausted ? `d${h.dayFull || "?"}` : pct(Math.min(100, h.fillPct)) }),
-        el("div", { class: "qh2-slot" }, el("i", { class: `${h.exhausted ? "is-out" : h.fillPct >= 85 ? "is-high" : ""}${h.current ? " is-now" : ""}`, style: `height:${Math.max(2, Math.min(100, h.fillPct))}%` })),
-        el("span", { class: "qh2-q", text: qShort(h.startDate) })))),
-      el("div", { class: "qh2-key" }, el("span", { class: "k-out", text: "Ran out" }), el("span", { class: "k-high", text: "85%+" }), el("span", { class: "k-low", text: "Below 85%" })));
+    const cls = (h) => `${h.exhausted ? "is-out" : h.fillPct >= 85 ? "is-high" : ""}${h.current ? " is-now" : ""}`;
+    const tip = (h) => `${qShort(h.startDate)} · ${pct(Math.min(100, h.fillPct))} used${h.exhausted ? ` · ran out day ${h.dayFull || "?"}` : ""}${h.current ? " · so far" : ""}`;
+    return el("div", { class: `qh3${hs.length > 6 ? " is-dense" : ""}` },
+      el("div", { class: "qh3-plot", role: "img", "aria-label": hs.map(tip).join(", ") },
+        el("span", { class: "qh3-line is-100" }, el("em", { text: "100%" })),
+        el("span", { class: "qh3-line is-85" }, el("em", { text: "85%" })),
+        ...hs.map((h) => { const f = Math.max(2, Math.min(100, h.fillPct));
+          return el("div", { class: "qh3-bar", title: tip(h) },
+            el("i", { class: cls(h), style: `height:${f}%` }),
+            el("b", { class: "qh3-val", style: `bottom:calc(${f}% + 6px)`, text: h.exhausted ? `Day ${h.dayFull || "?"}` : pct(Math.min(100, h.fillPct)) })); })),
+      el("div", { class: "qh3-axis" }, ...hs.map((h) => el("span", { class: h.current ? "is-now" : "", text: h.current ? `${qShort(h.startDate)} · now` : qShort(h.startDate) }))),
+      el("div", { class: "qh2-key" }, el("span", { class: "k-out", text: "Ran out" }), el("span", { class: "k-high", text: "85%+" }), el("span", { class: "k-low", text: "Below 85%" }), el("span", { class: "k-now", text: "So far" })));
   }
 
   function render(r) {
@@ -54,14 +61,14 @@
     const risky = o && o.safeUntil && (o.verdict === "full" || o.safeUntil < r.asOf);
 
     // one compact status strip: figures in a row, the quarter bar underneath
-    const fig = (k, v, cls, sub) => el("div", { class: "qp-fig" }, el("span", { text: k }), el("strong", { class: cls || "", text: v }), sub ? el("small", { text: sub }) : null);
+    const fig = (k, v, cls) => el("div", { class: "qp-fig" }, el("span", { text: k }), el("strong", { class: cls || "", text: v }));
     const hero = o ? el("section", { class: "card qp-hero" },
       el("div", { class: "qp-figs" },
-        fig("Left", t(o.leftT), o.leftT <= 0 ? "is-bad" : "", `of ${t(o.initialT)}`),
-        fig("Fills", o.fullOn ? `~${day(o.fullOn)}` : "Lasts", o.fullOn ? "is-bad" : "is-good", o.fullDay ? `day ${o.fullDay}/${o.quarterDays}` : null),
+        fig("Left", t(o.leftT), o.leftT <= 0 ? "is-bad" : ""),
+        fig("Fills", o.fullOn ? `~${day(o.fullOn)}` : "Lasts", o.fullOn ? "is-bad" : "is-good"),
         fig("Safe until", risky ? "Risky now" : o.safeUntil ? day(o.safeUntil) : "—", risky ? "is-bad" : ""),
-        fig("Pace", o.livePaceT ? `${t(o.livePaceT)}/d` : "—", "", o.historicPaceT ? `past ${t(o.historicPaceT)}/d` : null),
-        live && live.nextStartDate ? fig("Next quarter", day(live.nextStartDate), "", live.nextOpeningT ? t(live.nextOpeningT) : null) : null),
+        fig("Pace", o.livePaceT ? `${t(o.livePaceT)}/d` : "—"),
+        live && live.nextStartDate ? fig("Next quarter", day(live.nextStartDate)) : null),
       quarterBar(l, o))
       : el("section", { class: "card qp-hero" }, el("p", { class: "muted", text: "No live balance for this quarter." }));
 
