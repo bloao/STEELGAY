@@ -31,17 +31,17 @@
     const hs = hist.slice(-12);
     if (!hs.length) return el("p", { class: "muted", text: "No history yet" });
     return el("div", { class: "qh2" },
-      el("div", { class: "qh2-bars" }, ...hs.map((h) => el("div", { class: "qh2-col", title: `${qShort(h.startDate)} · ${pct(Math.min(100, h.fillPct))} used${h.exhausted ? ` · ran out day ${h.dayFull || "?"}` : ""}${h.current ? " · so far" : ""} · ${h.regime === "measure" ? "steel measure" : "safeguard"}` },
+      el("div", { class: "qh2-bars" }, ...hs.map((h) => el("div", { class: "qh2-col", title: `${qShort(h.startDate)} · ${pct(Math.min(100, h.fillPct))} used${h.exhausted ? ` · ran out day ${h.dayFull || "?"}` : ""}${h.current ? " · so far" : ""}` },
         el("span", { class: "qh2-val", text: h.exhausted ? `d${h.dayFull || "?"}` : pct(Math.min(100, h.fillPct)) }),
         el("div", { class: "qh2-slot" }, el("i", { class: `${h.exhausted ? "is-out" : h.fillPct >= 85 ? "is-high" : ""}${h.current ? " is-now" : ""}`, style: `height:${Math.max(2, Math.min(100, h.fillPct))}%` })),
-        el("span", { class: `qh2-q${h.regime === "measure" ? " is-measure" : ""}`, text: qShort(h.startDate) })))),
-      el("div", { class: "qh2-key" }, el("span", { class: "k-out", text: "Ran out" }), el("span", { class: "k-high", text: "85%+" }), el("span", { class: "k-low", text: "Below 85%" }), el("span", { class: "k-measure", text: "Steel measure" })));
+        el("span", { class: "qh2-q", text: qShort(h.startDate) })))),
+      el("div", { class: "qh2-key" }, el("span", { class: "k-out", text: "Ran out" }), el("span", { class: "k-high", text: "85%+" }), el("span", { class: "k-low", text: "Below 85%" })));
   }
 
   function render(r) {
     const l = r.line, o = l.outlook, live = r.live;
     $("qp-title").textContent = `Category ${l.categoryId} · ${l.origin}`;
-    $("qp-sub").textContent = `${l.orderNumber} · ${l.categoryName} · ${t(l.annualTonnes)} a year`;
+    $("qp-sub").textContent = `${l.orderNumber} · ${l.categoryName} · ${t(l.annualTonnes)} a year · steel measure from ${fmt.date(r.since || "2026-07-01")}`;
     document.title = `${l.categoryId} ${l.origin} quota · Datafab AGX`;
     const [vl, vc] = o ? VERDICT[o.verdict] || [o.verdict, ""] : ["No live data", ""];
     $("qp-verdict").replaceChildren(el("span", { class: `badge ${vc} qp-badge`, text: vl }));
@@ -60,7 +60,7 @@
 
     const enough = l.allQuarters >= 4;
     const facts = [
-      l.recentQuarters ? ["Ran out", `${l.exhaustedCount} of last ${l.recentQuarters} quarters`, l.exhaustedCount ? "is-bad" : "is-good"] : null,
+      l.recentQuarters ? ["Ran out", `${l.exhaustedCount} of ${l.recentQuarters === l.quarters ? "" : "last "}${l.recentQuarters} quarter${l.recentQuarters === 1 ? "" : "s"}`, l.exhaustedCount ? "is-bad" : "is-good"] : null,
       l.dayFullMedian ? ["Usually full by", `day ${Math.round(l.dayFullMedian)}`] : null,
       l.recentQuarters ? ["Average used", pct(l.avgFillPct)] : null,
       enough && Number.isFinite(l.paceTrendPct) && Math.abs(l.paceTrendPct) < 300 ? ["Demand vs year before", `${l.paceTrendPct >= 0 ? "+" : "−"}${Math.abs(Math.round(l.paceTrendPct))}%`, l.paceTrendPct > 10 ? "is-bad" : ""] : null,
@@ -81,7 +81,7 @@
       el("div", { class: "table-scroll" }, el("table", { class: "qp-table" },
         el("thead", {}, el("tr", {}, ...["Quarter", "Opening", "Used", "", "Ran out"].map((h, i) => el("th", { class: `${i && i !== 3 ? "num" : ""}${i === 1 ? " qp-hide-sm" : ""}`, text: h })))),
         el("tbody", {}, ...shown.map((h) => el("tr", { class: h.current ? "is-now" : "" },
-          el("td", {}, el("strong", { text: qShort(h.startDate) }), el("span", { class: "qp-scheme", text: h.current ? "now" : h.regime === "measure" ? "measure" : "safeguard" })),
+          el("td", {}, el("strong", { text: qShort(h.startDate) }), h.current ? el("span", { class: "qp-scheme", text: "now" }) : null),
           el("td", { class: "num qp-hide-sm", text: t(h.initialT) }),
           el("td", { class: "num", text: t(h.usedT) }),
           el("td", {}, el("div", { class: "qp-usedcell" }, el("span", { class: "qp-minibar" }, el("i", { class: h.exhausted ? "is-out" : h.fillPct >= 85 ? "is-high" : "", style: `width:${Math.min(100, h.fillPct)}%` })), el("span", { text: pct(Math.min(100, h.fillPct)) }))),
@@ -91,7 +91,7 @@
     $("qp-root").replaceChildren(...[
       hero,
       el("div", { class: "qp-grid" },
-        el("section", { class: "card qp-card" }, el("h2", { text: "History" }), historyBars(l.fullHistory)),
+        el("section", { class: "card qp-card" }, el("h2", { text: `History since ${fmt.date(r.since || "2026-07-01")}` }), historyBars(l.fullHistory)),
         ...(facts.length ? [el("section", { class: "card qp-card" }, el("h2", { text: "Key figures" }), el("dl", { class: "qp-kv qp-kv-rows" }, ...facts.map(([k, v, cls]) => el("div", {}, el("dt", { text: k }), el("dd", { class: cls || "", text: v })))))] : [])),
       exposure,
       table,

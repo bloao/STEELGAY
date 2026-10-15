@@ -24,7 +24,7 @@ test("quarters are aggregated per line with fill, run-out day and pace", () => {
     // annual periods are skipped
     row({ orderNumber: "058053", geographicalAreas: ["Turkey"], startDate: "2024-01-01", endDate: "2024-12-31", initialVolume: 1, balance: 0 }),
   ];
-  const by = periodsByLine(rows, "2026-10-15");
+  const by = periodsByLine(rows, "2026-10-15", { since: null });
   const tr = by.get("058623");
   assert.equal(tr.length, 2);
   assert.equal(tr[0].exhausted, true);
@@ -66,4 +66,16 @@ test("trade-agreement quotas on the same codes are ignored", () => {
   const p = periodsByLine(rows, "2026-10-15").get("058601");
   assert.equal(p.length, 1);
   assert.equal(p[0].initialT, 8364);
+});
+
+test("history only covers the current measure, from 1 July 2026", () => {
+  const rows = [
+    { orderNumber: "058050", geographicalAreas: ["Turkey"], categoryIds: ["12B"], startDate: "2026-04-01", endDate: "2026-06-30", initialVolume: 30000000, balance: 0, measurementUnit: "Kilogram (kg)", status: "Exhausted", lastAllocationDate: "2026-05-01" },
+    { orderNumber: "058623", geographicalAreas: ["Turkey"], categoryIds: ["12B"], startDate: "2026-07-01", endDate: "2026-09-30", initialVolume: 4663000, balance: 500000, measurementUnit: "Kilogram (kg)", status: "Closed", lastAllocationDate: "#NA" },
+  ];
+  const h = quotaHistory(rows, [], "2026-10-15");
+  assert.equal(h.since, "2026-07-01");
+  const tr = h.lines.find((l) => l.orderNumber === "058623");
+  assert.equal(tr.quarters, 1);
+  assert.equal(tr.history[0].regime, "measure");
 });

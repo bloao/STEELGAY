@@ -47,7 +47,7 @@
     $("qh-summary").replaceChildren(
       tile("Your lines filling this quarter", `${filling.length} of ${ofMine.length}`, null, filling.length ? "is-bad" : "is-good"),
       tile("Fills first", soonest ? `${soonest.categoryId} ${soonest.origin}` : "None", soonest ? `~${fmt.date(soonest.outlook.fullOn)}` : null),
-      tile("History", data.firstPeriod ? `${Math.max(...data.lines.map((l) => l.quarters))} quarters` : "—", data.firstPeriod ? `from ${qLabel(data.firstPeriod)}` : null));
+      tile("History", data.firstPeriod ? (() => { const n = Math.max(...data.lines.map((l) => l.quarters)); return `${n} quarter${n === 1 ? "" : "s"}`; })() : "—", data.firstPeriod ? `from ${qLabel(data.firstPeriod)}` : null));
     const order = { full: 0, imminent: 1, fills: 2, tight: 3, lasts: 4 };
     lines.sort((a, b) => (order[a.outlook?.verdict] ?? 5) - (order[b.outlook?.verdict] ?? 5) || (a.outlook?.fullOn || "9").localeCompare(b.outlook?.fullOn || "9") || a.orderNumber.localeCompare(b.orderNumber));
     const rows = [];

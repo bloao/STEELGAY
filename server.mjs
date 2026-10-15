@@ -812,7 +812,7 @@ async function quotaLineProfile(orderNumber) {
     .map((s) => ({ id: s.id, name: s.name, origin: s.origin }));
   const scenarios = (await store.list()).map(summarise).filter((x) => x.quotaOrderNumber === orderNumber)
     .map((x) => ({ id: x.id, title: x.title, tonnage: x.tonnage, importDate: x.importDate, status: x.status, afterSafe: Boolean(line.outlook && line.outlook.safeUntil && x.importDate > line.outlook.safeUntil) }));
-  return { ok: true, asOf: h.asOf, source: h.source, line: lineProfile(line, h.periods.get(orderNumber) || []), live, products: products.map((p) => ({ id: p.id, name: p.name })), suppliers, scenarios };
+  return { ok: true, asOf: h.asOf, since: h.since, source: h.source, line: lineProfile(line, h.periods.get(orderNumber) || []), live, products: products.map((p) => ({ id: p.id, name: p.name })), suppliers, scenarios };
 }
 
 async function getMeasureQuotas({ force = false } = {}) {
