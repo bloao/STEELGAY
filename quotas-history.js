@@ -7,7 +7,6 @@
   let data = null;
   let mine = new Set();
   let scope = "mine";
-  const open = new Set();
 
   const t = (v) => (Number.isFinite(v) ? `${Math.round(v).toLocaleString("en-GB")} t` : "—");
   const pct = (v) => (Number.isFinite(v) ? `${Math.round(v)}%` : "—");
@@ -38,27 +37,6 @@
     return el("td", { class: "num" }, el("strong", { text: fmt.date(o.safeUntil) }));
   }
 
-  function detail(l) {
-    return el("tr", { class: "qh-detail" }, el("td", { colspan: "10" },
-      el("table", { class: "qh-sub" },
-        el("thead", {}, el("tr", {}, ...["Quarter", "Scheme", "Opening", "Used", "Filled", "Ran out", "Pace / day"].map((h, i) => el("th", { class: i > 1 ? "num" : "", text: h })))),
-        el("tbody", {}, ...[...l.history].reverse().map((h) => el("tr", { class: h.current ? "is-now" : "" },
-          el("td", { text: `${qLabel(h.startDate)}${h.current ? " (now)" : ""}` }),
-          el("td", { text: h.regime === "measure" ? "Measure" : "Safeguard" }),
-          el("td", { class: "num", text: t(h.initialT) }),
-          el("td", { class: "num", text: t(h.usedT) }),
-          el("td", { class: "num", text: pct(Math.min(100, h.fillPct)) }),
-          el("td", { class: `num${h.exhausted ? " is-bad" : ""}`, text: h.exhausted ? (h.exhaustedOn ? `${fmt.date(h.exhaustedOn)} · day ${h.dayFull}` : "Yes") : h.partlyExhausted ? "Partly" : "—" }),
-          el("td", { class: "num", text: t(h.perDayT) }))))),
-      l.outlook ? el("div", { class: "qh-calc" },
-        el("span", {}, "This quarter ", el("b", { text: t(l.outlook.initialT) })),
-        el("span", {}, "Left ", el("b", { text: t(l.outlook.leftT) })),
-        el("span", {}, "Pace now ", el("b", { text: `${t(l.outlook.livePaceT)}/day` })),
-        el("span", {}, "Past pace ", el("b", { text: `${t(l.outlook.historicPaceT)}/day` })),
-        el("span", {}, "Blended ", el("b", { text: `${t(l.outlook.paceT)}/day` })),
-        el("span", {}, "Safe until ", el("b", { text: l.outlook.safeUntil ? fmt.date(l.outlook.safeUntil) : "—" }))) : null));
-  }
-
   function render() {
     if (!data) return;
     const lines = data.lines.filter((l) => l.quarters || (l.outlook && l.outlook.initialT)).filter((l) => scope === "all" || mine.has(l.categoryId));
@@ -74,10 +52,9 @@
     lines.sort((a, b) => (order[a.outlook?.verdict] ?? 5) - (order[b.outlook?.verdict] ?? 5) || (a.outlook?.fullOn || "9").localeCompare(b.outlook?.fullOn || "9") || a.orderNumber.localeCompare(b.orderNumber));
     const rows = [];
     for (const l of lines) {
-      const isOpen = open.has(l.orderNumber);
-      rows.push(el("tr", { class: `qh-row${isOpen ? " is-open" : ""}`, tabindex: "0", "aria-expanded": String(isOpen),
-        onclick: () => { if (isOpen) open.delete(l.orderNumber); else open.add(l.orderNumber); render(); },
-        onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } } },
+      const go = () => { location.href = `quota.html?order=${l.orderNumber}`; };
+      rows.push(el("tr", { class: "qh-row", tabindex: "0", role: "link", "aria-label": `Open ${l.categoryId} ${l.origin} quota`, onclick: go,
+        onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } } },
         el("td", {}, el("strong", { text: l.categoryId }), el("div", { class: "row-sub", text: l.orderNumber })),
         el("td", { text: l.origin }),
         el("td", { class: "num", text: String(l.quarters || "—") }),
@@ -88,7 +65,6 @@
         el("td", {}, bars(l.history)),
         verdictCell(l.outlook),
         safeCell(l.outlook)));
-      if (isOpen) rows.push(detail(l));
     }
     $("qh-rows").replaceChildren(...(rows.length ? rows : [el("tr", {}, el("td", { colspan: "10", class: "empty", text: "No quota history for these lines yet." }))]));
     for (const b of $("qh-scope").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.scope === scope));

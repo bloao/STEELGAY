@@ -142,4 +142,44 @@
   }).catch((error) => toast(`Could not load settings: ${error.message}`, true));
   loadMe().then((me) => { $("signed-in").textContent = me.authEnabled ? `Signed in as ${me.name} (${me.role}).` : "Running locally without sign-in — everyone is an admin."; });
   connections();
+
+  // ---- data sources: every feed, its status, and a refresh button
+  const feedMap = new Map();
+  const ago = (iso) => { if (!iso) return "never"; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+  const every = (ms) => (ms < 3600000 ? `${Math.round(ms / 60000)} min` : `${Math.round(ms / 3600000)} h`);
+  const LABEL = { live: ["Live", "is-good"], retrying: ["Retrying", "is-warn"], error: ["Failing", "is-bad"], stale: ["Stale", "is-warn"], waiting: ["Starting", "is-muted"], connecting: ["Connecting", "is-muted"], off: ["Not set up", "is-muted"] };
+  function feedRow(f) {
+    const [label, cls] = LABEL[f.status] || [f.status, ""];
+    const btn = el("button", { type: "button", class: "btn btn-sm", text: f.running ? "…" : "Refresh", disabled: f.running || !canEdit ? "" : null, "aria-label": `Refresh ${f.name}`,
+      onclick: async (e) => { e.currentTarget.disabled = true; e.currentTarget.textContent = "…"; try { render(await api(`/api/feeds/${f.key}/refresh`, { method: "POST" })); } catch (error) { toast(error.message, true); } } });
+    return el("li", { class: `ds-row is-${f.status}`, id: `ds-${f.key}`, title: f.lastError || f.what },
+      el("span", { class: `status-dot ${cls}`, text: label }),
+      el("div", { class: "ds-main" },
+        el("div", { class: "ds-name" }, el("strong", { text: f.name }), f.url ? el("a", { href: f.url, target: "_blank", rel: "noopener", class: "ds-src", text: f.source }) : el("span", { class: "ds-src", text: f.source })),
+        el("div", { class: "ds-meta" },
+          el("span", { text: f.stream ? (f.status === "live" ? "Connected" : "Stream") : ago(f.lastOkAt) }),
+          el("span", { text: f.stream ? "Always on" : `Every ${every(f.every)}` }),
+          f.detail ? el("span", { text: f.detail }) : null,
+          f.lastError && f.status !== "live" ? el("span", { class: "ds-err", text: f.lastError }) : null)),
+      btn);
+  }
+  function summary() {
+    const all = [...feedMap.values()];
+    const live = all.filter((f) => f.status === "live").length;
+    const bad = all.filter((f) => ["error", "stale", "retrying"].includes(f.status)).length;
+    const off = all.filter((f) => f.status === "off").length;
+    $("ds-summary").textContent = `${live} live · ${bad} need attention · ${off} not set up`;
+  }
+  function render(f) {
+    feedMap.set(f.key, f);
+    const row = feedRow(f), old = $(`ds-${f.key}`);
+    if (old) old.replaceWith(row); else $("ds-list").append(row);
+    summary();
+  }
+  api("/api/feeds").then((r) => { $("ds-list").replaceChildren(); r.feeds.forEach(render); }).catch(() => { $("ds-list").replaceChildren(el("li", { class: "muted", text: "Unavailable" })); });
+  if (window.EventSource) {
+    const es = new EventSource((window.OrderTool.apiBase || "") + "/api/benchmarks/events", { withCredentials: Boolean(window.OrderTool.apiBase) });
+    es.addEventListener("feeds", (e) => { try { render(JSON.parse(e.data)); } catch { /* ignore */ } });
+  }
+  setInterval(() => { for (const f of feedMap.values()) render(f); }, 60000); // keep "x min ago" current
 })();

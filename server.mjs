@@ -10,7 +10,8 @@ import { createStore } from "./lib/store.mjs";
 import { ORDER_LINES, MEASURE, isMeasureOrderNumber, quarterFor } from "./lib/steel-measure.mjs";
 import { parseTariffQuotas, toCalcRow, mergeDefinitions, buildLines } from "./lib/quota-feed.mjs";
 import { SEED_PRODUCTS, validateProduct, stockMetrics, parseProductTable } from "./lib/products.mjs";
-import { quotaHistory } from "./lib/quota-history.mjs";
+import { quotaHistory, lineProfile } from "./lib/quota-history.mjs";
+import { createFeedManager } from "./lib/feeds.mjs";
 import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS, UK_CBAM } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
@@ -279,10 +280,10 @@ async function fetchHeadingCommodities(heading) {
     }));
 }
 
-async function getSteelCommodities() {
+async function getSteelCommodities({ force = false } = {}) {
   const now = Date.now();
 
-  if (caches.commodities.payload && caches.commodities.expiresAt > now) {
+  if (!force && caches.commodities.payload && caches.commodities.expiresAt > now) {
     return caches.commodities.payload;
   }
 
@@ -392,10 +393,10 @@ function findCategoryIds(commodityCodes, categories) {
     .map((category) => category.id);
 }
 
-async function getSteelQuotaRows() {
+async function getSteelQuotaRows({ force = false } = {}) {
   const now = Date.now();
 
-  if (caches.quotas.payload && caches.quotas.expiresAt > now) {
+  if (!force && caches.quotas.payload && caches.quotas.expiresAt > now) {
     return caches.quotas.payload;
   }
 
@@ -780,8 +781,27 @@ async function steelQuotaHistory() {
   const tm = await loadTradeMeasure();
   const h = quotaHistory(dbt.rows, live.lines, asOf);
   const names = new Map(tm.categories.map((c) => [c.id, c.name]));
-  return { ok: true, ...h, source: { name: "DBT UK trade quotas dataset", url: dbt.sourceUrl, fetchedAt: dbt.liveFetchedAt }, liveFetchedAt: live.fetchedAt,
-    lines: h.lines.map((l) => ({ ...l, categoryName: names.get(l.categoryId) || `Category ${l.categoryId}` })) };
+  const { byLine, ...rest } = h;
+  return { ok: true, ...rest, source: { name: "DBT UK trade quotas dataset", url: dbt.sourceUrl, fetchedAt: dbt.liveFetchedAt }, liveFetchedAt: live.fetchedAt,
+    lines: h.lines.map((l) => ({ ...l, categoryName: names.get(l.categoryId) || `Category ${l.categoryId}` })), periods: byLine };
+}
+
+// One quota line in full: analysis, every past quarter, and what it means for you.
+async function quotaLineProfile(orderNumber) {
+  const h = await steelQuotaHistory();
+  const line = h.lines.find((l) => l.orderNumber === orderNumber);
+  if (!line) return null;
+  const live = (await getMeasureQuotas()).lines.find((l) => l.orderNumber === orderNumber) || null;
+  const products = (await Promise.all((await productStore.list()).filter((p) => p.status !== "archived").map(productView))).filter((p) => p.steelCategory && p.steelCategory.id === line.categoryId);
+  const named = ORDER_LINES.filter((l) => l.categoryId === line.categoryId && !l.residual).map((l) => l.origin);
+  const EU = ["France", "Germany", "Italy", "Spain", "Netherlands", "Belgium", "Poland", "Portugal", "Austria", "Czechia", "Sweden", "Finland", "Ireland", "Greece", "Romania", "Slovakia", "Slovenia", "Hungary", "Luxembourg", "Denmark", "Croatia", "Bulgaria", "Lithuania", "Latvia", "Estonia", "Cyprus", "Malta"];
+  const lineOrigin = (o) => { if (!o || o === "UK") return null; const x = EU.includes(o) ? "European Union" : o === "Korea" ? "South Korea" : o; return named.includes(x) ? x : "Residual"; };
+  const groups = new Set(products.map((p) => p.category));
+  const suppliers = (await supplierStore.list()).filter((s) => s.status !== "archived" && lineOrigin(s.origin) === line.origin && (s.supplies || []).some((g) => groups.has(g)))
+    .map((s) => ({ id: s.id, name: s.name, origin: s.origin }));
+  const scenarios = (await store.list()).map(summarise).filter((x) => x.quotaOrderNumber === orderNumber)
+    .map((x) => ({ id: x.id, title: x.title, tonnage: x.tonnage, importDate: x.importDate, status: x.status, afterSafe: Boolean(line.outlook && line.outlook.safeUntil && x.importDate > line.outlook.safeUntil) }));
+  return { ok: true, asOf: h.asOf, source: h.source, line: lineProfile(line, h.periods.get(orderNumber) || []), live, products: products.map((p) => ({ id: p.id, name: p.name })), suppliers, scenarios };
 }
 
 async function getMeasureQuotas({ force = false } = {}) {
@@ -2752,7 +2772,7 @@ function stopAis() {
 function openAisSocket(sub, label) {
   const ws = new WebSocket(ARR.AIS_URL);
   ws.binaryType = "arraybuffer";
-  ws.onopen = () => { ws.send(JSON.stringify(sub)); if (label === "area") { ais.connected = true; ais.error = null; aisBackoff = 30_000; } else ais.tracked = true; };
+  ws.onopen = () => { ws.send(JSON.stringify(sub)); if (label === "area") { ais.connected = true; ais.error = null; aisBackoff = 30_000; feeds.report("ais", { connected: true }); } else ais.tracked = true; };
   ws.onmessage = (ev) => {
     try {
       const text = typeof ev.data === "string" ? ev.data : new TextDecoder().decode(ev.data);
@@ -2765,6 +2785,7 @@ function openAisSocket(sub, label) {
   ws.onclose = (ev) => {
     if (label === "area") ais.connected = false; else ais.tracked = false;
     if (ev && ev.code === 1008) ais.error = "aisstream.io refused the key";
+    if (label === "area") feeds.report("ais", { connected: false, lastError: ais.error || "Connection closed, reconnecting", lastErrorAt: new Date().toISOString() });
     clearTimeout(aisRetry);
     aisRetry = setTimeout(() => startAis().catch(() => {}), aisBackoff);
     aisBackoff = Math.min(aisBackoff * 2, 10 * 60_000);
@@ -2783,6 +2804,49 @@ async function startAis() {
   if (mmsis.length) setTimeout(() => openAisSocket(ARR.trackedSubscription(key, mmsis), "tracked"), 1500);
 }
 setInterval(() => saveArrivals().catch(() => {}), 60_000).unref?.();
+
+// ------------------------------------------------------------ data sources on a constant feed
+const H = 3_600_000, M = 60_000;
+const feedOk = (detail) => ({ ok: true, detail });
+const feedList = [
+  { key: "hmrc-quotas", name: "HMRC quota balances", source: "HMRC Trade Tariff API", url: "https://www.trade-tariff.service.gov.uk/quota_search", what: "Live balance of all 72 steel quota lines", intervalMs: 30 * M, firstDelayMs: 4_000,
+    run: async () => { const q = await getMeasureQuotas({ force: true }); broadcast("quotas", {}); return feedOk(`${q.lines.filter((l) => l.found).length} lines`); } },
+  { key: "dbt-quotas", name: "Quota history", source: "DBT UK trade quotas dataset", url: quotaCsvUrl, what: "Every quota quarter since 2021; fallback balances", intervalMs: 6 * H, firstDelayMs: 6_000,
+    run: async () => { const d = await getSteelQuotaRows({ force: true }); return feedOk(`${d.rows.length} steel quota periods`); } },
+  { key: "ons", name: "ONS steel price indices", source: "Office for National Statistics", url: "https://www.ons.gov.uk/economy/inflationandpriceindices", what: "UK domestic and imported steel price indices (forecast base)", intervalMs: 12 * H, firstDelayMs: 8_000,
+    run: async () => { const r = await runLive("ONS", { force: true }); return r.ok ? feedOk(`${r.added || 0} new values`) : r; } },
+  { key: "lme", name: "LME steel prices", source: "Metals-API", url: "https://metals-api.com", what: "Daily LME rebar and scrap prices", intervalMs: 24 * H, firstDelayMs: 10_000, needs: "Metals-API key",
+    run: async () => { if (!(await metalsKey())) return { off: true, detail: "Add a Metals-API key" }; const r = await runLive("LME", { force: true }); return r.ok ? feedOk(`${r.added || 0} new values`) : r; } },
+  { key: "fx", name: "Exchange rates", source: "Frankfurter (ECB rates)", url: "https://frankfurter.dev", what: "EUR and USD to GBP for quotes", intervalMs: 6 * H, firstDelayMs: 12_000,
+    run: async () => { fxCache.clear(); const [eur, usd] = await Promise.all([getFx("EUR"), getFx("USD")]); if (!eur || !usd) throw new Error("No rate returned"); return feedOk(`EUR ${eur.rate.toFixed(4)} · USD ${usd.rate.toFixed(4)}`); } },
+  { key: "news", name: "GOV.UK steel news", source: "GOV.UK Atom feeds", url: "https://www.gov.uk/search/news-and-communications", what: "Trade, tariff and carbon announcements", intervalMs: 6 * H, firstDelayMs: 14_000,
+    run: async () => { const r = await refreshNews({ force: true }); if (r.errors && r.errors.length >= NEWS.NEWS_FEEDS.length) throw new Error(r.errors[0]); return feedOk(`${r.items.length} items${r.added ? ` · ${r.added} new` : ""}`); } },
+  { key: "hmrc-trade", name: "HMRC importers & trade", source: "HMRC uktradeinfo", url: "https://www.uktradeinfo.com", what: "Monthly importer lists and import volumes (competition, arrivals)", intervalMs: 24 * H, firstDelayMs: 20_000,
+    run: async () => { const d = await getCompData(); if (!Object.keys(d.importerMonths).length) return { off: true, detail: "Load HMRC history once on Competition" }; if (!compSync.running) await syncCompetition({ months: 3 }); return feedOk(`${Object.keys(d.importerMonths).length} months`); } },
+  { key: "companies-house", name: "Competitor accounts", source: "Companies House API", url: "https://developer.company-information.service.gov.uk", what: "Stock and turnover from filed accounts", intervalMs: 24 * H, firstDelayMs: 30_000, needs: "Companies House key",
+    run: async () => {
+      if (!(await chKey())) return { off: true, detail: "Add a Companies House key" };
+      const list = (await competitorStore.list()).filter((c) => c.companyNumber);
+      let n = 0;
+      for (const c of list) { try { const a = await chAccounts(c.companyNumber); await competitorStore.update(c.id, (x) => { x.accounts = a; }, "feed", "accounts refreshed"); n++; } catch { /* next */ } } // eslint-disable-line no-await-in-loop
+      if (list.length && !n) throw new Error("No accounts could be fetched");
+      if (n) broadcast("competition", {});
+      return feedOk(`${n} of ${list.length} competitors`);
+    } },
+  { key: "ais", name: "Ship tracking", source: "aisstream.io (AIS)", url: "https://aisstream.io", what: "Live ship positions to UK steel ports", intervalMs: 2 * M, firstDelayMs: 25_000, stream: true, needs: "aisstream.io key",
+    run: async () => {
+      if (!(await aisKey())) return { off: true, detail: "Add an aisstream.io key" };
+      const silent = ais.connected && ais.lastMessage && Date.now() - Date.parse(ais.lastMessage) > 15 * M;
+      if (!ais.connected || silent) await startAis(); // reconnect if dropped or gone quiet
+      if (ais.error && !ais.connected) throw new Error(ais.error);
+      return { ok: true, connected: ais.connected, detail: `${Object.keys(ais.vessels).length} ships · ${ais.messages || 0} messages` };
+    } },
+  { key: "tariff-codes", name: "Commodity codes", source: "HMRC Trade Tariff API", url: "https://www.trade-tariff.service.gov.uk", what: "Steel commodity codes (chapters 72–73)", intervalMs: 24 * H, firstDelayMs: 40_000,
+    run: async () => { const c = await getSteelCommodities({ force: true }); return feedOk(`${(c.commodities || []).length} codes`); } },
+  ...FEED_SOURCES.map((src) => ({ key: `prices-${src.toLowerCase()}`, name: `${src} prices`, source: src, what: `${src} price feed (your subscription)`, intervalMs: 6 * H, firstDelayMs: 45_000, needs: `${src} feed URL in .env`,
+    run: async () => { const cfg = feedConfig()[src]; if (!cfg || !cfg.configured) return { off: true, detail: "Not connected (or import files on Market prices)" }; const r = await runFeed(src); return r.ok ? feedOk(`${r.added || 0} new prices`) : r; } })),
+];
+const feeds = createFeedManager({ feeds: feedList, onChange: (v) => broadcast("feeds", v), log: (m) => console.log(`[feed] ${m}`) });
 
 function matchVessel(sh) {
   const vs = Object.values(ais.vessels);
@@ -3161,6 +3225,13 @@ async function handleBenchmarkApi(request, response, url) {
 
 async function handleSettingsApi(request, response, url) {
   const user = currentUser(request) || { name: "unknown", role: "viewer" };
+  if (url.pathname === "/api/feeds" && request.method === "GET") return sendJson(response, 200, { feeds: feeds.list(), now: new Date().toISOString() });
+  const fm = url.pathname.match(/^\/api\/feeds\/([a-z0-9-]+)\/refresh$/);
+  if (fm && request.method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot refresh data sources.");
+    if (!feeds.get(fm[1])) return sendError(response, 404, "No such data source");
+    return sendJson(response, 200, await feeds.run(fm[1], { manual: true }));
+  }
   if (url.pathname === "/api/settings" && request.method === "GET") {
     return sendJson(response, 200, { settings: publicSettings(await settingsStore.get()), catalogueGroups: CATALOGUE_GROUPS, canEdit: can(user, "edit"), metalsKeyFromEnv: Boolean(process.env.METALS_API_KEY) });
   }
@@ -3259,6 +3330,11 @@ async function handleScenarioApi(request, response, url) {
   const method = request.method;
   const path = url.pathname;
 
+  const qm = path.match(/^\/api\/steel-quotas\/line\/(\d{6})$/);
+  if (qm && method === "GET") {
+    try { const r = await quotaLineProfile(qm[1]); return r ? sendJson(response, 200, r) : sendError(response, 404, "No such quota line"); }
+    catch (error) { return sendJson(response, 502, { ok: false, error: `Quota data unavailable: ${error.message}` }); }
+  }
   if (path === "/api/steel-quotas/history" && method === "GET") {
     try { sendJson(response, 200, await steelQuotaHistory()); }
     catch (error) { sendJson(response, 502, { ok: false, error: `Quota history unavailable: ${error.message}` }); }
@@ -3502,12 +3578,12 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    if (url.pathname === "/api/settings" || url.pathname === "/api/backup") {
+    if (url.pathname === "/api/settings" || url.pathname === "/api/backup" || url.pathname.startsWith("/api/feeds")) {
       await handleSettingsApi(request, response, url);
       return;
     }
 
-    if (url.pathname.startsWith("/api/scenarios") || ["/api/calculate", "/api/me", "/api/options", "/api/data-status", "/api/sample-data", "/api/health", "/api/steel-quotas/live", "/api/steel-quotas/history", "/api/tariff-auth-check"].includes(url.pathname)) {
+    if (url.pathname.startsWith("/api/scenarios") || url.pathname.startsWith("/api/steel-quotas/line/") || ["/api/calculate", "/api/me", "/api/options", "/api/data-status", "/api/sample-data", "/api/health", "/api/steel-quotas/live", "/api/steel-quotas/history", "/api/tariff-auth-check"].includes(url.pathname)) {
       await handleScenarioApi(request, response, url);
       return;
     }
@@ -3541,8 +3617,7 @@ server.on("error", (error) => {
   throw error;
 });
 
-scheduleFeeds();
-scheduleLive();
+feeds.start();
 startAis().catch((error) => console.error("Ship tracking failed to start:", error.message));
 setTimeout(() => retireDemoScenarios().catch((error) => console.error("Replacing demo scenarios failed:", error.message)), 5_000).unref?.();
 applySupplierSheet().catch((error) => console.error("Supplier sheet update failed:", error.message));

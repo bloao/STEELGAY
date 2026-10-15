@@ -75,7 +75,7 @@
       const mine = exposure.get(l.orderNumber);
       rows.push(el("tr", {},
         el("td", {},
-          el("a", { href: `https://www.trade-tariff.service.gov.uk/quota_search?order_number=${l.orderNumber}`, target: "_blank", rel: "noopener", style: "font-weight:600;font-variant-numeric:tabular-nums", text: l.orderNumber }),
+          el("a", { href: `quota.html?order=${l.orderNumber}`, style: "font-weight:600;font-variant-numeric:tabular-nums", text: l.orderNumber }),
           l.source === "dbt" ? el("span", { class: "src", title: "From the DBT daily dataset", text: "daily" }) : null),
         el("td", {}, el("span", { class: "badge badge-info", text: l.categoryId }), grouped ? null : el("div", { class: "row-sub", text: l.categoryName })),
         el("td", {}, l.residual ? el("span", { title: "Every origin not named for this category" }, "Residual", el("div", { class: "row-sub", text: "all other origins" })) : l.origin),
