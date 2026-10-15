@@ -1,316 +1,194 @@
+// Plan an order: pick the products, the planner sizes each line from demand,
+// meets every supplier's minimum load, and ranks single-supplier and split
+// scenarios with the full supplier cost model.
 (function () {
   "use strict";
   const { api, fmt, el, toast, loadMe } = window.OrderTool;
   const $ = (id) => document.getElementById(id);
   let me = { canEdit: true };
   let products = [];
+  let picked = new Set();
+  const qty = {}; // productId → tonnes typed by the user
   let plan = null;
-  let chosen = null; // supplier id picked for saving (defaults to the recommendation)
-  let chosenByUser = false; // a supplier picked in the table overrides a recommended split
+  let chosen = 0; // index of the scenario shown
   let appetite = "balanced";
-  let timer = null;
-  let seq = 0;
+  let timer = null, seq = 0;
 
   const readCbam = () => { try { return localStorage.getItem("agx-cbam") === "on"; } catch { return false; } };
-  const gbpT = (v) => (Number.isFinite(v) ? `£${Math.round(v).toLocaleString("en-GB")}/t` : "—");
   const gbp = (v) => (Number.isFinite(v) ? `£${Math.round(v).toLocaleString("en-GB")}` : "—");
-  const pct = (v) => (Number.isFinite(v) ? `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}%` : "—");
-  const per = (p) => new Date(Date.UTC(Number(p.slice(0, 4)), Number(p.slice(4, 6)) - 1, 1)).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
-  const TIMING = { "order-now": "is-go", "buy-ahead": "is-watch", wait: "is-maybe" };
-  const RISK = { critical: ["Close to running out", "is-risk"], high: ["Filling fast", "is-maybe"], medium: ["Watch", "is-maybe"], low: ["Plenty left", "is-go"] };
-
-  // ---------------------------------------------------------------- form
+  const t1 = (v) => (Number.isFinite(v) ? `${Math.round(v * 10) / 10} t` : "—");
+  const dmy = (iso) => (iso ? fmt.date(iso) : "—");
   const NEEDS = ["critical", "reorder", "low"];
-  const STATUS = { critical: ["Order now", "is-risk"], reorder: ["Order now", "is-risk"], low: ["Order soon", "is-maybe"], ok: ["Stock OK", "is-go"], "no-usage": ["No usage set", ""] };
+  const STATUS = { critical: ["Order now", "is-risk"], reorder: ["Order now", "is-risk"], low: ["Order soon", "is-maybe"], ok: ["Stock OK", "is-go"], "no-usage": ["No usage", ""] };
   const APPROACHES = [["cashflow", "Cash flow"], ["speed", "Speed"], ["balanced", "Balanced"]];
-  const profileOf = (k) => (plan && plan.assumptions && plan.assumptions.approaches ? plan.assumptions.approaches[k] : null);
-  const weightOf = (k) => { const p = profileOf(k); return p ? p.quotaWeightPct : 25; };
+  const COLORS = ["#2a78d6", "#4f9a8f", "#6250d6", "#c2862a", "#c4553a", "#5b7083", "#8a5bb0", "#3f8f4f"];
+  const colorOf = (pid) => COLORS[Math.max(0, products.findIndex((p) => p.id === pid)) % COLORS.length];
 
-  function fillProducts() {
-    const keep = $("pf-product").value;
-    const need = products.filter((p) => NEEDS.includes(p.status));
-    const rest = products.filter((p) => !NEEDS.includes(p.status));
-    const opt = (p) => el("option", { value: p.id, text: p.name });
-    $("pf-product").replaceChildren(
-      ...(need.length ? [el("optgroup", { label: "Needs ordering" }, ...need.map(opt))] : []),
-      ...(rest.length ? [el("optgroup", { label: need.length ? "Other products" : "Products" }, ...rest.map(opt))] : []));
-    if (keep) $("pf-product").value = keep;
-  }
+  // ---------------------------------------------------------------- settings bar
   function fillForm() {
     $("pf-appetite").replaceChildren(...APPROACHES.map(([k, l]) => el("button", { type: "button", role: "radio", "aria-checked": String(appetite === k), "aria-pressed": String(appetite === k), tabindex: appetite === k ? "0" : "-1", text: l,
       onclick: () => { appetite = k; fillForm(); run(); },
       onkeydown: (e) => { if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return; e.preventDefault(); const i = APPROACHES.findIndex((x) => x[0] === appetite); appetite = APPROACHES[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3][0]; fillForm(); $("pf-appetite").querySelector('[aria-checked="true"]').focus(); run(); } })));
-    const w = weightOf(appetite);
-    $("pf-appetite-hint").textContent = w ? `Counts ${w}% of the quota-miss cost` : "Expected cost only, ignores quota risk";
     const on = readCbam(), sw = $("pf-cbam");
     sw.classList.toggle("is-on", on); sw.setAttribute("aria-checked", String(on));
     sw.querySelector(".pf-switch-text").textContent = on ? "Included" : "Not included";
-    $("pf-cbam-hint").textContent = on ? "Priced as if already in force" : "Charges imports from 1 Jan 2027";
   }
-  function fillHints(r) {
-    const p = products.find((x) => x.id === r.product.id) || r.product;
-    const [label, cls] = STATUS[r.product.status] || [r.product.status, ""];
-    $("pf-product-hint").replaceChildren(el("span", { class: `pf-dot ${cls}`, "aria-hidden": "true" }), `${label}${r.product.coverMonths !== null ? ` · ${r.product.coverMonths.toFixed(1)} months of cover` : ""}`);
-    const sug = r.product.needT ?? r.product.suggestedOrderT;
-    $("pf-tonnes-hint").replaceChildren(sug && Number(sug) !== Number(r.inputs.tonnage)
-      ? el("button", { type: "button", class: "pf-hint-btn", text: `Use suggested ${sug} t`, onclick: () => { $("pf-tonnes").value = sug; run(); } })
-      : sug ? "Suggested quantity" : `Uses ${p.monthlyUsageT ?? r.product.monthlyUsageT} t a month`);
-    $("pf-needby-hint").textContent = r.product.stockOutDate ? `Runs out ${fmt.date(r.product.stockOutDate)}` : "No run-out date";
-  }
-  function schedule() { clearTimeout(timer); timer = setTimeout(run, 350); }
 
-  async function run({ keepInputs = true } = {}) {
-    const id = $("pf-product").value;
-    if (!id) return;
-    const mine = ++seq;
-    $("plan").classList.add("is-loading");
-    const body = { productId: id, appetite, cbam: readCbam() };
-    if (keepInputs && $("pf-tonnes").value) body.tonnage = Number($("pf-tonnes").value);
-    if (keepInputs && $("pf-needby").value) body.needBy = $("pf-needby").value;
+  // ---------------------------------------------------------------- product picker
+  function needOf(p) { return Number(qty[p.id]) > 0 ? Number(qty[p.id]) : p.needT > 0 ? p.needT : Math.max(1, Math.ceil(p.usage || 1)); }
+  function renderPicker() {
+    const order = [...products].sort((a, b) => Number(!NEEDS.includes(a.status)) - Number(!NEEDS.includes(b.status)) || (a.coverMonths ?? 99) - (b.coverMonths ?? 99));
+    $("bk-list").replaceChildren(...order.map((p) => {
+      const on = picked.has(p.id);
+      const [label, cls] = STATUS[p.status] || [p.status, ""];
+      const input = el("input", { type: "number", min: "0.1", step: "0.1", inputmode: "decimal", class: "bk-qty-in", value: String(needOf(p)), disabled: on ? null : "", "aria-label": `${p.name} tonnes`,
+        oninput: (e) => { qty[p.id] = e.target.value; total(); schedule(); } });
+      return el("li", { class: `bk-row${on ? " is-on" : ""}`, style: `--c:${colorOf(p.id)}` },
+        el("label", { class: "bk-check" },
+          el("input", { type: "checkbox", checked: on ? "" : null, onchange: (e) => { if (e.target.checked) picked.add(p.id); else picked.delete(p.id); renderPicker(); run(); } }),
+          el("span", { class: "bk-swatch", "aria-hidden": "true" }),
+          el("span", { class: "bk-name" }, el("strong", { text: p.name }), el("span", { class: "bk-meta" }, el("span", { class: `sig ${cls}`, text: label }), `${t1(p.stockT)} · ${p.coverMonths !== null && p.coverMonths !== undefined ? `${p.coverMonths.toFixed(1)} mo` : "—"}`))),
+        el("span", { class: "bk-qty" }, input, el("span", { text: "t" })));
+    }));
+    total();
+  }
+  function total() {
+    const sel = products.filter((p) => picked.has(p.id));
+    $("bk-total").replaceChildren(el("span", { text: `${sel.length} product${sel.length === 1 ? "" : "s"}` }), el("strong", { text: t1(sel.reduce((n, p) => n + needOf(p), 0)) }));
+  }
+  document.querySelector(".bk-quick").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-pick]"); if (!b) return;
+    picked = new Set(b.dataset.pick === "all" ? products.map((p) => p.id) : b.dataset.pick === "need" ? products.filter((p) => NEEDS.includes(p.status)).map((p) => p.id) : []);
+    renderPicker(); run();
+  });
+
+  // ---------------------------------------------------------------- run
+  function schedule() { clearTimeout(timer); timer = setTimeout(run, 400); }
+  async function run() {
+    const my = ++seq;
+    if (!picked.size) { plan = null; $("plan").replaceChildren(el("div", { class: "card bk-empty" }, el("p", { class: "muted", text: "Pick the products to order" }))); return; }
+    $("plan").classList.add("is-busy");
     try {
-      const r = await api("/api/orders/plan", { method: "POST", body });
-      if (mine !== seq) return;
-      plan = r;
-      if (!r.ok) { $("plan").replaceChildren(el("p", { class: "muted", text: r.error })); return; }
-      // keep a supplier you picked, unless it can no longer price this order
-      if (!keepInputs || !chosen || !r.options.some((o) => o.id === chosen)) { chosen = r.recommendation.ok ? r.recommendation.best.id : null; chosenByUser = false; }
-      if (document.activeElement !== $("pf-tonnes")) $("pf-tonnes").value = r.inputs.tonnage;
-      $("pf-needby").value = r.inputs.needBy;
-      fillHints(r);
-      fillForm();
-      history.replaceState(null, "", `plan.html?product=${id}`);
-      renderAssumptions(r);
-      render();
+      const quantities = {};
+      for (const p of products) if (picked.has(p.id)) quantities[p.id] = needOf(p);
+      const r = await api("/api/orders/basket", { method: "POST", body: { productIds: [...picked], quantities, appetite, cbam: readCbam() } });
+      if (my !== seq) return;
+      plan = r; chosen = 0;
+      renderAssumptions(r); render();
     } catch (error) {
-      $("plan").replaceChildren(el("p", { class: "muted", text: `Couldn't plan this order: ${error.message}` }));
-    } finally { $("plan").classList.remove("is-loading"); }
+      if (my === seq) $("plan").replaceChildren(el("p", { class: "muted", text: `Couldn't plan this order: ${error.message}` }));
+    } finally { if (my === seq) $("plan").classList.remove("is-busy"); }
   }
 
-  // ---------------------------------------------------------------- assumptions (edited on their own page)
   function renderAssumptions(r) {
-    const a = r.assumptions;
-    if (!a) return;
-    const v = a.values;
-    const box = $("asm-strip");
-    box.replaceChildren(
+    const a = r.assumptions; if (!a) return;
+    const v = a.values, p = (a.approaches || {})[r.appetite] || {};
+    $("asm-strip").replaceChildren(
       el("span", { class: "asm-strip-label", text: "Assumptions" }),
-      el("span", { class: "asm-strip-ap", text: (APPROACHES.find((x) => x[0] === r.inputs.appetite) || APPROACHES[2])[1] }),
-      ...(() => { const p = profileOf(r.inputs.appetite) || {}; return [
-        el("span", { text: `Buy ahead at +${p.buyAheadTriggerPct}%` }),
-        el("span", { text: `Hold off at −${p.waitTriggerPct}%` }),
-        r.inputs.appetite === "cashflow" ? el("span", { text: `Cash ${p.cashRatePct}%/yr` }) : null,
-        r.inputs.appetite === "speed" ? el("span", { text: `Lead ${p.leadDayPct}%/day` }) : null,
-        el("span", { text: `Quota ${p.quotaWeightPct}%` })].filter(Boolean); })(),
-      el("span", { text: `Capital ${v.costOfCapitalPct}%` }),
-      el("span", { text: `Storage £${v.forecastStoragePerTMonth}/t a month` }),
+      el("span", { class: "asm-strip-ap", text: (APPROACHES.find((x) => x[0] === r.appetite) || APPROACHES[2])[1] }),
+      ...[p.quotaWeightPct !== undefined ? `Quota ${p.quotaWeightPct}%` : null, r.appetite === "cashflow" && p.cashRatePct !== undefined ? `Cash ${p.cashRatePct}%/yr` : null, r.appetite === "speed" && p.leadDayPct !== undefined ? `Lead ${p.leadDayPct}%/day` : null,
+        `Capital ${v.costOfCapitalPct}%`, `Storage £${v.forecastStoragePerTMonth}/t a month`, v.splitOrderCost ? `Second supplier £${v.splitOrderCost}` : null].filter(Boolean).map((t) => el("span", { text: t })),
       el("a", { href: "assumptions.html", class: "asm-strip-edit", text: "Edit" }));
-    box.hidden = false;
+    $("asm-strip").hidden = false;
   }
 
-  // ---------------------------------------------------------------- render
+  // ---------------------------------------------------------------- results
+  function loadBar(part) {
+    const cap = part.moqMaxT ? part.moqMaxT * part.loads : Math.max(part.totalT, part.moqMinT || 0);
+    const scale = Math.max(cap, part.totalT) || 1;
+    const minAt = part.moqMinT ? (part.moqMaxT && part.loads > 1 ? (part.loads - 1) * part.moqMaxT + part.moqMinT : part.moqMinT) : null;
+    return el("div", { class: "pkg-bar bk-bar-load", role: "img", "aria-label": `${t1(part.totalT)}${part.moqMinT ? `, minimum ${part.moqMinT} t` : ""}` },
+      ...part.lines.flatMap((l) => [
+        el("span", { class: "pkg-seg", style: `width:${(l.needT / scale) * 100}%;--c:${colorOf(l.productId)}`, title: `${l.name} · need ${t1(l.needT)}` }),
+        l.extraT > 0 ? el("span", { class: "pkg-seg is-fwd", style: `width:${(l.extraT / scale) * 100}%;--c:${colorOf(l.productId)}`, title: `${l.name} · +${t1(l.extraT)} to meet the minimum` }) : null]).filter(Boolean),
+      minAt ? el("i", { class: "pkg-min", style: `left:${Math.min(100, (minAt / scale) * 100)}%`, title: `Minimum ${part.moqMinT} t` }) : null,
+      ...(part.moqMaxT && part.loads > 1 ? Array.from({ length: part.loads - 1 }, (_, i) => el("i", { class: "pkg-load", style: `left:${(((i + 1) * part.moqMaxT) / scale) * 100}%` })) : []));
+  }
+
+  function partBlock(part) {
+    const tags = [part.origin && part.origin !== "UK" ? part.origin : "UK", part.origin && part.origin !== "UK" ? (part.ddp === "yes" ? "DDP" : part.ddp === "no" ? "No DDP" : null) : null, Number.isFinite(part.paymentDays) ? `${part.paymentDays} days` : null, Number.isFinite(part.onTimePct) ? `${part.onTimePct}% on time` : null].filter(Boolean);
+    return el("div", { class: "bk-part" },
+      el("div", { class: "bk-part-head" },
+        el("div", {}, el("strong", { class: "bk-part-name", text: part.supplier }), el("span", { class: "bk-part-tags", text: tags.join(" · ") })),
+        el("div", { class: "bk-part-load" }, el("strong", { text: t1(part.totalT) }), el("span", { text: part.loads > 1 ? `${part.loads} × ${part.moqMaxT} t` : part.moqMinT ? `min ${part.moqMinT}${part.moqMaxT && part.moqMaxT !== part.moqMinT ? `–${part.moqMaxT}` : ""} t` : "no minimum" }))),
+      loadBar(part),
+      el("table", { class: "bk-lines" },
+        el("thead", {}, el("tr", {}, ...["Product", "Need", "Buy", "Landed", "Arrives"].map((h, i) => el("th", { class: i ? "num" : "", text: h })))),
+        el("tbody", {}, ...part.lines.map((l) => el("tr", {},
+          el("td", {}, el("span", { class: "bk-dot", style: `--c:${colorOf(l.productId)}` }), l.name),
+          el("td", { class: "num", text: t1(l.needT) }),
+          el("td", { class: "num" }, el("strong", { text: t1(l.tonnes) }), l.extraT > 0 ? el("span", { class: "bk-extra", text: ` +${t1(l.extraT)}` }) : null),
+          el("td", { class: "num", text: `£${l.perT}/t` }),
+          el("td", { class: `num${l.lateDays ? " is-bad" : ""}`, text: l.arrival ? `${dmy(l.arrival)}${l.lateDays ? ` · ${l.lateDays}d late` : ""}` : "—" }))))));
+  }
+
+  function hero(s, i) {
+    const title = s.kind === "single" ? `One load from ${s.parts[0].supplier}` : `Split: ${s.parts.map((p) => p.supplier).join(" + ")}`;
+    const fig = (k, v, cls) => el("div", { class: "bk-fig" }, el("span", { text: k }), el("strong", { class: cls || "", text: v }));
+    return el("section", { class: "card bk-hero" },
+      el("div", { class: "bk-hero-top" },
+        el("span", { class: `sig ${i === 0 ? "is-go" : ""}`, text: i === 0 ? "Best scenario" : `Scenario ${i + 1}` }),
+        el("h2", { text: title })),
+      el("div", { class: "bk-figs" },
+        fig("Order total", gbp(s.landed)),
+        fig("Per tonne", `£${s.perT}`),
+        fig("Real £/t", `£${s.scorePerT}`),
+        fig("Extra stock", s.extraT > 0 ? `+${t1(s.extraT)}` : "None"),
+        fig("Quota risk", s.risk > 0 ? gbp(s.risk) : "None", s.risk > 0 ? "is-warn" : ""),
+        fig("Arrives", s.arrival ? dmy(s.arrival).replace(/ \d{4}$/, "") : "—", s.lateDays ? "is-bad" : "")),
+      ...s.parts.map(partBlock),
+      s.warnings.length ? el("ul", { class: "bk-warn" }, ...s.warnings.slice(0, 4).map((w) => el("li", { text: w }))) : null,
+      me.canEdit ? el("div", { class: "bk-actions" }, el("button", { type: "button", class: "btn btn-primary", id: "bk-save", text: `Save ${s.parts.reduce((n, p) => n + p.lines.length, 0)} orders${s.parts.length > 1 ? ` · ${s.parts.length} loads` : " · one load"}`, onclick: () => save(s) })) : null);
+  }
+
+  function table(r) {
+    return el("section", { class: "card bk-scen" },
+      el("h2", { text: "Scenarios" }),
+      el("div", { class: "table-scroll" }, el("table", { class: "bk-table" },
+        el("thead", {}, el("tr", {}, ...["", "Suppliers", "Load", "Extra", "Total", "Real £/t", "Arrives"].map((h, i) => el("th", { class: i > 1 ? "num" : "", text: h })))),
+        el("tbody", {}, ...r.scenarios.map((s, i) => el("tr", { class: `bk-srow${i === chosen ? " is-on" : ""}`, tabindex: "0", style: `--d:${i * 35}ms`,
+          onclick: () => { chosen = i; render(); }, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chosen = i; render(); } } },
+          el("td", {}, el("span", { class: "bk-rank", text: String(i + 1) })),
+          el("td", {}, el("strong", { text: s.parts.map((p) => p.supplier).join(" + ") }), el("div", { class: "row-sub", text: s.parts.map((p) => `${t1(p.totalT)}`).join(" + ") })),
+          el("td", { class: "num", text: t1(s.totalT) }),
+          el("td", { class: `num${s.extraT > 0 ? " is-warn" : ""}`, text: s.extraT > 0 ? `+${t1(s.extraT)}` : "—" }),
+          el("td", { class: "num", text: gbp(s.landed) }),
+          el("td", { class: "num" }, el("strong", { text: `£${s.scorePerT}` })),
+          el("td", { class: `num${s.lateDays ? " is-bad" : ""}`, text: dmy(s.arrival) })))))));
+  }
+
   function render() {
-    const r = plan, rec = r.recommendation;
-    if (!rec.ok) {
-      $("plan").replaceChildren(el("div", { class: "empty-state" }, el("h3", { text: "No supplier prices for this product" }), el("p", {}, rec.reason, " ", el("a", { href: "suppliers.html", text: "Open Suppliers →" }))));
-      return;
-    }
-    $("plan").replaceChildren(hero(r, rec), splitCard(r, rec), el("div", { class: "plan-grid" }, stockCard(r), priceCard(r), compCard(r), quotaCard(r), holdCard(r), intelCard(r)), optionsCard(r, rec));
+    const r = plan;
+    if (!r) return;
+    if (!r.scenarios.length) { $("plan").replaceChildren(el("div", { class: "card bk-empty" }, el("p", { class: "muted", text: r.uncovered.length ? `No supplier can price ${r.uncovered.join(", ")} yet` : "No supplier can price these products yet" }))); return; }
+    const s = r.scenarios[chosen] || r.scenarios[0];
+    $("plan").replaceChildren(...[
+      hero(s, chosen),
+      r.uncovered.length ? el("p", { class: "bk-miss", text: `No supplier quote for ${r.uncovered.join(", ")}` }) : null,
+      table(r)].filter(Boolean));
   }
 
-  const splitWins = (r, rec) => (r.split && r.split.better && !(rec.timing && rec.timing.extraTonnes) ? r.split.better : null);
-  const splitName = (sp) => sp.parts.map((p) => `${p.tonnes} t ${p.name}`).join(" + ");
-
-  function splitHero(r, rec, sp) {
-    const t = rec.timing, total = r.inputs.tonnage;
-    const first = sp.parts.reduce((a, p) => (!a || (p.arrival && p.arrival < a) ? p.arrival : a), null);
-    return el("section", { class: "plan-hero card is-split" },
-      el("div", { class: "ph-top" },
-        el("span", { class: `sig ${TIMING[t.action] || ""}`, text: t.label }),
-        el("span", { class: "sig is-go", text: "Split" }),
-        el("span", { class: "small muted", text: `${(r.appetites[r.inputs.appetite] || {}).label}${r.inputs.cbam ? " · UK CBAM" : ""}` })),
-      el("h2", { class: "ph-title" }, ...sp.parts.flatMap((p, i) => [i ? " + " : "", el("b", { text: `${p.tonnes} t` }), ` ${p.name}`])),
-      el("div", { class: "ph-figs" },
-        el("div", {}, el("span", { text: "Landed cost" }), el("strong", { text: gbpT(sp.spend / (sp.totalT || total)) }), el("small", { text: `${sp.totalT || total} t` })),
-        el("div", {}, el("span", { text: "Order total" }), el("strong", { text: gbp(sp.spend) }), el("small", { text: `${sp.parts.length} orders` })),
-        el("div", {}, el("span", { text: "Vs one supplier" }), el("strong", { class: "is-good", text: `−${gbp(sp.saving)}` }), el("small", { text: r.split.single.name })),
-        el("div", {}, el("span", { text: "First arrives" }), el("strong", { text: first ? fmt.date(first) : "—" }), el("small", { text: `need by ${fmt.date(r.inputs.needBy)}` }))),
-      el("div", { class: "ph-actions" },
-        me.canEdit ? el("button", { class: "btn btn-primary", type: "button", text: "Save split order", onclick: (e) => saveSplit(e.currentTarget, sp) }) : null,
-        me.canEdit ? el("button", { class: "link-btn", type: "button", text: "+ Log market intel", onclick: () => window.openMarketIntel({ scope: "product", targetId: r.product.id }) }) : null));
-  }
-
-  function splitCard(r, rec) {
-    const sp = r.split;
-    if (!sp || !sp.single || !sp.splits || !sp.splits.length) return null;
-    const total = r.inputs.tonnage;
-    const row = (label, perT, spend, diff, action, best) => el("tr", { class: best ? "is-chosen" : "" },
-      el("td", {}, el("strong", { text: label })),
-      el("td", { class: "num", text: gbpT(perT) }),
-      el("td", { class: "num", text: gbp(spend) }),
-      el("td", { class: `num ${diff < 0 ? "is-good" : diff > 0 ? "is-bad" : "muted"}`, text: diff === 0 ? "—" : `${diff < 0 ? "−" : "+"}${gbp(Math.abs(diff))}` }),
-      el("td", { class: "num" }, action || ""));
-    const winner = sp.better;
-    return el("section", { class: "card mk-card plan-split" },
-      el("div", { class: "card-head" }, el("h2", { text: `One supplier or split? · ${total} t` })),
-      el("div", { class: "table-scroll" }, el("table", { class: "quota-table" },
-        el("thead", {}, el("tr", {}, el("th", { text: "Option" }), el("th", { class: "num", text: "Score /t" }), el("th", { class: "num", text: "Spend" }), el("th", { class: "num", text: "Vs one supplier" }), el("th", {}))),
-        el("tbody", {},
-          row(`${total} t ${sp.single.name}`, sp.single.perT, sp.single.spend, 0, null, !winner),
-          ...sp.splits.map((x) => row(splitName(x), x.perT, x.spend, -x.saving,
-            me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Save", onclick: (e) => saveSplit(e.currentTarget, x) }) : null, winner === x || (winner && splitName(winner) === splitName(x))))))));
-  }
-
-  async function saveSplit(btn, sp) {
-    btn.disabled = true; const was = btn.textContent; btn.textContent = "Saving…";
+  async function save(s) {
+    const btn = $("bk-save"); btn.disabled = true;
     try {
-      const res = await api("/api/orders/plan/save-split", { method: "POST", body: { productId: plan.product.id, cbam: plan.inputs.cbam, timing: plan.recommendation.timing.action, reasons: [`Split: ${splitName(sp)}, saves ${gbp(sp.saving)} against one supplier.`], parts: sp.parts.map((p) => ({ supplierId: p.id, tonnage: p.tonnes, name: p.name })) } });
-      toast(`Saved ${res.ids.length} draft orders`);
-      location.href = "orders.html";
-    } catch (error) { toast(error.message, true); btn.disabled = false; btn.textContent = was; }
-  }
-
-  function hero(r, rec) {
-    const spw = splitWins(r, rec);
-    if (spw && !chosenByUser) return splitHero(r, rec, spw);
-    const b = rec.best, t = rec.timing;
-    const pick = r.options.find((o) => o.id === chosen) || b;
-    const tonnes = rec.recTonnes;
-    return el("section", { class: "plan-hero card" },
-      el("div", { class: "ph-top" },
-        el("span", { class: `sig ${TIMING[t.action] || ""}`, text: t.label }),
-        el("span", { class: "small muted", text: `${(r.appetites[r.inputs.appetite] || {}).label} approach${r.inputs.cbam ? " · UK CBAM included" : ""}` })),
-      el("h2", { class: "ph-title" }, "Buy ", el("b", { text: `${tonnes} t` }), ` of ${r.product.name} from `, el("b", { text: b.name })),
-      el("div", { class: "ph-figs" },
-        el("div", {}, el("span", { text: "Landed cost" }), el("strong", { text: gbpT(b.effectivePerT) }), el("small", { text: "every cost counted" })),
-        el("div", {}, el("span", { text: "Order total" }), el("strong", { text: gbp(b.effectivePerT * tonnes) }), el("small", { text: `${tonnes} t` })),
-        el("div", {}, el("span", { text: "If quota missed" }), el("strong", { class: b.quotaExposure > 1 ? "is-bad" : "", text: b.quotaExposure > 1 ? `+${gbpT(b.quotaExposure)}` : "£0" }), el("small", { text: b.quotaExposure > 1 ? `${Math.round((b.probability || 0) * 100)}% chance by arrival` : "no quota risk" })),
-        el("div", {}, el("span", { text: "Arrives" }), el("strong", { text: b.arrival ? fmt.date(b.arrival) : "—" }), el("small", { class: b.lateDays ? "is-bad" : "", text: b.lateDays ? `${b.lateDays} days after you run out` : `need it by ${fmt.date(r.inputs.needBy)}` }))),
-      el("p", { class: "ph-timing", text: t.text }),
-      el("div", { class: "ph-cols" },
-        el("div", {}, el("h4", { text: "Why" }), el("ul", { class: "ph-list" }, ...rec.reasons.map((x) => el("li", { text: x })))),
-        rec.watch.length ? el("div", {}, el("h4", { text: "Watch out" }), el("ul", { class: "ph-list is-watch" }, ...rec.watch.map((x) => el("li", { text: x })))) : null),
-      el("div", { class: "ph-actions" },
-        me.canEdit ? el("button", { class: "btn btn-primary", type: "button", text: pick.id === b.id ? `Save order with ${b.name}` : `Save order with ${pick.name}`, onclick: (e) => save(e.currentTarget, pick, tonnes) }) : null,
-        el("a", { class: "btn", href: `suppliers.html?supplier=${pick.id}`, text: "Full cost breakdown" }),
-        me.canEdit && (pick.quoteScope !== "product" || pick.quoteAgeDays > r.assumptions.values.staleQuoteDays) ? el("a", { class: "btn", href: `suppliers.html?rfq=${r.product.id}`, text: "Request fresh quotes" }) : null,
-        me.canEdit ? el("button", { class: "link-btn", type: "button", text: "+ Log market intel", onclick: () => window.openMarketIntel({ scope: "product", targetId: r.product.id }) }) : null));
-  }
-
-  async function save(btn, opt, tonnes) {
-    btn.disabled = true; btn.textContent = "Saving…";
-    try {
-      const res = await api("/api/orders/plan/save", { method: "POST", body: { productId: plan.product.id, supplierId: opt.id, tonnage: tonnes, cbam: plan.inputs.cbam, timing: plan.recommendation.timing.action, reasons: plan.recommendation.reasons } });
-      toast("Order saved as a draft. Submit it for approval from the order page.");
-      location.href = `order.html?id=${res.id}`;
-    } catch (error) { toast(error.message, true); btn.disabled = false; btn.textContent = "Save order"; }
-  }
-
-  const card = (title, sub, ...kids) => el("section", { class: "plan-card" }, el("div", { class: "pc-head" }, el("h3", { text: title }), sub ? el("span", { class: "small muted", text: sub }) : null), ...kids);
-  const fact = (k, v, cls) => el("div", { class: "pc-fact" }, el("span", { text: k }), el("b", { class: cls || "", text: v }));
-
-  function stockCard(r) {
-    const p = r.product;
-    const st = { critical: ["Order now", "is-risk"], reorder: ["Order now", "is-risk"], low: ["Order soon", "is-maybe"], ok: ["OK", "is-go"], "no-usage": ["No usage", ""] }[p.status] || [p.status, ""];
-    return card("Your stock", null,
-      el("span", { class: `sig ${st[1]}`, text: st[0] }), el("p", { class: "pc-note", text: p.reason }),
-      fact("In stock", `${Math.round(p.stockT)} t`), fact("You use", `${p.monthlyUsageT} t a month`),
-      fact("Cover", p.coverMonths !== null ? `${p.coverMonths.toFixed(1)} months` : "—"), fact("Runs out", p.stockOutDate ? fmt.date(p.stockOutDate) : "—"),
-      p.latestOrderDate ? fact("Order by", fmt.date(p.latestOrderDate), p.latestOrderDate <= r.today ? "is-bad" : "") : null);
-  }
-
-  function priceCard(r) {
-    const f = r.forecast, m = r.market, best = r.recommendation.best;
-    const rows = r.aheadOptions || [];
-    return card("Price outlook", f ? `UK steel ${pct(f.in3)} over 3 months` : "No forecast yet",
-      fact("Best landed now", gbpT(best.effectivePerT)), fact("You pay now", gbpT(m.yourCost)),
-      m.benchmark ? fact(m.benchmarkLabel.replace(/^./, (c) => c.toUpperCase()), gbpT(m.benchmark)) : fact("Market price", "Not set"),
-      f && f.in3Price ? fact("Expected in 3 months", `${gbpT(f.in3Price)} (${gbp(f.band3[0])}–${gbp(f.band3[1])})`, f.in3 >= 1 ? "is-up" : f.in3 <= -1 ? "is-down" : "") : null,
-      rows.length ? el("div", { class: "pc-ahead" }, el("span", { class: "pc-sub", text: "Buying ahead, after holding costs" }),
-        ...rows.map((a) => el("div", { class: "pc-ahead-row" }, el("span", { text: `+${a.months} mo (${Math.round(a.tonnes)} t)` }), el("b", { class: a.netMid > 0 ? "is-down" : "is-up", text: `${a.netMid >= 0 ? "+" : "−"}${gbp(Math.abs(a.netMid))}` })))) : null,
-      el("a", { class: "pc-link", href: `products.html?product=${r.product.id}`, text: "Product market prices →" }));
-  }
-
-  function compCard(r) {
-    const c = r.competition;
-    const bars = el("div", { class: "pc-bars", role: "img", "aria-label": "UK imports of this product by month" });
-    const max = Math.max(...c.volume.map((v) => v.tonnes), 1);
-    c.volume.forEach((v) => bars.append(el("span", { class: v.avg12 && v.tonnes > v.avg12 * 1.25 ? "is-hot" : "", style: `height:${Math.max(3, (v.tonnes / max) * 40)}px`, title: `${per(v.p)}: ${v.tonnes.toLocaleString("en-GB")} t` })));
-    return card("Competition", c.hasData ? `UK imports of this code, 12 months` : "Load HMRC history for volumes",
-      c.hasData ? bars : null,
-      c.vsAvgPct !== null ? fact("Latest month vs normal", pct(c.vsAvgPct), c.vsAvgPct >= 25 ? "is-up" : c.vsAvgPct <= -25 ? "is-down" : "") : null,
-      fact("UK companies importing it", c.buyers.source === "none" ? "—" : String(c.buyers.exact)),
-      c.rivals.length ? el("ul", { class: "pc-rivals" }, ...c.rivals.slice(0, 4).map((x) => el("li", {}, el("b", { text: x.name }), ` ${({ "stepping-up": "stepping up", expanding: "widening range", slowing: "slowing", quiet: "gone quiet", steady: "steady" })[x.signal] || x.signal}`,
-        x.stock ? el("span", { class: "row-sub", text: ` · stock £${(x.stock.value / 1e6).toFixed(1)}m${x.stockPrev && x.stockPrev.value ? ` (${x.stock.value >= x.stockPrev.value ? "+" : "−"}${Math.abs(Math.round(((x.stock.value - x.stockPrev.value) / x.stockPrev.value) * 100))}%)` : ""}` }) : null))) : el("p", { class: "pc-note", text: "None of the competitors you follow import this code." }),
-      el("a", { class: "pc-link", href: "competition.html", text: "Competition →" }));
-  }
-
-  function quotaCard(r) {
-    const q = r.quota;
-    if (!r.product.steelCategory) return card("Quota", null, el("p", { class: "pc-note", text: "Not in a steel-measure category, so there's no quota to worry about." }));
-    if (!q) return card("Quota", r.product.steelCategory.name, el("p", { class: "pc-note", text: "Quota data isn't available right now." }));
-    const [rl, rc] = RISK[q.risk] || [q.risk, ""];
-    const arrival = r.recommendation.best.arrival;
-    return card("Quota", `Category ${r.product.steelCategory.id}`,
-      el("span", { class: `sig ${rc}`, text: rl }),
-      fact(`${q.origin || "Line"} ${q.orderNumber}`, `${Math.round(q.balanceT).toLocaleString("en-GB")} t left`),
-      el("span", { class: "sp-bar pc-quota" }, el("span", { style: `width:${Math.round((q.usedShare || 0) * 100)}%` })),
-      q.runOutDate ? fact("Runs out about", fmt.date(q.runOutDate), arrival && q.runOutDate < arrival ? "is-bad" : "") : null,
-      q.history && q.history.recentQuarters ? fact("Ran out", `${q.history.exhaustedCount} of last ${q.history.recentQuarters} quarters`, q.history.exhaustedCount ? "is-bad" : "") : null,
-      q.history && q.history.dayFullMedian ? fact("Typically full by", `day ${Math.round(q.history.dayFullMedian)}`) : null,
-      q.history && q.history.safeUntil ? fact("Safe to import until", q.history.safeUntil < r.today ? "Risky now" : fmt.date(q.history.safeUntil), arrival && (q.history.safeUntil < r.today || arrival > q.history.safeUntil) ? "is-bad" : "") : null,
-      fact("Next quarter opens", fmt.date(q.nextStartDate)),
-      el("a", { class: "pc-link", href: "quotas.html", text: "Live quotas →" }));
-  }
-
-  function holdCard(r) {
-    const s = r.stockpile;
-    if (!s) return card("Safe to hold?", null, el("p", { class: "pc-note", text: "Not scored yet." }));
-    const cls = { good: "is-go", ok: "is-maybe", caution: "", risk: "is-risk" }[s.level];
-    return card("Safe to hold?", `#${s.rank} of ${s.of} products`,
-      el("span", { class: `sig ${cls}`, text: `${s.score}/100` }), el("p", { class: "pc-note", text: s.text }),
-      fact("Price swings", s.volatilityPct !== null ? `±${s.volatilityPct.toFixed(1)}% a month` : "—"),
-      fact("UK buyers of this code", String(s.buyers ?? "—")),
-      el("a", { class: "pc-link", href: "products.html", text: "Stockpiling ranking →" }));
-  }
-
-  function intelCard(r) {
-    return card("Market intel", r.intel.length ? `${r.intel.length} in these prices` : "Nothing logged",
-      r.intel.length ? el("ul", { class: "pc-rivals" }, ...r.intel.slice(0, 5).map((n) => el("li", {}, el("b", { text: n.effectUnit === "pct" ? `${n.effectValue > 0 ? "+" : ""}${n.effectValue}%` : `${n.effectValue > 0 ? "+" : "−"}£${Math.abs(n.effectValue)}/t` }), ` ${n.title}`, el("span", { class: "row-sub", text: ` · ${n.scope === "market" ? "whole market" : n.targetName}` })))) : el("p", { class: "pc-note", text: "Heard something about prices or a supplier? Log it and the plan recalculates." }),
-      me.canEdit ? el("button", { class: "btn btn-sm", type: "button", text: "Log market intel", onclick: () => window.openMarketIntel({ scope: "product", targetId: r.product.id }) }) : null);
-  }
-
-  function optionsCard(r, rec) {
-    const tags = (o) => [o.id === rec.best.id ? ["Best overall", "is-go"] : null, rec.alternatives.cheapest && o.id === rec.alternatives.cheapest.id && o.id !== rec.best.id ? ["Cheapest", "is-maybe"] : null,
-      rec.alternatives.safest && o.id === rec.alternatives.safest.id && o.id !== rec.best.id ? ["Lowest risk", ""] : null, rec.alternatives.fastest && o.id === rec.alternatives.fastest.id && o.id !== rec.best.id ? ["Fastest", ""] : null].filter(Boolean);
-    return el("section", { class: "card mk-card plan-options" },
-      el("div", { class: "card-head" }, el("div", {}, el("h2", { text: "Every supplier for this order" }))),
-      el("div", { class: "table-scroll" }, el("table", { class: "quota-table plan-table" },
-        el("thead", {}, el("tr", {}, el("th", {}), el("th", { text: "Supplier" }), el("th", { class: "num", text: "Landed cost" }), el("th", { class: "num", text: "If quota missed" }), el("th", { class: "num", text: "Terms" }), el("th", { class: "num", text: "Score" }), el("th", { text: "Arrives" }), el("th", { text: "Notes" }))),
-        el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; chosenByUser = true; render(); } },
-          el("td", {}, el("input", { type: "radio", name: "pick", "aria-label": `Choose ${o.name}`, ...(o.id === chosen ? { checked: "" } : {}), onchange: () => { chosen = o.id; chosenByUser = true; render(); } })),
-          el("td", {}, el("strong", { text: o.name }), el("div", { class: "row-sub" }, `${o.origin || ""}${o.covers === "everything" ? " · all-in" : o.covers === "except-duty" ? " · + duty" : ""}${o.isImport ? (o.ddp === "yes" ? " · DDP" : o.ddp === "no" ? " · no DDP" : "") : ""}`, ...tags(o).map(([l, c]) => el("span", { class: `sig ${c} plan-tag`, text: l })))),
-          el("td", { class: "num" }, el("strong", { text: gbpT(o.effectivePerT) }), el("div", { class: "row-sub", text: `quoted ${gbpT(o.quotedPerT)}${o.moqApplied ? ` · ${o.tonnage} t min` : ""}` })),
-          el("td", { class: "num" }, el("span", { class: o.quotaExposure > 1 ? "is-bad" : "muted", text: o.quotaExposure > 1 ? `+${gbpT(o.quotaExposure)}` : "—" })),
-          el("td", { class: "num", text: o.payDays ? `${o.payDays} days` : "On delivery" }),
-          el("td", { class: "num" }, el("strong", { text: gbpT(o.score) }), o.latePenalty ? el("div", { class: "row-sub is-bad", text: `incl. ${gbpT(o.latePenalty)} late` }) : null),
-          el("td", {}, el("span", { class: o.lateDays ? "is-bad" : "", text: o.arrival ? fmt.date(o.arrival) : "—" }), el("div", { class: "row-sub", text: o.leadDays ? (o.leadDays < 14 ? `${o.leadDays} days lead` : `${Math.round(o.leadDays / 7)} wk lead`) : "" })),
-          el("td", {}, o.warnings.length ? el("ul", { class: "plan-warn" }, ...o.warnings.slice(0, 3).map((w) => el("li", { text: w }))) : el("span", { class: "muted small", text: "No concerns" }))))))),
-      r.unpriced.length ? el("p", { class: "lad-note", text: `Couldn't price: ${r.unpriced.map((u) => `${u.name} (${(u.error || "").replace(/\.$/, "").toLowerCase()})`).join("; ")}.` }) : null);
+      const res = await api("/api/orders/basket/save", { method: "POST", body: { cbam: readCbam(), parts: s.parts.map((p) => ({ supplierId: p.supplierId, lines: p.lines.map((l) => ({ productId: l.productId, tonnes: l.tonnes })) })) } });
+      toast(`Saved ${res.ids.length} orders`);
+      setTimeout(() => { location.href = "orders.html"; }, 700);
+    } catch (error) { toast(error.message, true); btn.disabled = false; }
   }
 
   // ---------------------------------------------------------------- start
-  $("plan-form").addEventListener("change", (e) => { if (e.target.id === "pf-product") { $("pf-tonnes").value = ""; $("pf-needby").value = ""; run({ keepInputs: false }); } else schedule(); });
-  $("pf-tonnes").addEventListener("input", schedule);
   $("pf-cbam").addEventListener("click", () => { try { localStorage.setItem("agx-cbam", readCbam() ? "off" : "on"); } catch { /* blocked */ } fillForm(); run(); });
   $("plan-form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
-  window.addEventListener("agx:intel", () => run());
   loadMe().then((m) => { me = m; if (plan) render(); }).catch(() => {});
-  api("/api/orders/needs").then((r) => {
+  fillForm();
+  api("/api/orders/basket", { method: "POST", body: { productIds: [], appetite, cbam: readCbam() } }).then((r) => {
     products = r.products;
-    fillProducts();
-    fillForm();
     const want = new URLSearchParams(location.search).get("product");
-    if (want && products.some((p) => p.id === want)) $("pf-product").value = want;
-    run({ keepInputs: false });
+    picked = new Set(r.selected.map((x) => x.productId));
+    if (want && products.some((p) => p.id === want)) picked.add(want);
+    renderPicker();
+    if (want && !r.selected.some((x) => x.productId === want)) run();
+    else { plan = r; renderAssumptions(r); render(); }
   }).catch((error) => { $("plan").replaceChildren(el("p", { class: "muted", text: `Couldn't load products: ${error.message}` })); });
 })();

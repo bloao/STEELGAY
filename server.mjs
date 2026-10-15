@@ -14,6 +14,7 @@ import { quotaHistory, lineProfile } from "./lib/quota-history.mjs";
 import { createFeedManager } from "./lib/feeds.mjs";
 import { buildSchema } from "./lib/data-schema.mjs";
 import { planPackages } from "./lib/package.mjs";
+import { planBasket } from "./lib/basket.mjs";
 import { createSettingsStore, validateSettings, publicSettings, CATALOGUE_GROUPS, PLAN_ASSUMPTION_KEYS, ASSUMPTION_LIMITS, SETTINGS_DEFAULTS, UK_CBAM } from "./lib/settings.mjs";
 import * as LIVE from "./lib/live-feeds.mjs";
 import * as SUP from "./lib/suppliers.mjs";
@@ -3130,6 +3131,45 @@ async function orderPackage({ cbam = false } = {}) {
   return { ok: true, lines, ...plan };
 }
 
+// Plan an order for several products: pick the products, size each line from
+// demand, meet every supplier's minimum load, and rank single-supplier and
+// two-supplier scenarios with the full supplier cost model.
+async function basketPlan(body = {}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const all = (await productStore.list()).filter((p) => p.status !== "archived");
+  const views = await Promise.all(all.map(async (p) => ({ p, m: (await productView(p)).metrics })));
+  const appetite = PLAN.approachOf(body.appetite);
+  const cbam = body.cbam === true;
+  const assumptions = await planAssumptions(body.assume);
+  const assume = assumptions.values;
+  const thresholds = { ...assume, approaches: assumptions.approaches };
+  const qty = body.quantities && typeof body.quantities === "object" ? body.quantities : {};
+  const ids = Array.isArray(body.productIds) && body.productIds.length ? body.productIds : views.filter((x) => ["critical", "reorder", "low"].includes(x.m.status)).map((x) => x.p.id);
+  const productRows = views.map(({ p, m }) => ({ id: p.id, name: p.name, category: p.category, status: m.status, stockT: m.stockNowT, coverMonths: m.coverMonths, stockOutDate: m.stockOutDate, usage: p.monthlyUsageT || 0, needT: m.needT ?? m.suggestedOrderT ?? 0 }));
+  const items = productRows.filter((r) => ids.includes(r.id)).map((r) => {
+    const q = Number(qty[r.id]);
+    const needT = q > 0 ? Math.round(q * 10) / 10 : r.needT > 0 ? r.needT : Math.max(1, Math.ceil(r.usage || 1));
+    return { productId: r.id, name: r.name, category: r.category, needT, usage: r.usage, needBy: r.stockOutDate && r.stockOutDate > today ? r.stockOutDate : addDaysIso(today, 30) };
+  });
+  const sups = await supplierStore.list();
+  const supMap = new Map(sups.map((x) => [x.id, x]));
+  const suppliers = sups.filter((x) => x.status !== "archived" && x.standing !== "hold");
+  // each product priced by every supplier with their own quote, terms and lead time, as part of a full load
+  const lines = new Map();
+  await Promise.all(items.map(async (it) => {
+    const rows = await compareSuppliers({ productId: it.productId, tonnage: it.needT, packageT: 1000, arrival: "lead", cbam, assume }).catch(() => []);
+    const opts = rows.map((r) => {
+      const x = supMap.get(r.id) || {};
+      const leadDays = x.leadTimeMax != null ? x.leadTimeMax * (x.leadTimeUnit === "days" ? 1 : 7) : x.leadTimeMin != null ? x.leadTimeMin * (x.leadTimeUnit === "days" ? 1 : 7) : null;
+      return { ...r, arrival: r.importDate || null, leadDays, onTimePct: x.onTimePct ?? null, paymentDays: x.paymentDays ?? null, quoteAgeDays: r.quoteDate ? Math.max(0, Math.round((Date.parse(today) - Date.parse(r.quoteDate)) / 86_400_000)) : null };
+    });
+    for (const o of PLAN.scoreOptions(opts, { needBy: it.needBy, appetite, thresholds })) lines.set(`${o.id}|${it.productId}`, o);
+  }));
+  const plan = planBasket({ items, suppliers, line: (sid, pid) => lines.get(`${sid}|${pid}`) || null,
+    money: { ratePct: assume.costOfCapitalPct, storagePerTMonth: assume.forecastStoragePerTMonth ?? 2, splitOrderCost: assume.splitOrderCost ?? 0 } });
+  return { ok: true, appetite, cbam, products: productRows, selected: items, assumptions, ...plan };
+}
+
 // Draft orders for what needs ordering: the planner's pick and the runner-up
 // for each product, from your real suppliers' quotes.
 async function createStarterOrders(by = "system") {
@@ -3184,6 +3224,27 @@ async function handleOrdersApi(request, response, url) {
     }));
     const rank = { critical: 0, reorder: 1, low: 2, ok: 3, "no-usage": 4 };
     return sendJson(response, 200, { products: out.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || (a.coverMonths ?? 99) - (b.coverMonths ?? 99)) });
+  }
+  if (url.pathname === "/api/orders/basket" && request.method === "POST") return sendJson(response, 200, await basketPlan(await readJsonBody(request)));
+  if (url.pathname === "/api/orders/basket/save" && request.method === "POST") {
+    if (!can(user, "edit")) return sendError(response, 403, "Your account cannot create orders.");
+    const body = await readJsonBody(request);
+    const parts = (Array.isArray(body.parts) ? body.parts : []).slice(0, 4);
+    if (!parts.length) return sendJson(response, 422, { ok: false, error: "Nothing to order." });
+    const ids = [];
+    for (const part of parts) {
+      const lines = (Array.isArray(part.lines) ? part.lines : []).filter((l) => l && l.productId && Number(l.tonnes) > 0).slice(0, 12);
+      const packageT = Math.round(lines.reduce((n, l) => n + Number(l.tonnes), 0) * 10) / 10;
+      const packageId = randomUUID();
+      for (const [i, l] of lines.entries()) {
+        // eslint-disable-next-line no-await-in-loop
+        const r = await createPlannedOrder({ productId: l.productId, supplierId: part.supplierId, tonnage: Number(l.tonnes), cbam: body.cbam === true, packageT, packageId, assume: body.assume,
+          note: `One load, line ${i + 1} of ${lines.length}: ${packageT} t from this supplier${parts.length > 1 ? `, part of a ${parts.length}-supplier order` : ""}.`, by: user.name });
+        if (!r.ok) return sendJson(response, 422, { ...r, saved: ids });
+        ids.push(r.id);
+      }
+    }
+    return sendJson(response, 201, { ok: true, ids });
   }
   if (url.pathname === "/api/orders/package" && request.method === "GET") return sendJson(response, 200, await orderPackage({ cbam: url.searchParams.get("cbam") === "on" }));
   if (url.pathname === "/api/orders/package/save" && request.method === "POST") {
