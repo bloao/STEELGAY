@@ -1557,14 +1557,21 @@ function productChanges(before, after) {
     .map((k) => ({ field: k, label: PRODUCT_LABELS[k], from: before[k] ?? null, to: after[k] ?? null }));
 }
 
+// Smallest load any active supplier of this product will sell (their MOQ)
+async function supplierMoqFor(p) {
+  const sups = (await supplierStore.list()).filter((x) => x.status !== "archived" && x.standing !== "hold" && (x.supplies || []).includes(p.category) && Number(x.moqMinT) > 0);
+  return sups.length ? Math.min(...sups.map((x) => Number(x.moqMinT))) : 0;
+}
+
 async function productView(p) {
   const tradeMeasure = await loadTradeMeasure();
   const category = findCategory(p.commodityCode, tradeMeasure.categories);
+  const supplierMoqT = await supplierMoqFor(p);
   return {
     ...p,
     stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || null,
     steelCategory: category ? { id: category.id, name: category.name } : null,
-    metrics: stockMetrics({ ...p, stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || undefined }),
+    metrics: stockMetrics({ ...p, supplierMoqT, stockAsOf: p.stockAsOf || (p.createdAt || "").slice(0, 10) || undefined }),
     activity: p.activity || [],
   };
 }
@@ -1794,7 +1801,7 @@ async function supplierBreakdown(s, opts = {}) {
   const today = new Date().toISOString().slice(0, 10);
   const importDate = /^\d{4}-\d{2}-\d{2}$/.test(opts.importDate || "") ? opts.importDate : addDaysIso(today, leadDays ?? 21);
   // What you need, and what you actually have to buy: never less than the supplier's minimum order
-  const needT = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : Math.max(metrics.suggestedOrderT || 0, s.moqMinT || 0) || 25;
+  const needT = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : (metrics.needT || metrics.suggestedOrderT || s.moqMinT || 25);
   const moqMin = s.moqMinT || 0;
   const tonnage = moqMin && needT < moqMin ? moqMin : needT;
   const loads = s.moqMaxT > 0 ? Math.ceil(tonnage / s.moqMaxT) : 1;
@@ -2991,7 +2998,7 @@ async function orderPlan(body = {}) {
   if (!product || product.status === "archived") return { ok: false, error: "Pick a product." };
   const view = await productView(product);
   const m = view.metrics;
-  const tonnage = Number(body.tonnage) > 0 ? Math.round(Number(body.tonnage) * 10) / 10 : (m.suggestedOrderT || product.moqT || product.monthlyUsageT || 25);
+  const tonnage = Number(body.tonnage) > 0 ? Math.round(Number(body.tonnage) * 10) / 10 : (m.needT || m.suggestedOrderT || product.moqT || product.monthlyUsageT || 25);
   const today = new Date().toISOString().slice(0, 10);
   const needBy = /^\d{4}-\d{2}-\d{2}$/.test(body.needBy || "") ? body.needBy : (m.stockOutDate && m.stockOutDate > today ? m.stockOutDate : addDaysIso(today, 30));
   const appetite = PLAN.approachOf(body.appetite);
@@ -3066,7 +3073,7 @@ async function orderPlan(body = {}) {
   const intel = NEWS.notesFor(await liveNotes(), { productId: product.id, group: product.category, supplierId: "__none__", date: needBy })
     .concat((await liveNotes()).filter((n) => n.scope === "supplier" && priced.some((o) => o.id === n.targetId) && NEWS.noteActive(n, needBy) && n.effectUnit !== "none"));
   const productFacts = { id: product.id, name: product.name, category: product.category, commodityCode: product.commodityCode, steelCategory: view.steelCategory, costPerT: product.costPerT, targetBuyPrice: product.targetBuyPrice ?? null,
-    monthlyUsageT: product.monthlyUsageT, stockT: m.stockNowT, coverMonths: m.coverMonths, stockOutDate: m.stockOutDate, latestOrderDate: m.latestOrderDate, suggestedOrderT: m.suggestedOrderT, moqT: product.moqT ?? null, status: m.status, reason: m.reason };
+    monthlyUsageT: product.monthlyUsageT, stockT: m.stockNowT, coverMonths: m.coverMonths, stockOutDate: m.stockOutDate, latestOrderDate: m.latestOrderDate, suggestedOrderT: m.suggestedOrderT, needT: m.needT, minOrderT: m.minOrderT, moqT: product.moqT ?? null, status: m.status, reason: m.reason };
   // Would two suppliers beat one? Price each candidate at the split tonnages.
   let split = null;
   try {
@@ -3146,7 +3153,19 @@ async function handleOrdersApi(request, response, url) {
   if (url.pathname === "/api/orders/plan" && request.method === "POST") return sendJson(response, 200, await orderPlan(await readJsonBody(request)));
   if (url.pathname === "/api/orders/needs" && request.method === "GET") {
     const list = (await productStore.list()).filter((p) => p.status !== "archived");
-    const out = await Promise.all(list.map(async (p) => { const v = await productView(p); return { id: p.id, name: p.name, category: p.category, status: v.metrics.status, reason: v.metrics.reason, suggestedOrderT: v.metrics.suggestedOrderT, coverMonths: v.metrics.coverMonths, stockOutDate: v.metrics.stockOutDate, latestOrderDate: v.metrics.latestOrderDate, monthlyUsageT: p.monthlyUsageT, stockT: v.metrics.stockNowT }; }));
+    const out = await Promise.all(list.map(async (p) => {
+      const v = await productView(p);
+      const row = { id: p.id, name: p.name, category: p.category, status: v.metrics.status, reason: v.metrics.reason, needT: v.metrics.needT, suggestedOrderT: v.metrics.suggestedOrderT, coverMonths: v.metrics.coverMonths, stockOutDate: v.metrics.stockOutDate, latestOrderDate: v.metrics.latestOrderDate, monthlyUsageT: p.monthlyUsageT, stockT: v.metrics.stockNowT };
+      // what you'd actually buy: the planner's recommendation, which respects the supplier's minimum order
+      if (["critical", "reorder", "low"].includes(row.status)) {
+        try {
+          const plan = await orderPlan({ productId: p.id });
+          const rec = plan.ok && plan.recommendation;
+          if (rec && rec.ok && rec.recTonnes) { row.suggestedOrderT = Math.round(rec.recTonnes * 10) / 10; row.supplier = rec.best.name; row.moqMinT = rec.best.moqMinT || null; }
+        } catch { /* keep the stock-based figure */ }
+      }
+      return row;
+    }));
     const rank = { critical: 0, reorder: 1, low: 2, ok: 3, "no-usage": 4 };
     return sendJson(response, 200, { products: out.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || (a.coverMonths ?? 99) - (b.coverMonths ?? 99)) });
   }

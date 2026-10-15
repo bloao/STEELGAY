@@ -51,7 +51,7 @@
     const p = products.find((x) => x.id === r.product.id) || r.product;
     const [label, cls] = STATUS[r.product.status] || [r.product.status, ""];
     $("pf-product-hint").replaceChildren(el("span", { class: `pf-dot ${cls}`, "aria-hidden": "true" }), `${label}${r.product.coverMonths !== null ? ` · ${r.product.coverMonths.toFixed(1)} months of cover` : ""}`);
-    const sug = r.product.suggestedOrderT;
+    const sug = r.product.needT ?? r.product.suggestedOrderT;
     $("pf-tonnes-hint").replaceChildren(sug && Number(sug) !== Number(r.inputs.tonnage)
       ? el("button", { type: "button", class: "pf-hint-btn", text: `Use suggested ${sug} t`, onclick: () => { $("pf-tonnes").value = sug; run(); } })
       : sug ? "Suggested quantity" : `Uses ${p.monthlyUsageT ?? r.product.monthlyUsageT} t a month`);
