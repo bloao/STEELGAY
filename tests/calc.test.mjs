@@ -141,3 +141,16 @@ test("trade remedies are added on top of ordinary duty", () => {
   }, { asOf });
   assert.equal(r.lines.find((l) => l.key === "remedies").perTonne, 20);
 });
+
+test("quota risk early in a quarter leans on the pace of past quarters", () => {
+  const row = { orderNumber: "058623", startDate: "2026-10-01", endDate: "2026-12-31", initialVolume: 5000, balance: 4800, measurementUnit: "Tonne" };
+  const base = { tonnage: 25, importDate: "2026-11-20", asOf: "2026-10-05", valuePerT: 700, rate: 0.5 };
+  const quiet = quotaExposure({ ...base, row });
+  const busy = quotaExposure({ ...base, row: { ...row, historicBurnPerDayT: 120 } });
+  assert.ok(quiet.probability < 0.5); // 200 t in 5 days: plenty left by 20 Nov
+  assert.ok(busy.probability > quiet.probability); // past quarters ran ~120 t/day: likely gone by then
+  assert.match(busy.basis, /past quarters/);
+  // later in the quarter the quarter's own pace dominates
+  const late = quotaExposure({ ...base, asOf: "2026-11-25", importDate: "2026-12-10", row: { ...row, balance: 4000, historicBurnPerDayT: 120 } });
+  assert.match(late.basis, /100% this period/);
+});

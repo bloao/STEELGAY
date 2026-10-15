@@ -774,6 +774,17 @@ async function loadMeasureQuotas() {
   };
 }
 
+// Past pace of use per line (t/day), cached for the engine.
+let paceCache = { at: 0, map: new Map() };
+async function cachedQuotaPace() {
+  if (Date.now() - paceCache.at < 10 * 60_000) return paceCache.map;
+  try {
+    const h = await steelQuotaHistory();
+    paceCache = { at: Date.now(), map: new Map(h.lines.filter((l) => l.paceT > 0).map((l) => [l.orderNumber, l.paceT])) };
+  } catch { paceCache = { at: Date.now() - 9 * 60_000, map: paceCache.map }; } // retry in a minute
+  return paceCache.map;
+}
+
 // Past quarters for every line (DBT dataset, from 2021), with an outlook for this quarter.
 async function steelQuotaHistory() {
   const [dbt, live] = await Promise.all([getSteelQuotaRows(), getMeasureQuotas()]);
@@ -897,8 +908,10 @@ async function runScenario(rawInputs, engineSettings = {}) {
 
   const jobs = [];
   if (category && inputs.origin !== "United Kingdom") {
-    jobs.push(getMeasureQuotas().then((q) => {
-      market.quotaRows = q.rows;
+    jobs.push(Promise.all([getMeasureQuotas(), cachedQuotaPace()]).then(([q, pace]) => {
+      // each quota row also carries the pace of use from past quarters, so the
+      // run-out risk isn't judged on this quarter's first few days alone
+      market.quotaRows = q.rows.map((r) => (pace.has(r.orderNumber) ? { ...r, historicBurnPerDayT: pace.get(r.orderNumber) } : r));
       sources.quotasFetchedAt = q.fetchedAt;
       sources.quotaSource = q.sources.tariff.lines ? "HMRC Trade Tariff" : "DBT dataset";
     }).catch((error) => { market.quotaError = error.message; }));
@@ -1770,7 +1783,11 @@ async function supplierBreakdown(s, opts = {}) {
   const leadDays = s.leadTimeMax !== null && s.leadTimeMax !== undefined ? s.leadTimeMax * (s.leadTimeUnit === "days" ? 1 : 7) : s.leadTimeMin !== null && s.leadTimeMin !== undefined ? s.leadTimeMin * (s.leadTimeUnit === "days" ? 1 : 7) : null;
   const today = new Date().toISOString().slice(0, 10);
   const importDate = /^\d{4}-\d{2}-\d{2}$/.test(opts.importDate || "") ? opts.importDate : addDaysIso(today, leadDays ?? 21);
-  const tonnage = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : Math.max(metrics.suggestedOrderT || 0, s.moqMinT || 0) || 25;
+  // What you need, and what you actually have to buy: never less than the supplier's minimum order
+  const needT = Number(opts.tonnage) > 0 ? Number(opts.tonnage) : Math.max(metrics.suggestedOrderT || 0, s.moqMinT || 0) || 25;
+  const moqMin = s.moqMinT || 0;
+  const tonnage = moqMin && needT < moqMin ? moqMin : needT;
+  const loads = s.moqMaxT > 0 ? Math.ceil(tonnage / s.moqMaxT) : 1;
   const transportPerT = s.transport === "extra" ? Math.max(Number(opts.transportPerT ?? ws.deliveryPerT) || 0, 0) : 0;
   // Prefer a quote for this exact product; fall back to their general price.
   const byNewest = (a, b) => (b.date + (b.at || "")).localeCompare(a.date + (a.at || ""));
@@ -1823,19 +1840,20 @@ async function supplierBreakdown(s, opts = {}) {
         result: { label: "Saved per tonne", value: round2(pricePerT * rate * (s.paymentDays / 365)), unit: "£/t", sign: -1 } }] });
   }
   // Buying above what you need ties up cash until it's used.
-  const moqMin = s.moqMinT || 0;
-  if (moqMin && tonnage < moqMin) {
-    const extra = moqMin - tonnage;
+  if (tonnage > needT) {
+    // you buy their minimum; the tonnes you don't need yet sit in stock until used
+    const extra = tonnage - needT;
     const months = usage > 0 ? extra / usage : 6;
-    adjustments.push({ key: "moq", label: `Minimum order: ${round2(extra)} t more than you need`, perTonne: round2((extra * pricePerT * rate * (months / 12)) / tonnage),
-      formula: `${round2(extra)} t extra × price × ${ratePct}% × ${round2(months)} months to use it ÷ ${tonnage} t`,
-      working: `${round2(extra)} t × £${round2(pricePerT)} × ${ratePct}% × ${round2(months)}/12 months ÷ ${tonnage} t = £${round2((extra * pricePerT * rate * (months / 12)) / tonnage)} per tonne`,
-      why: "Their minimum is more than you need, so the extra sits in stock until you use it.",
+    const perT = (extra * pricePerT * rate * (months / 12)) / tonnage;
+    adjustments.push({ key: "moq", label: `Minimum order: buying ${round2(tonnage)} t, ${round2(extra)} t more than you need`, perTonne: round2(perT),
+      formula: `${round2(extra)} t extra × price × ${ratePct}% × ${round2(months)} months to use it ÷ ${tonnage} t bought`,
+      working: `${round2(extra)} t × £${round2(pricePerT)} × ${ratePct}% × ${round2(months)}/12 months ÷ ${tonnage} t = £${round2(perT)} per tonne`,
+      why: "Their minimum is more than you need, so the order is raised to it and the extra sits in stock until you use it.",
       equations: [
-        { parts: [v("Their minimum", `${moqMin} t`, "supplier", "Supplier MOQ", moqMin), op("−"), v("Your order", `${tonnage} t`, "you", "Your choice", tonnage)], result: { label: "Extra stock", value: round2(extra), unit: "t" } },
+        { parts: [v("Their minimum", `${moqMin} t`, "supplier", "Supplier MOQ", moqMin), op("−"), v("You need", `${needT} t`, "you", "Your choice", needT)], result: { label: "Extra stock", value: round2(extra), unit: "t" } },
         { parts: [v("Extra stock", `${round2(extra)} t`, "calc", "Step 1", extra), op("÷"), v("Monthly usage", usage ? `${round2(usage)} t/month` : "not set", "product", usage ? "Product usage" : "Assumed 6 months", usage)], result: { label: "Months to use it", value: round2(months), unit: "months" } },
-        { parts: [v("Extra stock", `${round2(extra)} t`, "calc", "Step 1", extra), op("×"), priceV, op("×"), rateV, op("×"), v("Time held", `${round2(months)} ÷ 12 yr`, "calc", "Step 2", months / 12), op("÷"), v("Your order", `${tonnage} t`, "you", "Your choice", tonnage)],
-          result: { label: "Cost per tonne", value: round2((extra * pricePerT * rate * (months / 12)) / tonnage), unit: "£/t" } },
+        { parts: [v("Extra stock", `${round2(extra)} t`, "calc", "Step 1", extra), op("×"), priceV, op("×"), rateV, op("×"), v("Time held", `${round2(months)} ÷ 12 yr`, "calc", "Step 2", months / 12), op("÷"), v("Tonnes bought", `${tonnage} t`, "calc", "Their minimum", tonnage)],
+          result: { label: "Cost per tonne", value: round2(perT), unit: "£/t" } },
       ] });
   }
   // Late deliveries mean holding extra safety stock.
@@ -1866,7 +1884,7 @@ async function supplierBreakdown(s, opts = {}) {
     cbam: cbamInfo,
     supplier: { id: s.id, name: s.name, origin: s.origin },
     product: { id: product.id, name: product.name, commodityCode: product.commodityCode, monthlyUsageT: usage, suggestedOrderT: metrics.suggestedOrderT },
-    inputs: { tonnage, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel, quoteScope },
+    inputs: { tonnage, needT, moqApplied: tonnage > needT, moqMinT: moqMin || null, loads, importDate, ratePct, transportPerT, incoterm: engineIncoterm(s), leadDays, quotedPerT: latest.pricePerT, currency: latest.currency || "GBP", quoteDate: latest.date, quoteChannel: latest.channel, quoteScope },
     engine: { lines: engine.lines, totals: engine.totals, quota: engine.quota ? { probability: engine.quota.probability, basis: engine.quota.basis, orderNumber: quotaLine?.source } : null, category: engine.category, buyerImports: engine.buyerImports, checks: engine.checks, warnings: engine.warnings, customsValuePerT: engine.customsValuePerT, fx: engine.fx },
     adjustments,
     scenarioInputs: engine.inputs,
@@ -2046,7 +2064,7 @@ async function compareSuppliers(body = {}) {
     const b = await supplierBreakdown(x, { ...body, importDate: body.arrival === "fixed" ? body.importDate : undefined }).catch((e) => ({ ok: false, error: e.message }));
     return b.ok ? { id: x.id, name: x.name, origin: x.origin, quotedPerT: b.engine.lines.find((l) => l.key === "price").perTonne, expectedPerT: b.engine.totals.expectedPerT,
       effectivePerT: b.effectivePerT, worstPerT: b.worstPerT, bestPerT: b.bestPerT, missPerT: b.model ? b.model.totals.missPerT : round2(b.worstPerT - b.bestPerT), cbamPerT: round2((b.engine.lines.find((l) => l.key === "cbam") || {}).perTonne || 0), cbam: b.cbam,
-      missing: b.model ? b.model.totals.missing : [], tonnage: b.inputs.tonnage, productName: b.product.name, probability: b.engine.quota ? b.engine.quota.probability : null,
+      missing: b.model ? b.model.totals.missing : [], tonnage: b.inputs.tonnage, needT: b.inputs.needT, moqApplied: b.inputs.moqApplied, moqMinT: b.inputs.moqMinT, loads: b.inputs.loads, productName: b.product.name, probability: b.engine.quota ? b.engine.quota.probability : null,
       importDate: b.inputs.importDate, adjustments: b.adjustments, covers: SUP.supplierMetrics(x).covers, quoteDate: b.inputs.quoteDate, quoteCurrency: b.inputs.currency, quotedRaw: b.inputs.quotedPerT, quoteScope: b.inputs.quoteScope, quoteChannel: b.inputs.quoteChannel }
       : { id: x.id, name: x.name, origin: x.origin, error: b.error };
   }));

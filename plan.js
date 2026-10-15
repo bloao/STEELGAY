@@ -117,7 +117,7 @@
     $("plan").replaceChildren(hero(r, rec), splitCard(r, rec), el("div", { class: "plan-grid" }, stockCard(r), priceCard(r), compCard(r), quotaCard(r), holdCard(r), intelCard(r)), optionsCard(r, rec));
   }
 
-  const splitWins = (r, rec) => r.split && r.split.better && Math.abs(rec.recTonnes - r.inputs.tonnage) < 0.01 ? r.split.better : null;
+  const splitWins = (r, rec) => (r.split && r.split.better && !(rec.timing && rec.timing.extraTonnes) ? r.split.better : null);
   const splitName = (sp) => sp.parts.map((p) => `${p.tonnes} t ${p.name}`).join(" + ");
 
   function splitHero(r, rec, sp) {
@@ -130,7 +130,7 @@
         el("span", { class: "small muted", text: `${(r.appetites[r.inputs.appetite] || {}).label}${r.inputs.cbam ? " · UK CBAM" : ""}` })),
       el("h2", { class: "ph-title" }, ...sp.parts.flatMap((p, i) => [i ? " + " : "", el("b", { text: `${p.tonnes} t` }), ` ${p.name}`])),
       el("div", { class: "ph-figs" },
-        el("div", {}, el("span", { text: "Landed cost" }), el("strong", { text: gbpT(sp.spend / total) }), el("small", { text: `${total} t` })),
+        el("div", {}, el("span", { text: "Landed cost" }), el("strong", { text: gbpT(sp.spend / (sp.totalT || total)) }), el("small", { text: `${sp.totalT || total} t` })),
         el("div", {}, el("span", { text: "Order total" }), el("strong", { text: gbp(sp.spend) }), el("small", { text: `${sp.parts.length} orders` })),
         el("div", {}, el("span", { text: "Vs one supplier" }), el("strong", { class: "is-good", text: `−${gbp(sp.saving)}` }), el("small", { text: r.split.single.name })),
         el("div", {}, el("span", { text: "First arrives" }), el("strong", { text: first ? fmt.date(first) : "—" }), el("small", { text: `need by ${fmt.date(r.inputs.needBy)}` }))),
@@ -289,7 +289,7 @@
         el("tbody", {}, ...r.options.map((o, i) => el("tr", { class: `opp-row${o.id === chosen ? " is-chosen" : ""}`, style: `--d:${i * 40}ms`, onclick: () => { chosen = o.id; chosenByUser = true; render(); } },
           el("td", {}, el("input", { type: "radio", name: "pick", "aria-label": `Choose ${o.name}`, ...(o.id === chosen ? { checked: "" } : {}), onchange: () => { chosen = o.id; chosenByUser = true; render(); } })),
           el("td", {}, el("strong", { text: o.name }), el("div", { class: "row-sub" }, `${o.origin || ""}${o.covers === "everything" ? " · all-in" : o.covers === "except-duty" ? " · + duty" : ""}`, ...tags(o).map(([l, c]) => el("span", { class: `sig ${c} plan-tag`, text: l })))),
-          el("td", { class: "num" }, el("strong", { text: gbpT(o.effectivePerT) }), el("div", { class: "row-sub", text: `quoted ${gbpT(o.quotedPerT)}` })),
+          el("td", { class: "num" }, el("strong", { text: gbpT(o.effectivePerT) }), el("div", { class: "row-sub", text: `quoted ${gbpT(o.quotedPerT)}${o.moqApplied ? ` · ${o.tonnage} t min` : ""}` })),
           el("td", { class: "num" }, el("span", { class: o.quotaExposure > 1 ? "is-bad" : "muted", text: o.quotaExposure > 1 ? `+${gbpT(o.quotaExposure)}` : "—" })),
           el("td", { class: "num", text: o.payDays ? `${o.payDays} days` : "On delivery" }),
           el("td", { class: "num" }, el("strong", { text: gbpT(o.score) }), o.latePenalty ? el("div", { class: "row-sub is-bad", text: `incl. ${gbpT(o.latePenalty)} late` }) : null),

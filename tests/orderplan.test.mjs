@@ -80,3 +80,10 @@ test("splitting: no split when one supplier is simply best", async () => {
   assert.equal(res.better, null);
   assert.equal(res.single.id, "a");
 });
+
+test("an order below the supplier's minimum is raised to it and says so", () => {
+  const o = [{ id: "m", name: "Mill", effectivePerT: 760, worstPerT: 760, arrival: "2026-10-20", tonnage: 25, needT: 5, moqApplied: true, moqMinT: 25, loads: 1 }];
+  const r = recommend({ product: { name: "100×50 Flat", monthlyUsageT: 2, costPerT: 780, coverMonths: 1 }, tonnage: 5, needBy: "2026-11-06", options: o, forecast: { in3: 0 } });
+  assert.equal(r.recTonnes, 25);
+  assert.ok(r.reasons.some((x) => /minimum order is 25 t/.test(x) && /10 months/.test(x)));
+});
