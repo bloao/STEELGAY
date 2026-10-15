@@ -2127,3 +2127,8 @@ a.ll-head:hover { background: var(--surface-alt); }
 /* Launcher: the five sections only */
 .launcher.launcher-list { width: 220px; gap: 2px; }
 .launcher.launcher-list .ll { min-height: 40px; }
+
+/* Settings at the bottom of the left menu */
+.sidebar__foot.sidebar__foot--settings { display: block !important; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
+.site-nav__settings { display: none; }
+@media (max-width: 900px) { .sidebar__foot.sidebar__foot--settings { margin: 0; padding: 0 0 0 4px; border-top: 0; border-left: 1px solid var(--line); } }

@@ -79,22 +79,10 @@
   var html = '<nav class="sidebar__nav" aria-label="Order tool sections"><div class="sidebar__head"><p class="sidebar__title">Procurement</p>' + launcher + "</div><ul>";
   SECTIONS.forEach(function (sec) { html += sectionLink(sec); });
   html += "</ul></nav>";
+  // Settings pinned to the bottom of the menu
+  var setOn = active === "settings";
+  html += '<nav class="sidebar__foot sidebar__foot--settings" aria-label="Workspace"><ul><li class="sidebar__sec"><a class="sidebar__link' + (setOn ? " is-active is-current" : "") + '" href="settings.html"' + (setOn ? ' aria-current="page"' : "") + ">" + icon("settings") + "<span>Settings</span></a></li></ul></nav>";
 
-  // Settings lives as a gear at the right of the top bar, not in the menu
-  function settingsGear() {
-    var bar = document.querySelector(".site-nav");
-    if (!bar || bar.querySelector(".site-nav__settings")) return;
-    var a = document.createElement("a");
-    a.className = "site-nav__settings" + (active === "settings" ? " is-active" : "");
-    a.href = "settings.html";
-    a.title = "Settings";
-    a.setAttribute("aria-label", "Settings");
-    if (active === "settings") a.setAttribute("aria-current", "page");
-    a.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS.settings + "</svg>";
-    bar.appendChild(a);
-  }
-  settingsGear();
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", settingsGear);
 
   // Tabs across the top of the page for the current section's sub-pages.
   function sectionTabs() {
