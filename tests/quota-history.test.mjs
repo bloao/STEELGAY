@@ -57,3 +57,13 @@ test("quotaHistory returns all 72 lines", () => {
   assert.equal(h.lines.length, 72);
   assert.equal(h.firstPeriod, null);
 });
+
+test("trade-agreement quotas on the same codes are ignored", () => {
+  const rows = [
+    { orderNumber: "058601", geographicalAreas: ["India"], categoryIds: ["1"], startDate: "2026-07-01", endDate: "2026-09-30", initialVolume: 8364000, balance: 1000000, measurementUnit: "Kilogram (kg)", status: "Closed" },
+    { orderNumber: "054321", geographicalAreas: ["India"], categoryIds: ["1"], startDate: "2026-07-01", endDate: "2026-09-30", initialVolume: 238000000, balance: 238000000, measurementUnit: "Kilogram (kg)", status: "Open" },
+  ];
+  const p = periodsByLine(rows, "2026-10-15").get("058601");
+  assert.equal(p.length, 1);
+  assert.equal(p[0].initialT, 8364);
+});
