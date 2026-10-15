@@ -51,8 +51,6 @@
         { key: "competition", label: "Competition", href: "competition.html", icon: "competition" },
       ] },
   ];
-  // Pinned to the bottom of the menu.
-  var FOOT = [{ key: "settings", label: "Settings", href: "settings.html", icon: "settings" }];
   var active = aside.getAttribute("data-active");
   if (active === "suppliers" && location.hash === "#market") active = "market-prices";
   var inSection = function (sec) { return sec.key === active || (sec.children || []).some(function (c) { return c.key === active; }); };
@@ -90,8 +88,7 @@
     var on = sec === openSec;
     var here = inSection(sec);
     if (!sec.children) return '<a class="lt lt-main' + (here ? " is-active" : "") + '" href="' + sec.href + '"' + (here ? ' aria-current="page"' : "") + ">" + icon(sec.icon) + "<span>" + sec.label + "</span></a>";
-    return '<button type="button" class="lt lt-main' + (here ? " is-here" : "") + (on ? " is-open" : "") + '" data-sec="' + sec.key + '" aria-expanded="' + on + '" aria-controls="launcher-sub">' + icon(sec.icon) + "<span>" + sec.label + "</span>" +
-      '<span class="lt-count">' + sec.children.length + "</span></button>";
+    return '<button type="button" class="lt lt-main' + (here ? " is-here" : "") + (on ? " is-open" : "") + '" data-sec="' + sec.key + '" aria-expanded="' + on + '" aria-controls="launcher-sub">' + icon(sec.icon) + "<span>" + sec.label + "</span>" + "</button>";
   }
   function subTiles(sec) {
     if (!sec || !sec.children) return "";
@@ -102,19 +99,28 @@
     '<div class="launcher" id="launcher" role="dialog" aria-label="All pages" hidden>' +
       '<div class="launcher-main">' + SECTIONS.map(mainTile).join("") + "</div>" +
       '<div class="launcher-sub" id="launcher-sub">' + subTiles(openSec.children ? openSec : SECTIONS.filter(function (x) { return x.children; })[0]) + "</div>" +
-      '<div class="launcher-foot">' + FOOT.map(function (f) { return tile(f, "lt-small"); }).join("") +
-        '<button type="button" class="lt lt-small is-intel js-intel">' + icon("intel") + "<span>Log market intel</span></button></div>" +
     "</div>";
 
   // The menu down the left, with the tile launcher at the top
   var html = '<nav class="sidebar__nav" aria-label="Order tool sections"><div class="sidebar__head"><p class="sidebar__title">Procurement</p>' + launcher + "</div><ul>";
   SECTIONS.forEach(function (sec) { html += sectionLink(sec); });
-  html += '</ul><button type="button" class="sidebar__intel js-intel">' +
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>' +
-    '<span>Log market intel</span></button>';
-  html += '</nav><nav class="sidebar__foot" aria-label="Workspace"><ul>';
-  FOOT.forEach(function (item) { html += sectionLink(item); });
   html += "</ul></nav>";
+
+  // Settings lives as a gear at the right of the top bar, not in the menu
+  function settingsGear() {
+    var bar = document.querySelector(".site-nav");
+    if (!bar || bar.querySelector(".site-nav__settings")) return;
+    var a = document.createElement("a");
+    a.className = "site-nav__settings" + (active === "settings" ? " is-active" : "");
+    a.href = "settings.html";
+    a.title = "Settings";
+    a.setAttribute("aria-label", "Settings");
+    if (active === "settings") a.setAttribute("aria-current", "page");
+    a.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS.settings + "</svg>";
+    bar.appendChild(a);
+  }
+  settingsGear();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", settingsGear);
 
   // Tabs across the top of the page for the current section's sub-pages.
   function sectionTabs() {
@@ -169,14 +175,6 @@
     tiles[Math.max(0, Math.min(tiles.length - 1, i + step))].focus();
   });
   // The intel form loads on first use, so pages stay light.
-  Array.prototype.forEach.call(aside.querySelectorAll(".js-intel"), function (btn) { btn.addEventListener("click", function () {
-    setOpen(false);
-    if (window.MarketIntel) { window.MarketIntel.open({}); return; }
-    var sc = document.createElement("script");
-    sc.src = "intel.js";
-    sc.onload = function () { if (window.MarketIntel) window.MarketIntel.open({}); };
-    document.body.appendChild(sc);
-  }); });
   window.openMarketIntel = function (pre) {
     if (window.MarketIntel) return window.MarketIntel.open(pre || {});
     var sc = document.createElement("script");

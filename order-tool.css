@@ -2055,3 +2055,14 @@ button.vdot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
   .qh2-val { display: block; }
   .qh2-bars.is-dense .qh2-val { display: none; }
 }
+
+/* Left menu: sections only, tighter fit; Settings is a gear in the top bar */
+@media (min-width: 901px) { .sidebar { flex-basis: 212px; padding: 18px 10px; } }
+.sidebar__link { min-height: 40px; gap: 10px; padding: 0 10px; font-size: 14.5px; }
+.sidebar__sub { margin: 0 0 4px 19px !important; }
+.sidebar__sublink { min-height: 32px; font-size: 13.5px; }
+.sidebar__foot, .sidebar__intel, .launcher-foot, .lt-count { display: none !important; }
+.site-nav__settings { display: grid; place-items: center; flex: 0 0 auto; width: 38px; height: 38px; margin-left: 8px; border-radius: 8px; color: var(--ink-soft); }
+.site-nav__settings:hover { background: var(--surface-alt); color: var(--ink); }
+.site-nav__settings.is-active { background: var(--accent-soft); color: var(--accent-ink); }
+.site-nav__settings:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
