@@ -2482,3 +2482,4 @@ a.tr-label:hover { color: var(--accent-ink); text-decoration: underline; }
 @media (max-width: 1100px) { .bk { grid-template-columns: minmax(0, 1fr); } .bk-pick { position: static; } .bk-figs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .bk-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bk-hero { padding: 16px; } .bk-actions .btn { width: 100%; } .bk-lines th:nth-child(5), .bk-lines td:nth-child(5) { display: none; } }
 .bk-figs { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); } .bk-fig strong { white-space: nowrap; }
+.bk-figs { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); } .bk-fig { padding: 9px 10px; } .bk-fig strong { font-size: 16px; }
