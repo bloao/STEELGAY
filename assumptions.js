@@ -6,37 +6,41 @@
   const $ = (id) => document.getElementById(id);
 
   const APPROACHES = [["cashflow", "Cash flow"], ["speed", "Speed"], ["balanced", "Balanced"]];
-  // [key, label, prefix, unit, min, max, step]
+  // Every example uses one typical order so the numbers mean something
+  const REF = { price: 750, load: 25 };
+  const money = (v) => `£${(Math.round(v * 100) / 100).toLocaleString("en-GB", { minimumFractionDigits: v < 10 && v % 1 ? 2 : 0, maximumFractionDigits: v < 10 ? 2 : 0 })}`;
+  const perLoad = (perT) => `${money(perT)}/t (${money(perT * REF.load)} a load)`;
+  // [key, label, prefix, unit, min, max, step, example(value, ctx)]
   const PER_APPROACH = [
-    ["Weighting", [
-      ["cashRatePct", "Payment terms", "", "%/yr", 0, 40, 1],
-      ["leadDayPct", "Lead time", "", "%/day", 0, 0.3, 0.01],
-      ["reliabilityPct", "Reliability", "", "%/pt", 0, 0.5, 0.01],
-      ["quotaWeightPct", "Quota risk", "", "%", 0, 100, 5],
-      ["stockOutPerDayPct", "Arriving late", "", "%/day", 0, 2, 0.05],
+    ["What matters most", [
+      ["quotaWeightPct", "Quota running out", "", "%", 0, 100, 5, (v) => v ? `If a missed quota would cost £375/t in duty, count ${money(375 * v / 100)}/t of it` : "Ignore quota risk"],
+      ["stockOutPerDayPct", "Arriving after you run out", "", "%/day", 0, 2, 0.05, (v) => v ? `Each day late adds ${perLoad(REF.price * v / 100)}` : "Don't penalise late arrival"],
+      ["cashRatePct", "Paying later", "", "%/yr", 0, 40, 1, (v, c) => { const x = Math.max(0, v - c.cap); return x ? `60-day terms worth ${perLoad(REF.price * x / 100 * 60 / 365)} more than paying now` : "Payment terms don't change the pick"; }],
+      ["leadDayPct", "Getting it quickly", "", "%/day", 0, 0.3, 0.01, (v) => v ? `A 2-week wait counts as ${perLoad(REF.price * v / 100 * 14)}` : "Lead time doesn't change the pick"],
+      ["reliabilityPct", "Reliable delivery", "", "%/pt", 0, 0.5, 0.01, (v) => v ? `A supplier 70% on time counts as ${perLoad(REF.price * v / 100 * 30)}` : "On-time record doesn't change the pick"],
     ]],
-    ["Buy ahead when", [
-      ["buyAheadTriggerPct", "Forecast rise, 3 months", "+", "%", 0, 10, 0.1],
-      ["buyAheadMinSaving", "Saving after holding costs", "£", "", 0, 5000, 50],
-      ["holdMinScore", "Stockpiling score", "", "/100", 0, 100, 1],
+    ["Buy extra now when", [
+      ["buyAheadTriggerPct", "Prices expected to rise by", "+", "% in 3 months", 0, 10, 0.1, (v) => `A ${money(REF.price)}/t price heading to ${money(REF.price * (1 + v / 100))}/t`],
+      ["buyAheadMinSaving", "And it saves at least", "£", "", 0, 5000, 50, (v) => v ? "After the cost of holding the extra stock" : "Any saving after holding costs"],
+      ["holdMinScore", "And the product is safe to hold", "", "/100", 0, 100, 1, (v) => (v >= 70 ? "Only products that store well and sell steadily" : v >= 50 ? "Most steady-selling products" : "Almost anything")],
     ]],
-    ["Hold off when", [
-      ["waitTriggerPct", "Forecast fall, 3 months", "−", "%", 0, 10, 0.1],
-      ["waitCoverBufferMonths", "Spare cover after lead time", "", " months", 0, 6, 0.25],
+    ["Wait when", [
+      ["waitTriggerPct", "Prices expected to fall by", "−", "% in 3 months", 0, 10, 0.1, (v) => `A ${money(REF.price)}/t price heading to ${money(REF.price * (1 - v / 100))}/t`],
+      ["waitCoverBufferMonths", "And stock still lasts", "", " months past the lead time", 0, 6, 0.25, (v) => (v ? `About ${Math.round(v * 4.3)} weeks of spare stock` : "No spare stock needed")],
     ]],
   ];
   const SHARED = [
-    ["Costs", [
-      ["costOfCapitalPct", "Cost of capital", "", "%/yr", 0, 20, 0.25],
-      ["forecastStoragePerTMonth", "Storage", "£", "/t/month", 0, 20, 0.5],
-      ["deliveryPerT", "Delivery", "£", "/t", 0, 100, 1],
-      ["splitOrderCost", "Each extra order (split)", "£", "", 0, 1000, 25],
+    ["Your costs", [
+      ["costOfCapitalPct", "Cost of money", "", "%/yr", 0, 20, 0.25, (v) => `Holding one ${REF.load} t load (${money(REF.price * REF.load)}) for a month costs ${money(REF.price * REF.load * v / 100 / 12)}`],
+      ["forecastStoragePerTMonth", "Storage", "£", "/t a month", 0, 20, 0.5, (v) => `${money(v * REF.load)} a month to store a ${REF.load} t load`],
+      ["deliveryPerT", "Delivery (when not included)", "£", "/t", 0, 100, 1, (v) => `${money(v * REF.load)} for a ${REF.load} t load`],
+      ["splitOrderCost", "Using a second supplier", "£", " per order", 0, 1000, 25, (v) => (v ? `Extra admin and paperwork for each extra supplier` : "Splitting costs nothing extra")],
     ]],
-    ["Flag when", [
-      ["staleQuoteDays", "Quote older than", "", " days", 7, 120, 1],
-      ["onTimeWarnPct", "On time below", "", "%", 50, 100, 1],
-      ["quotaWarnProbPct", "Quota run-out risk above", "", "%", 5, 90, 5],
-      ["importSurgePct", "UK imports above normal", "+", "%", 5, 200, 5],
+    ["Warn me when", [
+      ["staleQuoteDays", "A quote is older than", "", " days", 7, 120, 1, (v) => `About ${Math.round(v / 7)} week${Math.round(v / 7) === 1 ? "" : "s"}: ask for a fresh price`],
+      ["onTimeWarnPct", "A supplier is on time less than", "", "%", 50, 100, 1, (v) => `Late on more than ${Math.round(((100 - v) / 100) * 10)} in 10 deliveries`],
+      ["quotaWarnProbPct", "The quota could run out first", "", "% chance", 5, 90, 5, (v) => `About ${Math.max(1, Math.round(v / 10))} in 10`],
+      ["importSurgePct", "UK imports jump above normal by", "+", "%", 5, 200, 5, (v) => `Competitors stocking up: ${Math.round(100 + v)}% of a usual month`],
     ]],
   ];
   let data = null;
@@ -44,7 +48,7 @@
   let tab = (() => { try { return localStorage.getItem("agx-asm-ap") || "balanced"; } catch { return "balanced"; } })();
   if (!APPROACHES.some((a) => a[0] === tab)) tab = "balanced";
 
-  const fmtVal = (row, v) => `${row[2]}${row[6] < 1 ? String(Math.round(v * 100) / 100) : Math.round(v).toLocaleString("en-GB")}${row[3]}`;
+  const fmtVal = (row, v) => `${row[2]}${row[6] < 1 ? String(Math.round(v * 100) / 100) : Math.round(v).toLocaleString("en-GB")}${row[3].replace(/ (in 3 months|past the lead time|per order|chance|a month)$/, (m) => (m === " a month" ? m : ""))}`;
   const saved = (scope, k) => (scope === "shared" ? data.values[k] : data.approaches[scope][k]);
   const standard = (scope, k) => (scope === "shared" ? data.standard[k] : data.standardApproaches[scope][k]);
   const bucket = (scope) => (scope === "shared" ? draft.shared : (draft.approaches[scope] = draft.approaches[scope] || {}));
@@ -63,7 +67,7 @@
       l, n ? el("span", { class: "as-tab-dot", "aria-label": `${n} unsaved` }) : null);
     }));
     $("as-root").replaceChildren(
-      el("div", { class: "as-ap-head" }, el("h2", { text: "Approach" }), tabs),
+      el("div", { class: "as-ap-head" }, el("h2", { text: "Approach" }), tabs, el("span", { class: "as-basis", text: `Examples use £${REF.price}/t and a ${REF.load} t load` })),
       el("div", { class: "as-grid", id: "as-ap-panel", role: "tabpanel", "aria-labelledby": `as-tab-${tab}` }, ...PER_APPROACH.map(([title, rows]) => card(title, rows.map((r) => rowEl(tab, r))))),
       el("div", { class: "as-grid as-shared" },
         ...SHARED.map(([title, rows]) => card(title, rows.map((r) => rowEl("shared", r)))),
@@ -83,6 +87,7 @@
     const v = current(scope, key);
     const input = el("input", { id, type: "range", class: "as-slider", min: String(Math.min(min, v)), max: String(Math.max(max, v)), step: String(step), value: String(v), "aria-valuetext": fmtVal(row, v), ...(data.canEdit ? {} : { disabled: "" }) });
     const out = el("output", { class: "as-val", for: id, text: fmtVal(row, v) });
+    const ex = el("p", { class: "as-ex", text: row[7] ? row[7](v, ctx()) : "" });
     input.addEventListener("input", () => {
       const n = Number(input.value);
       out.textContent = fmtVal(row, n);
@@ -90,14 +95,19 @@
       paint(input);
       const b = bucket(scope);
       if (n === saved(scope, key)) delete b[key]; else b[key] = n;
+      if (key === "costOfCapitalPct") document.querySelectorAll(".as-row").forEach((r) => r.dispatchEvent(new Event("as:ex")));
+      ex.textContent = row[7] ? row[7](n, ctx()) : "";
       refresh();
     });
     paint(input);
-    return el("div", { class: "as-row", "data-scope": scope, "data-key": key },
+    const wrap = el("div", { class: "as-row", "data-scope": scope, "data-key": key, "data-ex": "" },
       el("div", { class: "as-top" }, el("label", { for: id, text: label }), el("span", { class: "as-right" }, el("button", { type: "button", class: "as-reset", hidden: "", "aria-label": `Reset ${label}`, text: "↺",
         onclick: () => { input.value = String(standard(scope, key)); input.dispatchEvent(new Event("input")); } }), out)),
-      input);
+      input, ex);
+    wrap.addEventListener("as:ex", () => { ex.textContent = row[7] ? row[7](Number(input.value), ctx()) : ""; });
+    return wrap;
   }
+  const ctx = () => ({ cap: current("shared", "costOfCapitalPct") });
 
   function refresh() {
     for (const r of document.querySelectorAll(".as-row[data-key]")) {

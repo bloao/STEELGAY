@@ -10,6 +10,7 @@
   const originFilter = document.getElementById("filter-origin");
   const compareBtn = document.getElementById("compare-btn");
   const selected = new Set();
+  const openBulk = new Set();
   let all = [];
 
   // The summary boxes were removed from the page; kept as a no-op so
@@ -27,7 +28,37 @@
       return [s.title, s.commodityCode, s.commodityDescription, s.supplier].some((v) => String(v || "").toLowerCase().includes(q));
     });
 
-    rowsEl.replaceChildren(...rows.map((s) => {
+    // lines saved together (one load from one supplier) show as a single bulk order
+    const groups = new Map();
+    for (const s of rows) if (s.packageId) { if (!groups.has(s.packageId)) groups.set(s.packageId, []); groups.get(s.packageId).push(s); }
+    const out = [];
+    const done = new Set();
+    for (const s of rows) {
+      if (!s.packageId || (groups.get(s.packageId) || []).length < 2) { out.push(lineRow(s, false)); continue; }
+      if (done.has(s.packageId)) continue;
+      done.add(s.packageId);
+      const g = groups.get(s.packageId);
+      const open = openBulk.has(s.packageId);
+      const tonnes = g.reduce((n, x) => n + (x.tonnage || 0), 0);
+      const value = g.reduce((n, x) => n + (x.plannedPerT !== null ? x.plannedPerT * x.tonnage : x.expectedTotal || 0), 0);
+      const arrive = g.map((x) => x.importDate).filter(Boolean).sort().slice(-1)[0];
+      out.push(el("tr", { class: `bulk-row${open ? " is-open" : ""}`, tabindex: "0", "aria-expanded": String(open),
+        onclick: (e) => { if (e.target.closest("input,a")) return; if (open) openBulk.delete(s.packageId); else openBulk.add(s.packageId); render(); },
+        onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (open) openBulk.delete(s.packageId); else openBulk.add(s.packageId); render(); } } },
+        el("td", {}, el("span", { class: "bulk-caret", "aria-hidden": "true" })),
+        el("td", {}, el("strong", { class: "row-title", text: `Bulk order · ${g.length} products` }), el("span", { class: "badge badge-info", style: "margin-left:8px", text: "One load" }),
+          el("div", { class: "row-sub", text: g.map((x) => (x.title || "").replace(/ from .*$/, "")).join(" · ") })),
+        el("td", {}, `${s.supplier || "—"} · ${s.origin}`, el("div", { class: "row-sub", text: s.incoterm })),
+        el("td", { class: "num" }, el("strong", { text: fmt.tonnes(tonnes) })),
+        el("td", { class: "num" }, el("strong", { text: fmt.perT(tonnes ? value / tonnes : null) }), el("div", { class: "row-sub", text: fmt.money(value) })),
+        el("td", {}, quotaBadge(g.find((x) => x.quotaProbability) || s)),
+        el("td", { text: fmt.date(arrive) }),
+        el("td", {}, statusBadge(s.status, s.quoteValidUntil)),
+        el("td", {}, el("span", { class: "small", text: fmt.dateTime(s.updatedAt) }), el("div", { class: "row-sub", text: s.createdBy }))));
+      if (open) g.forEach((x) => out.push(lineRow(x, true)));
+    }
+    rowsEl.replaceChildren(...out);
+    function lineRow(s, child) {
       const box = el("input", {
         type: "checkbox",
         "aria-label": `Select ${s.title}`,
@@ -38,7 +69,7 @@
         },
       });
       box.checked = selected.has(s.id);
-      return el("tr", {},
+      return el("tr", { class: child ? "bulk-child" : "" },
         el("td", {}, box),
         el("td", {},
           el("a", { class: "row-title", href: `order.html?id=${s.id}`, text: s.title || s.commodityCode }),
@@ -55,7 +86,7 @@
         el("td", {}, statusBadge(s.status, s.quoteValidUntil)),
         el("td", {}, el("span", { class: "small", text: fmt.dateTime(s.updatedAt) }), el("div", { class: "row-sub", text: s.createdBy })),
       );
-    }));
+    }
     emptyEl.hidden = all.length > 0;
     if (all.length && !rows.length) {
       rowsEl.append(el("tr", {}, el("td", { colspan: "9", class: "empty", text: "No scenarios match these filters." })));

@@ -2483,3 +2483,19 @@ a.tr-label:hover { color: var(--accent-ink); text-decoration: underline; }
 @media (max-width: 560px) { .bk-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bk-hero { padding: 16px; } .bk-actions .btn { width: 100%; } .bk-lines th:nth-child(5), .bk-lines td:nth-child(5) { display: none; } }
 .bk-figs { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); } .bk-fig strong { white-space: nowrap; }
 .bk-figs { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); } .bk-fig { padding: 9px 10px; } .bk-fig strong { font-size: 16px; }
+
+/* Assumptions: each slider says what it means for a typical order */
+.as-ex { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; font-variant-numeric: tabular-nums; }
+.as-row.is-edited .as-ex { color: #8a5a00; }
+.as-basis { margin-left: auto; font-size: 12px; color: var(--muted); }
+.as-top label { font-weight: 600; }
+
+/* Orders: lines saved as one load show as one bulk order */
+.bulk-row { cursor: pointer; }
+.bulk-row td { background: var(--surface-alt); }
+.bulk-row:hover td { background: var(--accent-soft); }
+.bulk-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.bulk-caret { display: inline-block; width: 8px; height: 8px; border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft); transform: rotate(-45deg); transition: transform 0.2s; margin-left: 4px; }
+.bulk-row.is-open .bulk-caret { transform: rotate(45deg); }
+.bulk-child td:nth-child(2) { padding-left: 28px; position: relative; }
+.bulk-child td:nth-child(2)::before { content: ""; position: absolute; left: 12px; top: 0; bottom: 50%; width: 10px; border-left: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }

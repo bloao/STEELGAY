@@ -3166,8 +3166,8 @@ async function basketPlan(body = {}) {
     for (const o of PLAN.scoreOptions(opts, { needBy: it.needBy, appetite, thresholds })) lines.set(`${o.id}|${it.productId}`, o);
   }));
   const plan = planBasket({ items, suppliers, line: (sid, pid) => lines.get(`${sid}|${pid}`) || null,
-    money: { ratePct: assume.costOfCapitalPct, storagePerTMonth: assume.forecastStoragePerTMonth ?? 2, splitOrderCost: assume.splitOrderCost ?? 0 } });
-  return { ok: true, appetite, cbam, products: productRows, selected: items, assumptions, ...plan };
+    money: { ratePct: assume.costOfCapitalPct, storagePerTMonth: assume.forecastStoragePerTMonth ?? 2, splitOrderCost: assume.splitOrderCost ?? 0, fill: body.fill === "min" ? "min" : "full" } });
+  return { ok: true, appetite, cbam, fill: body.fill === "min" ? "min" : "full", products: productRows, selected: items, assumptions, ...plan };
 }
 
 // Draft orders for what needs ordering: the planner's pick and the runner-up
@@ -3477,6 +3477,8 @@ function summarise(s) {
     sample: Boolean(r.sources?.sample),
     planned: Boolean(s.plan),
     planRole: s.plan ? s.plan.role || "chosen" : null,
+    packageId: s.plan ? s.plan.packageId || null : null,
+    packageT: s.plan ? s.plan.packageT || null : null,
     plannedPerT: s.plan && Number.isFinite(s.plan.effectivePerT) ? s.plan.effectivePerT : null,
     starter: Boolean(s.starter),
     createdBy: s.createdBy,

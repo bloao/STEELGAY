@@ -12,6 +12,7 @@
   let plan = null;
   let chosen = 0; // index of the scenario shown
   let appetite = "balanced";
+  let fill = (() => { try { return localStorage.getItem("agx-fill") === "min" ? "min" : "full"; } catch { return "full"; } })();
   let timer = null, seq = 0;
 
   const readCbam = () => { try { return localStorage.getItem("agx-cbam") === "on"; } catch { return false; } };
@@ -29,6 +30,7 @@
     $("pf-appetite").replaceChildren(...APPROACHES.map(([k, l]) => el("button", { type: "button", role: "radio", "aria-checked": String(appetite === k), "aria-pressed": String(appetite === k), tabindex: appetite === k ? "0" : "-1", text: l,
       onclick: () => { appetite = k; fillForm(); run(); },
       onkeydown: (e) => { if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return; e.preventDefault(); const i = APPROACHES.findIndex((x) => x[0] === appetite); appetite = APPROACHES[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3][0]; fillForm(); $("pf-appetite").querySelector('[aria-checked="true"]').focus(); run(); } })));
+    for (const b of $("pf-fill").querySelectorAll("button")) { const on2 = b.dataset.fill === fill; b.setAttribute("aria-checked", String(on2)); b.setAttribute("aria-pressed", String(on2)); }
     const on = readCbam(), sw = $("pf-cbam");
     sw.classList.toggle("is-on", on); sw.setAttribute("aria-checked", String(on));
     sw.querySelector(".pf-switch-text").textContent = on ? "Included" : "Not included";
@@ -71,7 +73,7 @@
     try {
       const quantities = {};
       for (const p of products) if (picked.has(p.id)) quantities[p.id] = needOf(p);
-      const r = await api("/api/orders/basket", { method: "POST", body: { productIds: [...picked], quantities, appetite, cbam: readCbam() } });
+      const r = await api("/api/orders/basket", { method: "POST", body: { productIds: [...picked], quantities, appetite, fill, cbam: readCbam() } });
       if (my !== seq) return;
       plan = r; chosen = 0;
       renderAssumptions(r); render();
@@ -123,7 +125,7 @@
   }
 
   function hero(s, i) {
-    const title = s.kind === "single" ? `One load from ${s.parts[0].supplier}` : `Split: ${s.parts.map((p) => p.supplier).join(" + ")}`;
+    const title = s.kind === "single" ? `Bulk order from ${s.parts[0].supplier}` : `Bulk order split: ${s.parts.map((p) => p.supplier).join(" + ")}`;
     const fig = (k, v, cls) => el("div", { class: "bk-fig" }, el("span", { text: k }), el("strong", { class: cls || "", text: v }));
     return el("section", { class: "card bk-hero" },
       el("div", { class: "bk-hero-top" },
@@ -178,11 +180,12 @@
   }
 
   // ---------------------------------------------------------------- start
+  $("pf-fill").addEventListener("click", (e) => { const b = e.target.closest("button[data-fill]"); if (!b) return; fill = b.dataset.fill; try { localStorage.setItem("agx-fill", fill); } catch { /* blocked */ } fillForm(); run(); });
   $("pf-cbam").addEventListener("click", () => { try { localStorage.setItem("agx-cbam", readCbam() ? "off" : "on"); } catch { /* blocked */ } fillForm(); run(); });
   $("plan-form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
   loadMe().then((m) => { me = m; if (plan) render(); }).catch(() => {});
   fillForm();
-  api("/api/orders/basket", { method: "POST", body: { productIds: [], appetite, cbam: readCbam() } }).then((r) => {
+  api("/api/orders/basket", { method: "POST", body: { productIds: [], appetite, fill, cbam: readCbam() } }).then((r) => {
     products = r.products;
     const want = new URLSearchParams(location.search).get("product");
     picked = new Set(r.selected.map((x) => x.productId));
